@@ -1,35 +1,21 @@
 # 004 — End-to-End Encryption vs AI Features
 
-> **Format:** Architecture Decision Record (ADR)
-> **Reference:** https://adr.github.io
-> **Date:** 2026-06-27
-> **Status:** Accepted
+> **Format:** Architecture Decision Record (ADR)  
+> **Reference:** https://adr.github.io  
+> **Date:** 2026-06-27  
+> **Status:** Accepted  
 
 ---
 
 ## Context
 
-Privacy and data encryption are legitimate concerns in any
-messaging application. High-profile legal cases involving
-large technology companies have drawn public attention to
-how chat platforms handle message data — specifically whether
-messages are readable by the platform operator or only by
-the communicating parties.
+Privacy and data encryption are legitimate concerns in any messaging application. High-profile legal cases involving large technology companies have drawn public attention to how chat platforms handle message data — specifically whether messages are readable by the platform operator or only by the communicating parties.  
 
-End-to-end encryption (E2EE) is the gold standard for private
-messaging. Signal pioneered it. WhatsApp adopted the Signal
-Protocol. It means messages are encrypted on the sender's
-device and can only be decrypted by the recipient's device.
-The server never sees plaintext content.
+End-to-end encryption (E2EE) is the gold standard for private messaging. Signal pioneered it. WhatsApp adopted the Signal Protocol. It means messages are encrypted on the sender's device and can only be decrypted by the recipient's device. The server never sees plaintext content.  
 
-Orbit's planned Phase 4 features include server-side AI
-capabilities: message summarisation, an AI assistant bot,
-smart reply suggestions, message translation, and tone
-checking. These features require the server to read and
-process message content.
+Orbit's planned Phase 4 features include server-side AI capabilities: message summarisation, an AI assistant bot, smart reply suggestions, message translation, and tone checking. These features require the server to read and process message content.  
 
-These two requirements are architecturally incompatible.
-A decision was required.
+These two requirements are architecturally incompatible. A decision was required.  
 
 ---
 
@@ -37,9 +23,7 @@ A decision was required.
 
 ### Option 1 — Implement End-to-End Encryption
 
-Encrypt messages on the client device before transmission.
-Server stores and routes ciphertext only. Decrypt on the
-recipient's device.
+Encrypt messages on the client device before transmission. Server stores and routes ciphertext only. Decrypt on the recipient's device.  
 
 **Pros:**
 - Maximum privacy — operator cannot read messages
@@ -60,26 +44,21 @@ recipient's device.
     - Lost device = lost message history permanently
 - Group message E2EE is a research-level problem:
     - Each message must be encrypted for every group member
-    - Or implement Sender Keys protocol (Signal's solution,
-      years of cryptographic research)
-- Multi-device support breaks without secure key backup,
-  itself a hard problem
+    - Or implement Sender Keys protocol (Signal's solution, years of cryptographic research)
+- Multi-device support breaks without secure key backup, itself a hard problem  
 - No server-side search — encrypted content cannot be indexed
 - Eliminates message search feature planned for Phase 3
 
 ### Option 2 — Server-Side Processing with Security Baseline (Chosen)
 
-Do not implement E2EE. Secure all data with encryption
-in transit and at rest. Implement robust auth. Document
-the tradeoff transparently.
+Do not implement E2EE. Secure all data with encryption in transit and at rest. Implement robust auth. Document the tradeoff transparently.  
 
 **Pros:**
 - All Phase 4 AI features remain fully viable
 - Message search (Phase 3) remains viable
 - No key management complexity
 - Security baseline is still meaningful and honest
-- Transparent documentation of the tradeoff is itself
-  a demonstration of architectural maturity
+- Transparent documentation of the tradeoff is itself a demonstration of architectural maturity  
 
 **Cons:**
 - Server can read message content
@@ -92,15 +71,9 @@ the tradeoff transparently.
 
 Orbit does **not** implement end-to-end encryption.
 
-This is a deliberate architectural tradeoff, not an oversight.
-E2EE and server-side AI features are fundamentally incompatible
-— the server cannot summarise, translate, or assist with
-content it cannot read.
+This is a deliberate architectural tradeoff, not an oversight. E2EE and server-side AI features are fundamentally incompatible — the server cannot summarise, translate, or assist with content it cannot read.
 
-Orbit's value proposition is AI-augmented group communication
-for people with shared goals. That value proposition requires
-server-side message processing. Implementing E2EE would
-eliminate the core differentiating feature set.
+Orbit's value proposition is AI-augmented group communication for people with shared goals. That value proposition requires server-side message processing. Implementing E2EE would eliminate the core differentiating feature set.
 
 ### Security Baseline Implemented
 
@@ -136,31 +109,21 @@ If asked about encryption or privacy:
 - Messages are readable by the platform operator (the developer)
 - Not appropriate for highly sensitive or confidential communications
 - Users who require E2EE should use Signal or WhatsApp
-- Platform is subject to legal data requests since plaintext
-  is accessible server-side
+- Platform is subject to legal data requests since plaintext is accessible server-side
 
 ---
 
 ## Evolution Path
 
-The fundamental incompatibility between server-side AI and
-E2EE is a current constraint of where AI technology sits today.
+The fundamental incompatibility between server-side AI and E2EE is a current constraint of where AI technology sits today.  
 
 Two paths could change this in future:
 
-1. **On-device AI models** — if sufficiently capable AI models
-   run locally on the user's device (as Apple Intelligence
-   demonstrates is directionally viable), AI features could
-   process message content client-side before encryption.
-   This would make E2EE and AI features compatible.
+1. **On-device AI models** — if sufficiently capable AI models run locally on the user's device (as Apple Intelligence demonstrates is directionally viable), AI features could process message content client-side before encryption. This would make E2EE and AI features compatible.
 
-2. **Homomorphic encryption** — a cryptographic technique
-   allowing computation on encrypted data without decrypting it.
-   Currently too computationally expensive for real-time use
-   but an active area of research.
+2. **Homomorphic encryption** — a cryptographic technique allowing computation on encrypted data without decrypting it. Currently too computationally expensive for real-time use but an active area of research.
 
-Either evolution would allow revisiting this decision without
-requiring a fundamental rearchitecture of the messaging system.
+Either evolution would allow revisiting this decision without requiring a fundamental rearchitecture of the messaging system.
 
 ---
 
@@ -169,5 +132,4 @@ requiring a fundamental rearchitecture of the messaging system.
 - Signal Protocol — https://signal.org/docs
 - WhatsApp E2EE Technical Overview
 - Apple Intelligence on-device processing model
-- Meta privacy lawsuits — context for public expectations
-  around messaging platform privacy
+- Meta privacy lawsuits — context for public expectations around messaging platform privacy  

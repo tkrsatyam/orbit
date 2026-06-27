@@ -9,8 +9,8 @@
 
 ## Context
 
-What situation, requirement, or problem prompted this decision?
-What constraints were we operating under at the time?
+What situation, requirement, or problem prompted this decision?  
+What constraints were we operating under at the time?  
 
 ---
 
@@ -40,22 +40,22 @@ Brief description of the approach.
 
 ## Decision
 
-What was chosen and why.
-Reference specific constraints or goals that made this the right call.
+What was chosen and why.  
+Reference specific constraints or goals that made this the right call.  
 
 ---
 
 ## Drawbacks Acknowledged
 
-Honest tradeoffs accepted with this decision.
-No decision is perfect — document what we're giving up.
+Honest tradeoffs accepted with this decision.  
+No decision is perfect — document what we're giving up.  
 
 ---
 
 ## Evolution Path
 
-How this decision scales, changes, or gets revisited if requirements grow.
-What would trigger us to revisit this decision?
+How this decision scales, changes, or gets revisited if requirements grow.  
+What would trigger us to revisit this decision?  
 
 ---
 
