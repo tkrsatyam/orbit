@@ -1,0 +1,1749 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1800 3200"
+   role="img"
+   version="1.1"
+   id="svg125"
+   sodipodi:docname="message_send_flow.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview125"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="0.62944445"
+     inkscape:cx="518.71138"
+     inkscape:cy="1991.4386"
+     inkscape:window-width="2560"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg125" />
+  <title
+     id="title1">Orbit — Message Send Flow</title>
+  <defs
+     id="defs5">
+    <marker
+       id="ag"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="ab"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="ao"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B45309"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="ar"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B91C1C"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <marker
+       id="ap"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#534AB7"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path5" />
+    </marker>
+    <style
+       id="style5">
+    text { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .hdr  { font-size: 14px; font-weight: 700; }
+    .sub  { font-size: 11px; font-style: italic; fill: #5F5E5A; }
+    .lbl  { font-size: 12px; }
+    .slbl { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1px; }
+    .plbl { font-size: 13px; font-weight: 700; }
+    .note { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+    .ll   { stroke: #C4C2BB; stroke-width: 1; stroke-dasharray: 6 4; fill: none; }
+    .cg   { stroke: #0F6E56; stroke-width: 1.4; fill: none; }
+    .cb   { stroke: #1D6FA8; stroke-width: 1.4; fill: none; stroke-dasharray: 6 3; }
+    .co   { stroke: #B45309; stroke-width: 1.4; fill: none; }
+    .cr   { stroke: #B91C1C; stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+    .cp   { stroke: #534AB7; stroke-width: 1.4; fill: none; }
+    .cpd  { stroke: #534AB7; stroke-width: 1.4; fill: none; stroke-dasharray: 6 3; }
+    /* participant boxes */
+    .p1 { fill:#C7F0E3; stroke:#0F6E56; stroke-width:1.5; }
+    .p2 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1.5; }
+    .p3 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1.5; }
+    .p4 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1.5; }
+    .p5 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1.5; }
+    .p6 { fill:#FCEFD9; stroke:#B45309; stroke-width:1.5; }
+    .p7 { fill:#F4F3F0; stroke:#888780; stroke-width:1.5; }
+    .p8 { fill:#EEEDFE; stroke:#534AB7; stroke-width:1.5; }
+    .p9 { fill:#E8EEF7; stroke:#1D6FA8; stroke-width:1.5; }
+    /* activation boxes — 14px wide centred on lifeline */
+    .a1 { fill:#C7F0E3; stroke:#0F6E56; stroke-width:1; }
+    .a2 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1; }
+    .a3 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1; }
+    .a6 { fill:#FCEFD9; stroke:#B45309; stroke-width:1; }
+    .a8 { fill:#EEEDFE; stroke:#534AB7; stroke-width:1; }
+    /* bands */
+    .band-g { fill:#F0FAF6; stroke:#0F6E56; stroke-width:1; stroke-dasharray:6 4; }
+    .band-p { fill:#F5F3FF; stroke:#534AB7; stroke-width:1; stroke-dasharray:6 4; }
+    .band-o { fill:#FFFBEB; stroke:#B45309; stroke-width:1; stroke-dasharray:6 4; }
+    .band-b { fill:#EFF6FF; stroke:#1D6FA8; stroke-width:1; stroke-dasharray:6 4; }
+    .band-r { fill:#FFF5F5; stroke:#B91C1C; stroke-width:1; stroke-dasharray:6 4; }
+    /* inline boxes */
+    .ibox  { fill:#FFFFFF; stroke:#B4B2A9; stroke-width:0.8; }
+    .warn  { fill:#FEF9C3; stroke:#CA8A04; stroke-width:0.8; }
+    .good  { fill:#D1FAE5; stroke:#0F6E56; stroke-width:0.8; }
+    .info  { fill:#DBEAFE; stroke:#1D6FA8; stroke-width:0.8; }
+    .err   { fill:#FEE2E2; stroke:#B91C1C; stroke-width:0.8; }
+  </style>
+  </defs>
+  <!-- ── outer frame ── -->
+  <rect
+     x="19.969772"
+     y="19.972298"
+     width="1760.0604"
+     height="3159.9836"
+     rx="14.000481"
+     fill="none"
+     stroke="#d8d6cf"
+     stroke-width="0.999667"
+     stroke-dasharray="10, 5"
+     id="rect5" />
+  <text
+     class="slbl"
+     x="44"
+     y="46"
+     id="text5">SEQUENCE DIAGRAM — MESSAGE SEND FLOW</text>
+  <!-- ══════════════════ LEGEND ══════════════════ -->
+  <g
+     id="g125"
+     transform="translate(201.88146,-12.0041)">
+    <rect
+       x="1199.9182"
+       y="55.918159"
+       width="354.02301"
+       height="220.16368"
+       rx="5.0574718"
+       fill="#fafaf8"
+       stroke="#d8d6cf"
+       stroke-width="0.636317"
+       id="rect6" />
+    <text
+       class="slbl"
+       x="1222"
+       y="80"
+       id="text6">LEGEND</text>
+    <line
+       x1="1222"
+       y1="100"
+       x2="1292"
+       y2="100"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line6" />
+    <text
+       class="lbl"
+       x="1302"
+       y="104"
+       id="text7">Request / internal call</text>
+    <line
+       x1="1222"
+       y1="124"
+       x2="1292"
+       y2="124"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line7" />
+    <text
+       class="lbl"
+       x="1302"
+       y="128"
+       id="text8">Response / return (dashed)</text>
+    <line
+       x1="1222"
+       y1="148"
+       x2="1292"
+       y2="148"
+       class="co"
+       marker-end="url(#ao)"
+       id="line8" />
+    <text
+       class="lbl"
+       x="1302"
+       y="152"
+       id="text9">Kafka event</text>
+    <line
+       x1="1222"
+       y1="172"
+       x2="1292"
+       y2="172"
+       class="cp"
+       marker-end="url(#ap)"
+       id="line9" />
+    <text
+       class="lbl"
+       x="1302"
+       y="176"
+       id="text10">R2 / external system call</text>
+    <line
+       x1="1222"
+       y1="196"
+       x2="1292"
+       y2="196"
+       class="cr"
+       marker-end="url(#ar)"
+       id="line10" />
+    <text
+       class="lbl"
+       x="1302"
+       y="200"
+       id="text11">Error path (dashed)</text>
+    <rect
+       x="1222"
+       y="212"
+       width="14"
+       height="30"
+       rx="2"
+       class="a2"
+       id="rect11" />
+    <text
+       class="lbl"
+       x="1244"
+       y="231"
+       id="text12">Activation box (component is processing)</text>
+    <rect
+       x="1222"
+       y="248"
+       width="200"
+       height="20"
+       rx="4"
+       class="ibox"
+       id="rect12" />
+    <text
+       class="note"
+       x="1322"
+       y="262"
+       text-anchor="middle"
+       id="text13">Inline action / decision label</text>
+  </g>
+  <!-- ══════════════════ PARTICIPANT HEADERS  y=90 ══════════════════
+     x-centres (lifeline x values):
+     React=100  MsgSvc=290  MsgRepo=480  ConvRepo=660  NotifRepo=840
+     KafkaProd=1020  Upstash=1200  R2=1390  Recipient=1620
+-->
+  <!-- ══════════════════ LIFELINES ══════════════════ -->
+  <!-- ════════════════════════════════════════════════════════════
+     FLOW A — TEXT MESSAGE VIA WEBSOCKET  y=210→1080
+════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 260: optimistic UI note -->
+  <!-- row 320: STOMP SEND -->
+  <!-- row 358: rate limit ibox -->
+  <!-- row 390: rate limit error path -->
+  <!-- critical ordering note -->
+  <!-- row 466: persist message -->
+  <!-- row 500: return _id -->
+  <!-- row 532: update lastMessage -->
+  <!-- row 566: return ack -->
+  <!-- row 600: upsert notification -->
+  <!-- row 636: return ack -->
+  <!-- row 668: publish to Kafka -->
+  <!-- row 702: kafka to upstash -->
+  <!-- row 736: ack from kafka -->
+  <!-- row 770: STOMP receipt to sender -->
+  <!-- row 804: optimistic confirmed -->
+  <!-- row 840: Kafka consumer delivers -->
+  <!-- row 876: session registry check -->
+  <!-- row 908: push to recipient -->
+  <!-- row 950: phase note -->
+  <!-- ════════════════════════════════════════════════════════════
+     FLOW B — FILE / IMAGE MESSAGE  y=1120→1560
+════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 1180: file trigger note -->
+  <!-- row 1220: REST POST -->
+  <!-- row 1258: validate ibox -->
+  <!-- row 1292: reject path -->
+  <!-- row 1328: stream to R2 -->
+  <!-- row 1364: R2 fail path -->
+  <!-- row 1398: R2 success -->
+  <!-- row 1432: persist with file metadata -->
+  <!-- row 1466: savedMessage -->
+  <!-- row 1500: note -->
+  <!-- ════════════════════════════════════════════════════════════
+     FLOW C — REST FALLBACK  y=1600→1840
+════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 1650: trigger note -->
+  <!-- row 1700: REST POST -->
+  <!-- row 1736: same internal note -->
+  <!-- row 1770: 201 response -->
+  <!-- row 1806: idempotency note -->
+  <!-- ════════════════════════════════════════════════════════════
+     FLOW D — MULTI-INSTANCE FAN-OUT  y=1880→2220
+════════════════════════════════════════════════════════════ -->
+  <!-- instance labels -->
+  <!-- activations -->
+  <!-- row 1978: sender sends on instance A -->
+  <!-- row 2014: persist -->
+  <!-- row 2062: publish kafka -->
+  <!-- row 2098: all instances consume -->
+  <!-- row 2134: Instance A discards -->
+  <!-- Instance B delivers -->
+  <!-- row 2168: note -->
+  <!-- ════════════════════════════════════════════════════════════
+     FLOW E — ERROR PATHS  y=2260→2720
+════════════════════════════════════════════════════════════ -->
+  <!-- E1 sub-band -->
+  <!-- activations E1 -->
+  <!-- row 2356: message arrives -->
+  <!-- row 2390: insert attempt -->
+  <!-- row 2424: exception -->
+  <!-- row 2458: error to client -->
+  <!-- E2 sub-band -->
+  <!-- activations E2 -->
+  <!-- row 2568: kafka publish attempt -->
+  <!-- row 2604: kafka fail -->
+  <!-- row 2640: sender still gets receipt -->
+  <!-- row 2672: E2 note -->
+  <!-- ════════════════════════════════════════════════════════════
+     SUMMARY TABLE  y=2760→2860
+════════════════════════════════════════════════════════════ -->
+  <rect
+     x="46.79435"
+     y="294.14828"
+     width="108"
+     height="82"
+     rx="8"
+     class="p1"
+     id="rect13" />
+  <text
+     class="hdr"
+     x="100.79435"
+     y="322.14828"
+     text-anchor="middle"
+     fill="#053D30"
+     id="text14">React SPA</text>
+  <text
+     class="sub"
+     x="100.79435"
+     y="340.14828"
+     text-anchor="middle"
+     id="text15">SockJS</text>
+  <text
+     class="sub"
+     x="100.79435"
+     y="356.14828"
+     text-anchor="middle"
+     id="text16">STOMP.js</text>
+  <rect
+     x="206.79436"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p2"
+     id="rect16" />
+  <text
+     class="hdr"
+     x="290.79434"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text17">MessageController</text>
+  <text
+     class="sub"
+     x="290.79434"
+     y="338.14828"
+     text-anchor="middle"
+     id="text18">+</text>
+  <text
+     class="sub"
+     x="290.79434"
+     y="354.14828"
+     text-anchor="middle"
+     id="text19">MessageService</text>
+  <rect
+     x="390.79434"
+     y="294.14828"
+     width="180"
+     height="82"
+     rx="8"
+     class="p3"
+     id="rect19" />
+  <text
+     class="hdr"
+     x="480.79434"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#03241D"
+     id="text20">Message</text>
+  <text
+     class="sub"
+     x="480.79434"
+     y="338.14828"
+     text-anchor="middle"
+     id="text21">Repository</text>
+  <text
+     class="sub"
+     x="480.79434"
+     y="356.14828"
+     text-anchor="middle"
+     id="text22">(MongoDB)</text>
+  <rect
+     x="576.79437"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p4"
+     id="rect22" />
+  <text
+     class="hdr"
+     x="660.79437"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#03241D"
+     id="text23">Conversation</text>
+  <text
+     class="sub"
+     x="660.79437"
+     y="338.14828"
+     text-anchor="middle"
+     id="text24">Repository</text>
+  <text
+     class="sub"
+     x="660.79437"
+     y="356.14828"
+     text-anchor="middle"
+     id="text25">(MongoDB)</text>
+  <rect
+     x="756.79437"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p5"
+     id="rect25" />
+  <text
+     class="hdr"
+     x="840.79437"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#03241D"
+     id="text26">Notification</text>
+  <text
+     class="sub"
+     x="840.79437"
+     y="338.14828"
+     text-anchor="middle"
+     id="text27">Repository</text>
+  <text
+     class="sub"
+     x="840.79437"
+     y="356.14828"
+     text-anchor="middle"
+     id="text28">(MongoDB)</text>
+  <rect
+     x="936.79437"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p6"
+     id="rect28" />
+  <text
+     class="hdr"
+     x="1020.7944"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#6B3A04"
+     id="text29">Kafka</text>
+  <text
+     class="sub"
+     x="1020.7944"
+     y="338.14828"
+     text-anchor="middle"
+     id="text30">Producer</text>
+  <text
+     class="sub"
+     x="1020.7944"
+     y="356.14828"
+     text-anchor="middle"
+     id="text31">Config</text>
+  <rect
+     x="1116.7943"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p7"
+     id="rect31" />
+  <text
+     class="hdr"
+     x="1200.7943"
+     y="320.14828"
+     text-anchor="middle"
+     id="text32">Upstash</text>
+  <text
+     class="sub"
+     x="1200.7943"
+     y="338.14828"
+     text-anchor="middle"
+     id="text33">Kafka</text>
+  <text
+     class="sub"
+     x="1200.7943"
+     y="356.14828"
+     text-anchor="middle"
+     id="text34">chat.messages</text>
+  <rect
+     x="1306.7943"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p8"
+     id="rect34" />
+  <text
+     class="hdr"
+     x="1390.7943"
+     y="320.14828"
+     text-anchor="middle"
+     fill="#3C3489"
+     id="text35">Cloudflare</text>
+  <text
+     class="sub"
+     x="1390.7943"
+     y="338.14828"
+     text-anchor="middle"
+     id="text36">R2</text>
+  <text
+     class="sub"
+     x="1390.7943"
+     y="356.14828"
+     text-anchor="middle"
+     id="text37">(file path only)</text>
+  <rect
+     x="1536.7943"
+     y="294.14828"
+     width="168"
+     height="82"
+     rx="8"
+     class="p9"
+     id="rect37" />
+  <text
+     class="hdr"
+     x="1620.7943"
+     y="318.14828"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text38">KafkaConsumer</text>
+  <text
+     class="sub"
+     x="1620.7943"
+     y="336.14828"
+     text-anchor="middle"
+     id="text39">+</text>
+  <text
+     class="sub"
+     x="1620.7943"
+     y="354.14828"
+     text-anchor="middle"
+     id="text40">Recipient Browser</text>
+  <line
+     x1="100.79435"
+     y1="376.14828"
+     x2="100.79435"
+     y2="2964.7417"
+     class="ll"
+     id="line40" />
+  <line
+     x1="290.79434"
+     y1="376.14828"
+     x2="290.79434"
+     y2="2964.7417"
+     class="ll"
+     id="line41" />
+  <line
+     x1="480.79434"
+     y1="376.14828"
+     x2="480.79434"
+     y2="2964.7417"
+     class="ll"
+     id="line42" />
+  <line
+     x1="660.79437"
+     y1="376.14828"
+     x2="660.79437"
+     y2="2964.7417"
+     class="ll"
+     id="line43" />
+  <line
+     x1="840.79437"
+     y1="376.14828"
+     x2="840.79437"
+     y2="2964.7417"
+     class="ll"
+     id="line44" />
+  <line
+     x1="1020.7944"
+     y1="376.14828"
+     x2="1020.7944"
+     y2="2964.7417"
+     class="ll"
+     id="line45" />
+  <line
+     x1="1200.7943"
+     y1="376.14828"
+     x2="1200.7943"
+     y2="2964.7417"
+     class="ll"
+     id="line46" />
+  <line
+     x1="1390.7943"
+     y1="376.14828"
+     x2="1390.7943"
+     y2="2964.7417"
+     class="ll"
+     id="line47" />
+  <line
+     x1="1620.7943"
+     y1="376.14828"
+     x2="1620.7943"
+     y2="2964.7417"
+     class="ll"
+     id="line48" />
+  <rect
+     x="44.79435"
+     y="414.14828"
+     width="1712"
+     height="870"
+     rx="10"
+     class="band-g"
+     id="rect48" />
+  <text
+     class="plbl"
+     x="68.79435"
+     y="444.14828"
+     fill="#0F6E56"
+     id="text48">FLOW A — TEXT MESSAGE VIA WEBSOCKET (primary path)</text>
+  <rect
+     x="93.79435"
+     y="464.14828"
+     width="14"
+     height="800"
+     rx="2"
+     class="a1"
+     id="rect49" />
+  <rect
+     x="283.79123"
+     y="523.1322"
+     width="14.006215"
+     height="691.01917"
+     rx="2.0008879"
+     class="a2"
+     id="rect50" />
+  <rect
+     x="473.62921"
+     y="670.84985"
+     width="14.330305"
+     height="35.05228"
+     rx="2.0471864"
+     class="a3"
+     id="rect51" />
+  <rect
+     x="653.64532"
+     y="733.13422"
+     width="14.298071"
+     height="38.594627"
+     rx="2.0425816"
+     class="a3"
+     id="rect52" />
+  <rect
+     x="834.43799"
+     y="803.67096"
+     width="14.301574"
+     height="38.200958"
+     rx="2.043082"
+     class="a3"
+     id="rect53" />
+  <rect
+     x="1014.1916"
+     y="871.90643"
+     width="14"
+     height="80"
+     rx="2"
+     class="a6"
+     id="rect54" />
+  <rect
+     x="68.79435"
+     y="464.14828"
+     width="560"
+     height="36"
+     rx="6"
+     class="good"
+     id="rect55" />
+  <text
+     class="note"
+     x="88.79435"
+     y="477.79349"
+     fill="#065F46"
+     id="text55">Optimistic UI: message appended to sender's chat instantly, marked &quot;sending…&quot;</text>
+  <text
+     class="note"
+     x="88.79435"
+     y="493.79349"
+     fill="#065F46"
+     id="text56">before any server response. Reverted on error.</text>
+  <line
+     x1="107.79435"
+     y1="526.14825"
+     x2="283.79434"
+     y2="526.14825"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line56" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="518.14825"
+     id="text57">1. STOMP SEND → /app/conversations/{id}/send { type: TEXT, content: &quot;…&quot; }</text>
+  <rect
+     x="234.61575"
+     y="545.40796"
+     width="260"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect57" />
+  <text
+     class="note"
+     x="364.61575"
+     y="562.40796"
+     text-anchor="middle"
+     id="text58">RateLimitFilter: check 60 msg/min bucket for userId</text>
+  <line
+     x1="283.79434"
+     y1="596.14825"
+     x2="107.79435"
+     y2="596.14825"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line58" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="588.14825"
+     fill="#B91C1C"
+     id="text59">[rate limit exceeded] → STOMP ERROR frame { status: 429 }</text>
+  <rect
+     x="68.414261"
+     y="607.82465"
+     width="1299.9658"
+     height="39.143223"
+     rx="5.9998422"
+     class="warn"
+     id="rect59" />
+  <text
+     class="note"
+     x="86.808472"
+     y="623.21887"
+     fill="#92400E"
+     id="text60">CRITICAL ORDER: MongoDB persist happens FIRST — before any Kafka publish.</text>
+  <text
+     class="note"
+     x="86.808472"
+     y="639.21887"
+     fill="#92400E"
+     id="text61">If Kafka fails after persist, the message exists in DB and can be recovered. If Kafka were first and MongoDB failed, the message appears in UIs but does not exist.</text>
+  <line
+     x1="297.79434"
+     y1="672.14825"
+     x2="473.79434"
+     y2="672.14825"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line61" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="664.14825"
+     id="text62">2. insert message document { type, content, senderId, senderName ✱, conversationId, createdAt }</text>
+  <line
+     x1="473.79434"
+     y1="704.14825"
+     x2="297.79434"
+     y2="704.14825"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line62" />
+  <text
+     class="lbl"
+     x="320.79434"
+     y="697.14825"
+     fill="#1D6FA8"
+     id="text63">savedMessage { _id assigned by MongoDB }</text>
+  <line
+     x1="297.79434"
+     y1="736.14825"
+     x2="653.79437"
+     y2="736.14825"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line63" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="728.14825"
+     id="text64">3. update conversations.lastMessage snapshot { messageId, content, senderId, senderName, sentAt }</text>
+  <line
+     x1="653.79437"
+     y1="770.14825"
+     x2="297.79434"
+     y2="770.14825"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line64" />
+  <text
+     class="lbl"
+     x="360.79434"
+     y="763.14825"
+     fill="#1D6FA8"
+     id="text65">acknowledged</text>
+  <line
+     x1="297.79434"
+     y1="806.14825"
+     x2="833.79437"
+     y2="806.14825"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line65" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="798.14825"
+     id="text66">4. upsert notification — increment unreadCount for each participant except sender</text>
+  <line
+     x1="833.79437"
+     y1="840.14825"
+     x2="297.79434"
+     y2="840.14825"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line66" />
+  <text
+     class="lbl"
+     x="440.79434"
+     y="833.14825"
+     fill="#1D6FA8"
+     id="text67">acknowledged</text>
+  <line
+     x1="297.79434"
+     y1="874.14825"
+     x2="1013.7944"
+     y2="874.14825"
+     class="co"
+     marker-end="url(#ao)"
+     id="line67" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="866.14825"
+     id="text68">5. publish → chat.messages { messageId, conversationId, recipientIds[], messagePayload }</text>
+  <line
+     x1="1013.7944"
+     y1="906.14825"
+     x2="1200.7943"
+     y2="906.14825"
+     class="co"
+     marker-end="url(#ao)"
+     id="line68" />
+  <text
+     class="lbl"
+     x="1031.135"
+     y="898.7511"
+     id="text69">6. event stored on topic partition</text>
+  <line
+     x1="1013.7944"
+     y1="940.14825"
+     x2="297.79434"
+     y2="940.14825"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line69" />
+  <text
+     class="lbl"
+     x="420.79434"
+     y="933.14825"
+     fill="#1D6FA8"
+     id="text70">ack from Kafka broker</text>
+  <line
+     x1="297.79434"
+     y1="974.14825"
+     x2="107.79435"
+     y2="974.14825"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line70" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="967.14825"
+     fill="#1D6FA8"
+     id="text71">7. STOMP receipt — savedMessage payload (confirmed send)</text>
+  <rect
+     x="68.79435"
+     y="1000.1483"
+     width="460"
+     height="26"
+     rx="6"
+     class="good"
+     id="rect71" />
+  <text
+     class="note"
+     x="88.79435"
+     y="1017.1483"
+     fill="#065F46"
+     id="text72">Optimistic message confirmed: &quot;sending…&quot; replaced with final _id</text>
+  <line
+     x1="1200.7943"
+     y1="1046.1483"
+     x2="1620.7943"
+     y2="1046.1483"
+     class="co"
+     marker-end="url(#ao)"
+     id="line72" />
+  <text
+     class="lbl"
+     x="1210.7943"
+     y="1039.1483"
+     id="text73">8. KafkaConsumerConfig on each instance consumes event from chat.messages</text>
+  <rect
+     x="1540.7943"
+     y="1068.1483"
+     width="160"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect73" />
+  <text
+     class="note"
+     x="1620.7943"
+     y="1084.1483"
+     text-anchor="middle"
+     id="text74">check local session registry</text>
+  <rect
+     x="1513.3339"
+     y="1104.2107"
+     width="214.92078"
+     height="25.87504"
+     rx="5.3730192"
+     class="ibox"
+     id="rect74" />
+  <text
+     class="note"
+     x="1620.7943"
+     y="1120.1483"
+     text-anchor="middle"
+     id="text75">push → /topic/conversations/{id}/messages</text>
+  <rect
+     x="68.79435"
+     y="1150.1483"
+     width="1660.4772"
+     height="57.301987"
+     rx="5.9021697"
+     fill="#e8f8f2"
+     stroke="none"
+     id="rect75"
+     style="stroke-width:1.06177" />
+  <text
+     class="note"
+     x="88.79435"
+     y="1168.1483"
+     id="text76">If recipient is on a DIFFERENT backend instance, the KafkaConsumer on THAT instance delivers it — this is multi-instance fan-out (see Flow D).</text>
+  <text
+     class="note"
+     x="88.79435"
+     y="1184.1483"
+     id="text77">If recipient is offline, the event is discarded by all instances. The unread notification count (step 4) is how they learn about missed messages on next login.</text>
+  <text
+     class="note"
+     x="88.79435"
+     y="1200.1483"
+     id="text78">✱ senderName is stored as a snapshot at send time, not a live reference — message history is preserved even if the user later changes their display name.</text>
+  <rect
+     x="44.79435"
+     y="1324.1483"
+     width="1712"
+     height="440"
+     rx="10"
+     class="band-p"
+     id="rect78" />
+  <rect
+     x="474.56454"
+     y="1633.9539"
+     width="14.296326"
+     height="38.79147"
+     rx="2.0423322"
+     class="a3"
+     id="rect51-8"
+     style="fill:#5dcaa5;stroke:#0f6e56;stroke-width:0.703674" />
+  <text
+     class="plbl"
+     x="68.79435"
+     y="1354.1483"
+     fill="#534AB7"
+     id="text79">FLOW B — FILE / IMAGE MESSAGE (R2 upload before persist)</text>
+  <rect
+     x="93.79435"
+     y="1374.1483"
+     width="14"
+     height="370"
+     rx="2"
+     class="a1"
+     id="rect79" />
+  <rect
+     x="283.78732"
+     y="1423.6901"
+     width="14.014058"
+     height="320.4653"
+     rx="2.0020082"
+     class="a2"
+     id="rect80" />
+  <rect
+     x="1384.0895"
+     y="1529.2538"
+     width="14.204082"
+     height="74.926056"
+     rx="2.0291545"
+     class="a8"
+     id="rect81" />
+  <rect
+     x="68.79435"
+     y="1374.1483"
+     width="700"
+     height="26"
+     rx="6"
+     fill="#ede9fe"
+     stroke="none"
+     id="rect82" />
+  <text
+     class="note"
+     x="88.79435"
+     y="1391.1483"
+     fill="#534AB7"
+     id="text82">Triggered via REST (multipart). WebSocket STOMP cannot carry binary file data.</text>
+  <line
+     x1="107.79435"
+     y1="1426.1483"
+     x2="283.79434"
+     y2="1426.1483"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line82" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="1418.1483"
+     id="text83">1. POST /api/v1/conversations/{id}/messages/upload (multipart/form-data)</text>
+  <g
+     id="g126"
+     transform="translate(0.2326601,195.7229)">
+    <rect
+       x="240"
+       y="1248"
+       width="300"
+       height="26"
+       rx="4"
+       class="ibox"
+       id="rect83" />
+    <text
+       class="note"
+       x="390"
+       y="1265"
+       text-anchor="middle"
+       id="text84">validate MIME type + size (images ≤10MB, files ≤25MB)</text>
+  </g>
+  <line
+     x1="283.79434"
+     y1="1498.1483"
+     x2="107.79435"
+     y2="1498.1483"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line84" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="1490.1483"
+     fill="#B91C1C"
+     id="text85">[invalid type or size] → 400 Bad Request</text>
+  <line
+     x1="297.79434"
+     y1="1534.1483"
+     x2="1383.7943"
+     y2="1534.1483"
+     class="cp"
+     marker-end="url(#ap)"
+     id="line85" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="1526.1483"
+     id="text86">2. stream file to Cloudflare R2 via R2StorageClient (AWS S3 SDK)</text>
+  <line
+     x1="1383.7943"
+     y1="1568.1483"
+     x2="297.79434"
+     y2="1568.1483"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line86" />
+  <text
+     class="lbl"
+     x="340.79434"
+     y="1560.1483"
+     fill="#B91C1C"
+     id="text87">[R2 upload fails] → do NOT persist message → 500 to client</text>
+  <line
+     x1="1383.7943"
+     y1="1602.1483"
+     x2="297.79434"
+     y2="1602.1483"
+     class="cpd"
+     marker-end="url(#ap)"
+     id="line87" />
+  <text
+     class="lbl"
+     x="600.79437"
+     y="1594.1483"
+     fill="#534AB7"
+     id="text88">R2 object key + presigned URL (1 hr expiry)</text>
+  <line
+     x1="297.79434"
+     y1="1636.1483"
+     x2="473.79434"
+     y2="1636.1483"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line88" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="1628.1483"
+     id="text89">3. insert message { type: IMAGE|FILE, file: { fileId, fileName, mimeType, url } }</text>
+  <line
+     x1="473.79434"
+     y1="1670.1483"
+     x2="297.79434"
+     y2="1670.1483"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line89" />
+  <text
+     class="lbl"
+     x="320.79434"
+     y="1662.1483"
+     fill="#1D6FA8"
+     id="text90">savedMessage with _id</text>
+  <rect
+     x="68.79435"
+     y="1696.1483"
+     width="1665.5323"
+     height="43.863678"
+     rx="5.9201388"
+     fill="#ede9fe"
+     stroke="none"
+     id="rect90"
+     style="stroke-width:1.09646" />
+  <text
+     class="note"
+     x="88.79435"
+     y="1714.1483"
+     id="text91">Steps 3–8 from Flow A continue identically: update lastMessage → upsert notifications → publish to Kafka → WebSocket fan-out delivery.</text>
+  <text
+     class="note"
+     x="88.79435"
+     y="1730.1483"
+     id="text92">R2 upload MUST succeed before message is persisted. DB never holds a message with a broken file reference. Presigned URL expires after 1hr — refresh via GET /api/v1/files/{fileId}/url.</text>
+  <rect
+     x="44.79435"
+     y="1804.1483"
+     width="1712"
+     height="240"
+     rx="10"
+     class="band-o"
+     id="rect92" />
+  <text
+     class="plbl"
+     x="68.79435"
+     y="1834.1483"
+     fill="#B45309"
+     id="text93">FLOW C — REST FALLBACK (WebSocket unavailable)</text>
+  <rect
+     x="93.79435"
+     y="1854.1483"
+     width="14"
+     height="170"
+     rx="2"
+     class="a1"
+     id="rect93" />
+  <rect
+     x="283.78064"
+     y="1901.4366"
+     width="14.027431"
+     height="122.72545"
+     rx="2.0039186"
+     class="a2"
+     id="rect94" />
+  <rect
+     x="68.79435"
+     y="1854.1483"
+     width="700"
+     height="26"
+     rx="6"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect95" />
+  <text
+     class="note"
+     x="88.79435"
+     y="1871.1483"
+     id="text95">Triggered when WebSocket is unavailable — not yet connected, or SockJS is in backoff retry after a disconnect.</text>
+  <line
+     x1="107.79435"
+     y1="1906.1483"
+     x2="283.79434"
+     y2="1906.1483"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line95" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="1898.1483"
+     id="text96">1. POST /api/v1/conversations/{id}/messages { type: TEXT, content: &quot;…&quot; } (Bearer token)</text>
+  <rect
+     x="240.79436"
+     y="1928.1483"
+     width="680"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect96" />
+  <text
+     class="note"
+     x="580.79437"
+     y="1945.1483"
+     text-anchor="middle"
+     id="text97">Internal flow identical to Flow A steps 2–8: persist → lastMessage → notifications → Kafka publish → WebSocket delivery</text>
+  <line
+     x1="297.79434"
+     y1="1976.1483"
+     x2="107.79435"
+     y2="1976.1483"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line97" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="1968.1483"
+     fill="#1D6FA8"
+     id="text98">2. 201 Created — full message object (same shape as WebSocket receipt)</text>
+  <rect
+     x="68.79435"
+     y="2000.1483"
+     width="1671.1493"
+     height="26"
+     rx="5.940104"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect98"
+     style="stroke-width:0.994996" />
+  <text
+     class="note"
+     x="88.79435"
+     y="2017.1483"
+     id="text99">Client sends an idempotency key (client-generated UUID in X-Idempotency-Key header). Duplicate retries return the already-persisted message, not a duplicate.</text>
+  <rect
+     x="44.79435"
+     y="2084.1482"
+     width="1712"
+     height="340"
+     rx="10"
+     class="band-b"
+     id="rect99" />
+  <rect
+     x="1015.1147"
+     y="2263.1101"
+     width="14.209018"
+     height="49.316002"
+     rx="2.0298595"
+     class="a6"
+     id="rect54-9"
+     style="fill:#fcefd9;stroke:#b45309;stroke-width:0.790983" />
+  <rect
+     x="474.29398"
+     y="2217.6396"
+     width="14.372089"
+     height="30.725132"
+     rx="2.0531554"
+     class="a3"
+     id="rect51-9"
+     style="fill:#5dcaa5;stroke:#0f6e56;stroke-width:0.627911" />
+  <text
+     class="plbl"
+     x="68.79435"
+     y="2114.1482"
+     fill="#1D6FA8"
+     id="text100">FLOW D — MULTI-INSTANCE FAN-OUT (sender and recipient on different backend instances)</text>
+  <rect
+     x="68.79435"
+     y="2128.1482"
+     width="320"
+     height="28"
+     rx="6"
+     class="info"
+     id="rect100" />
+  <text
+     class="note"
+     x="228.79436"
+     y="2146.1482"
+     text-anchor="middle"
+     id="text101">Instance A (sender's WebSocket session lives here)</text>
+  <rect
+     x="1440.7943"
+     y="2128.1482"
+     width="300"
+     height="28"
+     rx="6"
+     class="info"
+     id="rect101" />
+  <text
+     class="note"
+     x="1590.7943"
+     y="2146.1482"
+     text-anchor="middle"
+     id="text102">Instance B (recipient's WebSocket session lives here)</text>
+  <rect
+     x="93.79435"
+     y="2170.1482"
+     width="14"
+     height="220"
+     rx="2"
+     class="a1"
+     id="rect102" />
+  <rect
+     x="283.79434"
+     y="2202.1482"
+     width="14"
+     height="188"
+     rx="2"
+     class="a2"
+     id="rect103" />
+  <line
+     x1="107.79435"
+     y1="2184.1482"
+     x2="283.79434"
+     y2="2184.1482"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line103" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="2176.1482"
+     id="text103">1. sender sends message → Instance A handles it (MessageService persists to shared MongoDB Atlas)</text>
+  <line
+     x1="297.79434"
+     y1="2220.1482"
+     x2="473.79434"
+     y2="2220.1482"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line104" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="2212.1482"
+     id="text104">2. message persisted (shared MongoDB — accessible by all instances)</text>
+  <line
+     x1="473.79434"
+     y1="2246.1482"
+     x2="297.79434"
+     y2="2246.1482"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line105" />
+  <text
+     class="lbl"
+     x="320.79434"
+     y="2238.1482"
+     fill="#1D6FA8"
+     id="text105">savedMessage</text>
+  <line
+     x1="297.79434"
+     y1="2272.1482"
+     x2="1013.7944"
+     y2="2272.1482"
+     class="co"
+     marker-end="url(#ao)"
+     id="line106" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="2264.1482"
+     id="text106">3. Instance A publishes event → chat.messages (Upstash Kafka)</text>
+  <line
+     x1="1200.7943"
+     y1="2304.1482"
+     x2="1620.7943"
+     y2="2304.1482"
+     class="co"
+     marker-end="url(#ao)"
+     id="line107" />
+  <text
+     class="lbl"
+     x="1210.7943"
+     y="2296.1482"
+     id="text107">4. ALL instances (A, B, others) consume event from their Kafka consumer group</text>
+  <rect
+     x="68.79435"
+     y="2328.1482"
+     width="500"
+     height="28"
+     rx="6"
+     class="info"
+     id="rect107" />
+  <text
+     class="note"
+     x="318.79434"
+     y="2346.1482"
+     text-anchor="middle"
+     id="text108">Instance A: no recipient session in registry → discards event silently</text>
+  <rect
+     x="1440.7943"
+     y="2328.1482"
+     width="300"
+     height="28"
+     rx="6"
+     class="info"
+     id="rect108" />
+  <text
+     class="note"
+     x="1590.7943"
+     y="2346.1482"
+     text-anchor="middle"
+     id="text109">Instance B: finds recipient session → pushes via WebSocket</text>
+  <rect
+     x="68.79435"
+     y="2372.1482"
+     width="1671.7111"
+     height="26"
+     rx="5.9421005"
+     fill="#dbeafe"
+     stroke="none"
+     id="rect109"
+     style="stroke-width:0.995163" />
+  <text
+     class="note"
+     x="88.79435"
+     y="2389.1482"
+     id="text110">Adding more Render instances requires zero code changes. Kafka consumer group membership handles the routing automatically.</text>
+  <rect
+     x="44.79435"
+     y="2464.1482"
+     width="1712"
+     height="460"
+     rx="10"
+     class="band-r"
+     id="rect110" />
+  <text
+     class="plbl"
+     x="68.79435"
+     y="2494.1482"
+     fill="#B91C1C"
+     id="text111">FLOW E — ERROR PATHS</text>
+  <rect
+     x="68.791397"
+     y="2509.022"
+     width="1663.0919"
+     height="188.00591"
+     rx="7.8819523"
+     class="err"
+     id="rect111" />
+  <rect
+     x="474.21805"
+     y="2593.5249"
+     width="14.288954"
+     height="39.629055"
+     rx="2.0412788"
+     class="a3"
+     id="rect51-9-2"
+     style="fill:#5dcaa5;stroke:#0f6e56;stroke-width:0.711047" />
+  <text
+     class="slbl"
+     x="88.79435"
+     y="2532.1482"
+     fill="#B91C1C"
+     id="text112">E1 — MongoDB Persist Fails</text>
+  <rect
+     x="93.79435"
+     y="2546.1482"
+     width="14"
+     height="140"
+     rx="2"
+     class="a1"
+     id="rect112" />
+  <rect
+     x="283.84512"
+     y="2560.5398"
+     width="13.898464"
+     height="107.55766"
+     rx="1.9854949"
+     class="a2"
+     id="rect113" />
+  <line
+     x1="107.79435"
+     y1="2562.1482"
+     x2="283.79434"
+     y2="2562.1482"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line113" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="2554.1482"
+     id="text113">1. message arrives at MessageService</text>
+  <line
+     x1="297.79434"
+     y1="2596.1482"
+     x2="473.79434"
+     y2="2596.1482"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line114" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="2588.1482"
+     id="text114">2. insert message document → MongoDB throws DataAccessException</text>
+  <line
+     x1="473.79434"
+     y1="2630.1482"
+     x2="297.79434"
+     y2="2630.1482"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line115" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="2622.1482"
+     fill="#B91C1C"
+     id="text115">3. DataAccessException caught — Kafka is NOT published</text>
+  <line
+     x1="297.79434"
+     y1="2664.1482"
+     x2="107.79435"
+     y2="2664.1482"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line116" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="2656.1482"
+     fill="#B91C1C"
+     id="text116">4. STOMP ERROR frame / 500 JSON → optimistic message reverted → &quot;failed to send&quot; + retry</text>
+  <rect
+     x="68.791351"
+     y="2712.1453"
+     width="1662.7299"
+     height="188.006"
+     rx="7.8802366"
+     fill="#fee2e2"
+     stroke="#b91c1c"
+     stroke-width="0.8"
+     id="rect116" />
+  <rect
+     x="1014.989"
+     y="2771.1875"
+     width="14.28424"
+     height="40.169498"
+     rx="2.0406055"
+     class="a6"
+     id="rect54-5"
+     style="fill:#fcefd9;stroke:#b45309;stroke-width:0.715761" />
+  <text
+     class="slbl"
+     x="88.79435"
+     y="2734.1482"
+     fill="#B91C1C"
+     id="text117">E2 — Kafka Publish Fails After MongoDB Persist (message exists in DB, real-time delivery failed)</text>
+  <rect
+     x="283.79434"
+     y="2760.1482"
+     width="14"
+     height="120"
+     rx="2"
+     class="a2"
+     id="rect117" />
+  <line
+     x1="297.79434"
+     y1="2774.1482"
+     x2="1013.7944"
+     y2="2774.1482"
+     class="co"
+     marker-end="url(#ao)"
+     id="line117" />
+  <text
+     class="lbl"
+     x="304.79434"
+     y="2766.1482"
+     id="text118">1. publish → chat.messages → Kafka broker unreachable</text>
+  <line
+     x1="1013.7944"
+     y1="2808.1482"
+     x2="297.79434"
+     y2="2808.1482"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line118" />
+  <text
+     class="lbl"
+     x="340.79434"
+     y="2800.1482"
+     fill="#B91C1C"
+     id="text119">KafkaProducerException (after 3 retries: 1s → 2s → 4s backoff)</text>
+  <line
+     x1="297.79434"
+     y1="2846.1482"
+     x2="107.79435"
+     y2="2846.1482"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line119" />
+  <text
+     class="lbl"
+     x="116.79435"
+     y="2838.1482"
+     fill="#1D6FA8"
+     id="text120">2. sender receives 200/receipt — message was persisted, delivery failed</text>
+  <rect
+     x="88.79435"
+     y="2866.1482"
+     width="1625.8732"
+     height="26"
+     rx="5.8484645"
+     fill="#fff5f5"
+     stroke="none"
+     id="rect120"
+     style="stroke-width:0.987291" />
+  <text
+     class="note"
+     x="108.79435"
+     y="2883.1482"
+     fill="#7F1D1D"
+     id="text121">Message NOT lost — recipients see it on next REST history fetch. This is why persist-before-publish is the correct ordering — the failure state is recoverable.</text>
+  <rect
+     x="44.79435"
+     y="2974.1482"
+     width="1712"
+     height="120"
+     rx="10"
+     fill="#fafaf8"
+     stroke="#d8d6cf"
+     stroke-width="0.8"
+     id="rect121" />
+  <text
+     class="slbl"
+     x="68.79435"
+     y="3002.1482"
+     id="text122">ORDERING RULES (must be enforced in MessageService without exception)</text>
+  <text
+     class="lbl"
+     x="68.79435"
+     y="3030.1482"
+     id="text123">▸ Persist to MongoDB BEFORE publishing to Kafka — data integrity guarantee</text>
+  <text
+     class="lbl"
+     x="68.79435"
+     y="3054.1482"
+     id="text124">▸ Update lastMessage snapshot AFTER persist, BEFORE Kafka — snapshot must reflect the committed message</text>
+  <text
+     class="lbl"
+     x="68.79435"
+     y="3078.1482"
+     id="text125">▸ Upsert notifications AFTER persist, BEFORE Kafka — offline recipients must have accurate unread counts</text>
+</svg>

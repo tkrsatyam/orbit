@@ -1,0 +1,1485 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1400 2950"
+   role="img"
+   version="1.1"
+   id="svg93"
+   sodipodi:docname="websocket_lifecycle.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview93"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.5106667"
+     inkscape:cx="253.19947"
+     inkscape:cy="2983.782"
+     inkscape:window-width="2560"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg93" />
+  <title
+     id="title1">Orbit — WebSocket Connection Lifecycle</title>
+  <desc
+     id="desc1">Sequence diagram showing WebSocket connection, subscription, heartbeat, reconnection, and disconnection phases</desc>
+  <defs
+     id="defs4">
+    <marker
+       id="arr-green"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="arr-blue"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="arr-orange"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B45309"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="arr-red"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B91C1C"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <style
+       id="style4">
+    text  { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .th   { font-size: 14px; font-weight: 700; }
+    .ts   { font-size: 12px; }
+    .tl   { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+    .slbl { font-size: 12px; font-weight: 700; fill: #888780; letter-spacing: 1px; }
+    .plbl { font-size: 13px; font-weight: 700; }
+    .mlbl { font-size: 12px; }
+    .note { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+
+    /* participant headers */
+    .p-react  { fill: #C7F0E3; stroke: #0F6E56;  stroke-width: 1.5; }
+    .p-sec    { fill: #E8EEF7; stroke: #1D6FA8;  stroke-width: 1.5; }
+    .p-ws     { fill: #9FE1CB; stroke: #0F6E56;  stroke-width: 1.5; }
+    .p-kafka  { fill: #FCEFD9; stroke: #B45309;  stroke-width: 1.5; }
+    .p-mongo  { fill: #F4F3F0; stroke: #888780;  stroke-width: 1.5; }
+
+    /* activation boxes */
+    .a-react  { fill: #C7F0E3; stroke: #0F6E56;  stroke-width: 1; }
+    .a-sec    { fill: #E8EEF7; stroke: #1D6FA8;  stroke-width: 1; }
+    .a-ws     { fill: #9FE1CB; stroke: #0F6E56;  stroke-width: 1; }
+    .a-kafka  { fill: #FCEFD9; stroke: #B45309;  stroke-width: 1; }
+    .a-mongo  { fill: #F4F3F0; stroke: #888780;  stroke-width: 1; }
+
+    /* lifelines */
+    .ll { stroke: #C4C2BB; stroke-width: 1; stroke-dasharray: 6 4; fill: none; }
+
+    /* arrows */
+    .c-green  { stroke: #0F6E56; stroke-width: 1.4; fill: none; }
+    .c-blue   { stroke: #1D6FA8; stroke-width: 1.4; fill: none; stroke-dasharray: 6 3; }
+    .c-orange { stroke: #B45309; stroke-width: 1.4; fill: none; }
+    .c-red    { stroke: #B91C1C; stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+
+    /* phase bands */
+    .band-green  { fill: #F0FAF6; stroke: #0F6E56; stroke-width: 1; stroke-dasharray: 6 4; }
+    .band-purple { fill: #F5F3FF; stroke: #534AB7; stroke-width: 1; stroke-dasharray: 6 4; }
+    .band-orange { fill: #FFFBEB; stroke: #B45309; stroke-width: 1; stroke-dasharray: 6 4; }
+    .band-red    { fill: #FFF5F5; stroke: #B91C1C; stroke-width: 1; stroke-dasharray: 6 4; }
+    .band-grey   { fill: #F7F6F4; stroke: #888780; stroke-width: 1; stroke-dasharray: 6 4; }
+
+    /* inline action labels */
+    .action { fill: #FFFFFF; stroke: #B4B2A9; stroke-width: 0.8; }
+  </style>
+  </defs>
+  <!-- outer frame -->
+  <rect
+     x="20.013962"
+     y="20.013121"
+     width="1359.972"
+     height="2909.9543"
+     rx="13.999711"
+     fill="none"
+     stroke="#d8d6cf"
+     stroke-width="0.991312"
+     stroke-dasharray="10, 5"
+     id="rect4" />
+  <text
+     class="slbl"
+     x="44"
+     y="46"
+     id="text4">SEQUENCE DIAGRAM — WEBSOCKET CONNECTION LIFECYCLE</text>
+  <!-- ═══════════════════════════════════════
+     LEGEND
+═══════════════════════════════════════ -->
+  <g
+     id="g109"
+     transform="translate(171.21561,-9.8177751)">
+    <rect
+       x="899.91309"
+       y="55.913059"
+       width="285.38837"
+       height="182.17389"
+       rx="5.0068135"
+       fill="#fafaf8"
+       stroke="#d8d6cf"
+       stroke-width="0.756647"
+       id="rect5" />
+    <text
+       class="slbl"
+       x="922"
+       y="80"
+       id="text5">LEGEND</text>
+    <line
+       x1="922"
+       y1="100"
+       x2="982"
+       y2="100"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line5" />
+    <text
+       class="ts"
+       x="992"
+       y="104"
+       id="text6">Request / call →</text>
+    <line
+       x1="922"
+       y1="124"
+       x2="982"
+       y2="124"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line6" />
+    <text
+       class="ts"
+       x="992"
+       y="128"
+       id="text7">Response / return (dashed)</text>
+    <line
+       x1="922"
+       y1="148"
+       x2="982"
+       y2="148"
+       class="c-orange"
+       marker-end="url(#arr-orange)"
+       id="line7" />
+    <text
+       class="ts"
+       x="992"
+       y="152"
+       id="text8">Kafka / presence event</text>
+    <line
+       x1="922"
+       y1="172"
+       x2="982"
+       y2="172"
+       class="c-red"
+       marker-end="url(#arr-red)"
+       id="line8" />
+    <text
+       class="ts"
+       x="992"
+       y="176"
+       id="text9">Error or rejection (dashed)</text>
+    <rect
+       x="922"
+       y="190"
+       width="14"
+       height="28"
+       rx="2"
+       class="a-react"
+       id="rect9" />
+    <text
+       class="ts"
+       x="944"
+       y="209"
+       id="text10">Activation box (component is processing)</text>
+  </g>
+  <!-- ═══════════════════════════════════════
+     PARTICIPANT HEADERS  y = 80
+     x-centres: React=140  Sec=360  WS=580  Kafka=800  Mongo=1040
+═══════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════
+     LIFELINES  start y=148, end y=2720
+═══════════════════════════════════════ -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     PHASE 1 — CONNECTION
+     band: y=270 → y=760
+═══════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- step 1 ─ HTTP upgrade request -->
+  <!-- action box: extract token -->
+  <!-- step 2 ─ validate JWT -->
+  <!-- return: userId, email, role -->
+  <!-- step 3 ─ rejected path -->
+  <!-- action box: populate SecurityContext -->
+  <!-- step 3b ─ upgrade accepted -->
+  <!-- action box: register session -->
+  <!-- step 4 ─ set online=true -->
+  <!-- step 5 ─ STOMP CONNECTED back to client -->
+  <!-- step 6 ─ presence broadcast -->
+  <!-- phase note -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     PHASE 2 — SUBSCRIPTION
+     band: y=800 → y=1150
+═══════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- step 7 ─ subscribe conversations -->
+  <!-- step 8 ─ subscribe presence -->
+  <!-- step 9 ─ subscribe private queue -->
+  <!-- step 10 ─ server receipts -->
+  <!-- step 11 ─ fetch history via REST -->
+  <!-- phase note -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     PHASE 3 — ACTIVE SESSION
+     band: y=1190 → y=1540
+═══════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- heartbeat out -->
+  <!-- heartbeat response -->
+  <!-- heartbeat note -->
+  <!-- divider -->
+  <!-- token expiry section -->
+  <!-- step 13 ─ token refresh -->
+  <!-- phase note -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     PHASE 4 — RECONNECTION
+     band: y=1580 → y=2080
+═══════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- drop event -->
+  <!-- session deregistered -->
+  <!-- online=false on unexpected drop -->
+  <!-- SockJS backoff -->
+  <!-- token check before reconnect -->
+  <!-- step 14 ─ reconnect attempt -->
+  <!-- step 15 ─ JWT re-validated -->
+  <!-- step 16 ─ new session + CONNECTED -->
+  <!-- step 18 ─ re-subscribe -->
+  <!-- step 19 ─ presence online again -->
+  <!-- step 20 ─ re-fetch history -->
+  <!-- phase note -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     PHASE 5 — CLEAN DISCONNECT
+     band: y=2120 → y=2560
+═══════════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- step 21 ─ logout REST first -->
+  <!-- step 22 ─ STOMP DISCONNECT frame -->
+  <!-- action box: deregister session -->
+  <!-- step 23 ─ set online=false -->
+  <!-- step 24 ─ presence broadcast offline -->
+  <!-- step 25 ─ connection closed -->
+  <!-- phase note -->
+  <!-- ═══════════════════════════════════════════════════════════════
+     BOTTOM SUMMARY
+═══════════════════════════════════════════════════════════════ -->
+  <g
+     id="g110"
+     transform="translate(0,176.93272)">
+    <rect
+       x="60"
+       y="80"
+       width="160"
+       height="68"
+       rx="8"
+       class="p-react"
+       id="rect10" />
+    <text
+       class="th"
+       x="140"
+       y="108"
+       text-anchor="middle"
+       fill="#053D30"
+       id="text11">React SPA</text>
+    <text
+       class="tl"
+       x="140"
+       y="128"
+       text-anchor="middle"
+       id="text12">SockJS + STOMP.js</text>
+    <rect
+       x="280"
+       y="80"
+       width="160"
+       height="68"
+       rx="8"
+       class="p-sec"
+       id="rect12" />
+    <text
+       class="th"
+       x="360"
+       y="108"
+       text-anchor="middle"
+       fill="#0D3F62"
+       id="text13">Security Filter</text>
+    <text
+       class="tl"
+       x="360"
+       y="128"
+       text-anchor="middle"
+       id="text14">+ Handshake Interceptor</text>
+    <rect
+       x="500"
+       y="80"
+       width="160"
+       height="68"
+       rx="8"
+       class="p-ws"
+       id="rect14" />
+    <text
+       class="th"
+       x="580"
+       y="108"
+       text-anchor="middle"
+       fill="#042D24"
+       id="text15">WebSocketConfig</text>
+    <text
+       class="tl"
+       x="580"
+       y="128"
+       text-anchor="middle"
+       id="text16">STOMP Broker</text>
+    <rect
+       x="720"
+       y="80"
+       width="160"
+       height="68"
+       rx="8"
+       class="p-kafka"
+       id="rect16" />
+    <text
+       class="th"
+       x="800"
+       y="108"
+       text-anchor="middle"
+       fill="#6B3A04"
+       id="text17">KafkaConsumer</text>
+    <text
+       class="tl"
+       x="800"
+       y="128"
+       text-anchor="middle"
+       id="text18">Config</text>
+    <g
+       id="g108"
+       transform="translate(-0.66196241,1.3239189)">
+      <rect
+         x="960"
+         y="80"
+         width="160"
+         height="68"
+         rx="8"
+         class="p-mongo"
+         id="rect18" />
+      <text
+         class="th"
+         x="1040"
+         y="108"
+         text-anchor="middle"
+         fill="#3d3d3a"
+         id="text19">MongoDB</text>
+      <text
+         class="tl"
+         x="1040"
+         y="128"
+         text-anchor="middle"
+         id="text20">via Repositories</text>
+    </g>
+    <line
+       x1="140"
+       y1="148"
+       x2="140"
+       y2="2720"
+       class="ll"
+       id="line20" />
+    <line
+       x1="360"
+       y1="148"
+       x2="360"
+       y2="2720"
+       class="ll"
+       id="line21" />
+    <line
+       x1="580"
+       y1="148"
+       x2="580"
+       y2="2720"
+       class="ll"
+       id="line22" />
+    <line
+       x1="800"
+       y1="148"
+       x2="800"
+       y2="2720"
+       class="ll"
+       id="line23" />
+    <line
+       x1="1040"
+       y1="148"
+       x2="1040"
+       y2="2720"
+       class="ll"
+       id="line24" />
+    <rect
+       x="44"
+       y="270"
+       width="1312"
+       height="490"
+       rx="10"
+       class="band-green"
+       id="rect24" />
+    <text
+       class="plbl"
+       x="68"
+       y="298"
+       fill="#0F6E56"
+       id="text24">PHASE 1 — CONNECTION</text>
+    <rect
+       x="132"
+       y="314"
+       width="16"
+       height="430"
+       rx="2"
+       class="a-react"
+       id="rect25" />
+    <rect
+       x="352.02032"
+       y="323.16962"
+       width="15.959325"
+       height="212.81006"
+       rx="1.9949156"
+       class="a-sec"
+       id="rect26" />
+    <rect
+       x="572.03052"
+       y="508.88214"
+       width="15.93891"
+       height="235.08731"
+       rx="1.9923637"
+       class="a-ws"
+       id="rect27" />
+    <line
+       x1="148"
+       y1="326"
+       x2="352"
+       y2="326"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line27" />
+    <text
+       class="mlbl"
+       x="160"
+       y="318"
+       id="text27">1. GET /ws?token=eyJhbGc… (HTTP Upgrade — SockJS negotiation)</text>
+    <rect
+       x="306.33099"
+       y="344.96469"
+       width="220"
+       height="24"
+       rx="4"
+       class="action"
+       id="rect28" />
+    <text
+       class="note"
+       x="416.33099"
+       y="360.96469"
+       text-anchor="middle"
+       id="text28">extract JWT from ?token= query param</text>
+    <line
+       x1="368.33099"
+       y1="391.2533"
+       x2="1040.3309"
+       y2="391.2533"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line28" />
+    <text
+       class="mlbl"
+       x="380.33099"
+       y="383.2533"
+       id="text29">2. validate JWT — check claims, expiry, signature</text>
+    <line
+       x1="1040.3309"
+       y1="415.2533"
+       x2="368.33099"
+       y2="415.2533"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line29" />
+    <text
+       class="mlbl"
+       x="580.33099"
+       y="407.2533"
+       fill="#1D6FA8"
+       id="text30">userId, email, role confirmed</text>
+    <line
+       x1="368.46808"
+       y1="444.63806"
+       x2="148.46808"
+       y2="444.63806"
+       class="c-red"
+       marker-end="url(#arr-red)"
+       id="line30" />
+    <text
+       class="mlbl"
+       x="164.51079"
+       y="424.93616"
+       fill="#B91C1C"
+       id="text31"><tspan
+         sodipodi:role="line"
+         id="tspan107"
+         x="164.51079"
+         y="424.93616">3a. [token invalid / expired] → 401,</tspan><tspan
+         sodipodi:role="line"
+         x="164.51079"
+         y="439.93616"
+         id="tspan108">close code 4401</tspan></text>
+    <rect
+       x="306"
+       y="461.91458"
+       width="220"
+       height="24"
+       rx="4"
+       class="action"
+       id="rect31" />
+    <text
+       class="note"
+       x="416"
+       y="477.91458"
+       text-anchor="middle"
+       id="text32">populate SecurityContext with identity</text>
+    <line
+       x1="368"
+       y1="512.76532"
+       x2="572"
+       y2="512.76532"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line32" />
+    <text
+       class="mlbl"
+       x="380"
+       y="504.76532"
+       id="text33">3b. [token valid] → 101 Switching Protocols — WebSocket upgraded</text>
+    <g
+       id="g97"
+       transform="translate(-0.19388342,42.56332)">
+      <rect
+         x="534"
+         y="494"
+         width="220"
+         height="24"
+         rx="4"
+         class="action"
+         id="rect33" />
+      <text
+         class="note"
+         x="644"
+         y="510"
+         text-anchor="middle"
+         id="text34">register session in session registry</text>
+    </g>
+    <g
+       id="g96"
+       style="display:inline"
+       transform="translate(0.46807598,53.828737)">
+      <g
+         id="g95">
+        <line
+           x1="588"
+           y1="532"
+           x2="1040"
+           y2="532"
+           class="c-green"
+           marker-end="url(#arr-green)"
+           id="line34" />
+        <text
+           class="mlbl"
+           x="600"
+           y="524"
+           id="text35">4. set users.online = true, lastSeen = now</text>
+        <line
+           x1="1040"
+           y1="554"
+           x2="588"
+           y2="554"
+           class="c-blue"
+           marker-end="url(#arr-blue)"
+           id="line35" />
+        <text
+           class="mlbl"
+           x="750"
+           y="546"
+           fill="#1D6FA8"
+           id="text36">acknowledged</text>
+      </g>
+      <g
+         id="g94">
+        <line
+           x1="588"
+           y1="578"
+           x2="148"
+           y2="578"
+           class="c-blue"
+           marker-end="url(#arr-blue)"
+           id="line36" />
+        <text
+           class="mlbl"
+           x="220"
+           y="570"
+           fill="#1D6FA8"
+           id="text37">5. STOMP CONNECTED frame → client</text>
+      </g>
+      <g
+         id="g93">
+        <line
+           x1="588"
+           y1="612"
+           x2="148"
+           y2="612"
+           class="c-orange"
+           marker-end="url(#arr-orange)"
+           id="line37" />
+        <text
+           class="mlbl"
+           x="160"
+           y="604"
+           id="text38">6. presence broadcast → /topic/presence/{userId} { online: true }</text>
+      </g>
+    </g>
+    <rect
+       x="68.468079"
+       y="694.80957"
+       width="1260"
+       height="40"
+       rx="6"
+       fill="#e8f8f2"
+       stroke="none"
+       id="rect38" />
+    <text
+       class="note"
+       x="88.468079"
+       y="711.80957"
+       id="text39">Token is validated only at handshake time — not on every STOMP frame thereafter.</text>
+    <text
+       class="note"
+       x="88.468079"
+       y="726.80957"
+       id="text40">The session is trusted for its lifetime. A fresh token is only needed at the next reconnection.</text>
+    <rect
+       x="43.063847"
+       y="827.14838"
+       width="1312"
+       height="350"
+       rx="10"
+       class="band-purple"
+       id="rect40" />
+    <text
+       class="plbl"
+       x="67.06385"
+       y="855.14838"
+       fill="#534AB7"
+       id="text41">PHASE 2 — SUBSCRIPTION</text>
+    <rect
+       x="131.06384"
+       y="871.14838"
+       width="16"
+       height="288"
+       rx="2"
+       class="a-react"
+       id="rect41" />
+    <rect
+       x="571.53192"
+       y="896.89258"
+       width="16"
+       height="200"
+       rx="2"
+       class="a-ws"
+       id="rect42" />
+    <line
+       x1="147.53192"
+       y1="912.89258"
+       x2="571.53192"
+       y2="912.89258"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line42" />
+    <text
+       class="mlbl"
+       x="158.59576"
+       y="892.7226"
+       id="text42"><tspan
+         sodipodi:role="line"
+         id="tspan104"
+         x="158.59576"
+         y="892.7226">7. SUBSCRIBE /topic/conversations/{id}/messages + /typing + /reactions</tspan><tspan
+         sodipodi:role="line"
+         id="tspan105"
+         x="158.59576"
+         y="907.7226">+ /edited + /deleted + /read</tspan></text>
+    <text
+       class="note"
+       x="169.53192"
+       y="928.89258"
+       id="text43">(one set per conversation the user participates in)</text>
+    <line
+       x1="147.53192"
+       y1="956.89258"
+       x2="571.53192"
+       y2="956.89258"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line43" />
+    <text
+       class="mlbl"
+       x="159.53192"
+       y="948.89258"
+       id="text44">8. SUBSCRIBE /topic/presence/{contactId} (one per contact)</text>
+    <line
+       x1="147.53192"
+       y1="988.89258"
+       x2="571.53192"
+       y2="988.89258"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line44" />
+    <text
+       class="mlbl"
+       x="159.53192"
+       y="980.89258"
+       id="text45">9. SUBSCRIBE /user/queue/notifications (private — this user only)</text>
+    <line
+       x1="587.53192"
+       y1="1016.8926"
+       x2="147.53192"
+       y2="1016.8926"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line45" />
+    <text
+       class="mlbl"
+       x="229.53192"
+       y="1008.8926"
+       fill="#1D6FA8"
+       id="text46">10. RECEIPT frame per subscription</text>
+    <line
+       x1="147.53192"
+       y1="1052.8926"
+       x2="1039.5319"
+       y2="1052.8926"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line46" />
+    <text
+       class="mlbl"
+       x="150.63847"
+       y="1044.8926"
+       id="text47">11. GET /api/v1/conversations/{id}/messages?size=50 (REST — not WebSocket)</text>
+    <line
+       x1="1039.5319"
+       y1="1076.8926"
+       x2="147.53192"
+       y2="1076.8926"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line47" />
+    <text
+       class="mlbl"
+       x="325.70139"
+       y="1070.2166"
+       fill="#1D6FA8"
+       id="text48">last 50 messages + nextCursor for pagination</text>
+    <rect
+       x="67.531929"
+       y="1104.8926"
+       width="1260"
+       height="40"
+       rx="6"
+       fill="#ede9fe"
+       stroke="none"
+       id="rect48" />
+    <text
+       class="note"
+       x="87.531929"
+       y="1121.8926"
+       id="text49">Initial message history is fetched via REST, not WebSocket. REST is more reliable for bulk retrieval of historical data.</text>
+    <text
+       class="note"
+       x="87.531929"
+       y="1136.8926"
+       id="text50">Step 11 repeats once per conversation on connect and again after every reconnection to catch missed messages.</text>
+    <rect
+       x="43.041721"
+       y="1217.1262"
+       width="1312.0443"
+       height="320.55649"
+       rx="10.000338"
+       class="band-orange"
+       id="rect50" />
+    <text
+       class="plbl"
+       x="67.06385"
+       y="1245.1484"
+       fill="#B45309"
+       id="text51">PHASE 3 — ACTIVE SESSION (heartbeat + token refresh)</text>
+    <rect
+       x="131.04085"
+       y="1261.1255"
+       width="16.045994"
+       height="261.36566"
+       rx="2.0057492"
+       class="a-react"
+       id="rect51" />
+    <rect
+       x="571.06384"
+       y="1261.1484"
+       width="16"
+       height="110"
+       rx="2"
+       class="a-ws"
+       id="rect52" />
+    <line
+       x1="147.06384"
+       y1="1277.1484"
+       x2="571.06384"
+       y2="1277.1484"
+       class="c-orange"
+       marker-end="url(#arr-orange)"
+       id="line52" />
+    <text
+       class="mlbl"
+       x="159.06384"
+       y="1269.1484"
+       id="text52">12. STOMP heartbeat PING (client → server, every 25 seconds)</text>
+    <line
+       x1="587.06384"
+       y1="1305.1484"
+       x2="147.06384"
+       y2="1305.1484"
+       class="c-orange"
+       marker-end="url(#arr-orange)"
+       id="line53" />
+    <text
+       class="mlbl"
+       x="199.06384"
+       y="1297.1484"
+       id="text53">STOMP heartbeat PONG (server → client, every 25 seconds)</text>
+    <rect
+       x="67.06385"
+       y="1327.1484"
+       width="1260"
+       height="28"
+       rx="6"
+       fill="#fef3c7"
+       stroke="none"
+       id="rect53" />
+    <text
+       class="note"
+       x="87.06385"
+       y="1346.1484"
+       id="text54">If no PONG is received within 50 seconds (2 × heartbeat interval), SockJS treats the connection as dead and begins Phase 4 reconnection.</text>
+    <line
+       x1="67.06385"
+       y1="1375.1484"
+       x2="1307.0638"
+       y2="1375.1484"
+       stroke="#d8d6cf"
+       stroke-width="0.8"
+       stroke-dasharray="4, 3"
+       id="line54" />
+    <rect
+       x="67.06385"
+       y="1387.1484"
+       width="1260"
+       height="28"
+       rx="6"
+       fill="#fef3c7"
+       stroke="none"
+       id="rect54" />
+    <text
+       class="note"
+       x="87.06385"
+       y="1406.1484"
+       id="text55">React SPA monitors access token expiry (15 min TTL). Before expiry, it proactively refreshes via REST — WebSocket session stays open throughout.</text>
+    <line
+       x1="147.7258"
+       y1="1441.7681"
+       x2="1039.7258"
+       y2="1441.7681"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line55" />
+    <text
+       class="mlbl"
+       x="159.7258"
+       y="1433.7681"
+       id="text56">13. POST /api/v1/auth/refresh (REST — before access token expires)</text>
+    <line
+       x1="1039.7258"
+       y1="1465.7681"
+       x2="147.7258"
+       y2="1465.7681"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line56" />
+    <text
+       class="mlbl"
+       x="359.7258"
+       y="1457.7681"
+       fill="#1D6FA8"
+       id="text57">new accessToken + rotated refreshToken</text>
+    <g
+       id="g103"
+       transform="translate(-0.93615196,27.148407)">
+      <rect
+         x="68"
+         y="1460"
+         width="1260"
+         height="28"
+         rx="6"
+         fill="#fef3c7"
+         stroke="none"
+         id="rect57" />
+      <text
+         class="note"
+         x="88"
+         y="1479"
+         id="text58">New token stored in React memory only. Used for subsequent REST calls and the next WebSocket reconnection — not the current session.</text>
+    </g>
+    <rect
+       x="44"
+       y="1580"
+       width="1312"
+       height="500"
+       rx="10"
+       class="band-red"
+       id="rect58" />
+    <text
+       class="plbl"
+       x="68"
+       y="1608"
+       fill="#B91C1C"
+       id="text59">PHASE 4 — UNEXPECTED DISCONNECT + RECONNECTION</text>
+    <rect
+       x="132"
+       y="1624"
+       width="16"
+       height="440"
+       rx="2"
+       class="a-react"
+       id="rect59" />
+    <rect
+       x="352.03793"
+       y="1764.038"
+       width="15.924105"
+       height="116.30676"
+       rx="1.9905131"
+       class="a-sec"
+       id="rect60" />
+    <rect
+       x="572.06482"
+       y="1624.0648"
+       width="15.870371"
+       height="77.189178"
+       rx="1.9837964"
+       class="a-ws"
+       id="rect61" />
+    <rect
+       x="68"
+       y="1624"
+       width="340"
+       height="28"
+       rx="6"
+       fill="#fee2e2"
+       stroke="#b91c1c"
+       stroke-width="0.8"
+       id="rect62" />
+    <text
+       class="note"
+       x="238"
+       y="1643"
+       text-anchor="middle"
+       id="text62">network drop / server restart / heartbeat timeout</text>
+    <g
+       id="g101"
+       transform="translate(0,-4.6807598)">
+      <rect
+         x="534"
+         y="1630"
+         width="220"
+         height="24"
+         rx="4"
+         class="action"
+         id="rect63" />
+      <text
+         class="note"
+         x="644"
+         y="1646"
+         text-anchor="middle"
+         id="text63">session deregistered from registry</text>
+    </g>
+    <g
+       id="g102"
+       transform="translate(0.46807598,7.0211397)">
+      <line
+         x1="588"
+         y1="1668"
+         x2="1040"
+         y2="1668"
+         class="c-green"
+         marker-end="url(#arr-green)"
+         id="line63" />
+      <text
+         class="mlbl"
+         x="600"
+         y="1660"
+         id="text64">set users.online = false (server-side, on session loss)</text>
+      <line
+         x1="1040"
+         y1="1688"
+         x2="588"
+         y2="1688"
+         class="c-blue"
+         marker-end="url(#arr-blue)"
+         id="line64" />
+    </g>
+    <rect
+       x="68"
+       y="1706"
+       width="620"
+       height="28"
+       rx="6"
+       fill="#fee2e2"
+       stroke="#b91c1c"
+       stroke-width="0.8"
+       id="rect64" />
+    <text
+       class="note"
+       x="378"
+       y="1725"
+       text-anchor="middle"
+       id="text65">SockJS exponential backoff begins: 100ms → 200ms → 400ms → 800ms → capped at 30s per attempt</text>
+    <rect
+       x="68"
+       y="1748"
+       width="500"
+       height="24"
+       rx="6"
+       fill="#fee2e2"
+       stroke="#b91c1c"
+       stroke-width="0.8"
+       id="rect65" />
+    <text
+       class="note"
+       x="318"
+       y="1764"
+       text-anchor="middle"
+       id="text66">if access token expired during disconnect: call POST /auth/refresh first</text>
+    <g
+       id="g99"
+       transform="translate(0,21.063419)">
+      <line
+         x1="148"
+         y1="1792"
+         x2="352"
+         y2="1792"
+         class="c-red"
+         marker-end="url(#arr-red)"
+         id="line66" />
+      <text
+         class="mlbl"
+         x="160"
+         y="1770.4258"
+         id="text67"><tspan
+           sodipodi:role="line"
+           id="tspan100"
+           x="160"
+           y="1770.4258">14. GET /ws?token=… (reconnect</tspan><tspan
+           sodipodi:role="line"
+           x="160"
+           y="1785.4258"
+           id="tspan101">attempt — fresh token if needed)</tspan></text>
+    </g>
+    <g
+       id="g98"
+       transform="translate(0.93615196,14.978431)">
+      <line
+         x1="368"
+         y1="1816"
+         x2="1040"
+         y2="1816"
+         class="c-green"
+         marker-end="url(#arr-green)"
+         id="line67" />
+      <text
+         class="mlbl"
+         x="380"
+         y="1808"
+         id="text68">15. validate JWT (same as Phase 1, step 2)</text>
+      <line
+         x1="1040"
+         y1="1838"
+         x2="368"
+         y2="1838"
+         class="c-blue"
+         marker-end="url(#arr-blue)"
+         id="line68" />
+      <text
+         class="mlbl"
+         x="580"
+         y="1830"
+         fill="#1D6FA8"
+         id="text69">identity confirmed</text>
+      <line
+         x1="368"
+         y1="1862"
+         x2="572"
+         y2="1862"
+         class="c-green"
+         marker-end="url(#arr-green)"
+         id="line69" />
+      <text
+         class="mlbl"
+         x="380"
+         y="1854"
+         id="text70">16. 101 Switching Protocols — new session registered</text>
+      <line
+         x1="588"
+         y1="1886"
+         x2="148"
+         y2="1886"
+         class="c-blue"
+         marker-end="url(#arr-blue)"
+         id="line70" />
+      <text
+         class="mlbl"
+         x="230"
+         y="1878"
+         fill="#1D6FA8"
+         id="text71">17. STOMP CONNECTED frame</text>
+      <line
+         x1="148"
+         y1="1916"
+         x2="572"
+         y2="1916"
+         class="c-green"
+         marker-end="url(#arr-green)"
+         id="line71" />
+      <text
+         class="mlbl"
+         x="160"
+         y="1908"
+         id="text72">18. re-SUBSCRIBE to all previous destinations (client's responsibility — server does not restore subscriptions)</text>
+      <line
+         x1="588"
+         y1="1944"
+         x2="148"
+         y2="1944"
+         class="c-orange"
+         marker-end="url(#arr-orange)"
+         id="line72" />
+      <text
+         class="mlbl"
+         x="160"
+         y="1936"
+         id="text73">19. presence broadcast → /topic/presence/{userId} { online: true }</text>
+      <line
+         x1="148"
+         y1="1972"
+         x2="1040"
+         y2="1972"
+         class="c-green"
+         marker-end="url(#arr-green)"
+         id="line73" />
+      <text
+         class="mlbl"
+         x="160"
+         y="1964"
+         id="text74">20. re-fetch conversation history via REST to recover missed messages</text>
+      <line
+         x1="1040"
+         y1="1994"
+         x2="148"
+         y2="1994"
+         class="c-blue"
+         marker-end="url(#arr-blue)"
+         id="line74" />
+      <text
+         class="mlbl"
+         x="420"
+         y="1986"
+         fill="#1D6FA8"
+         id="text75">messages sent during disconnect</text>
+    </g>
+    <rect
+       x="68"
+       y="2024"
+       width="1260"
+       height="40"
+       rx="6"
+       fill="#fee2e2"
+       stroke="none"
+       id="rect75" />
+    <text
+       class="note"
+       x="88"
+       y="2041"
+       id="text76">Messages sent while disconnected are NOT replayed via WebSocket — the client re-fetches via REST using the before= cursor.</text>
+    <text
+       class="note"
+       x="88"
+       y="2056"
+       id="text77">Re-subscription in step 18 is the client's responsibility. The server only knows about the new session — not the previous subscriptions.</text>
+    <rect
+       x="44"
+       y="2120"
+       width="1312"
+       height="440"
+       rx="10"
+       class="band-grey"
+       id="rect77" />
+    <text
+       class="plbl"
+       x="68"
+       y="2148"
+       fill="#888780"
+       id="text78">PHASE 5 — CLEAN DISCONNECT (logout or tab close)</text>
+    <rect
+       x="132"
+       y="2164"
+       width="16"
+       height="356"
+       rx="2"
+       class="a-react"
+       id="rect78" />
+    <rect
+       x="572"
+       y="2244"
+       width="16"
+       height="200"
+       rx="2"
+       class="a-ws"
+       id="rect79" />
+    <line
+       x1="148"
+       y1="2180"
+       x2="1040"
+       y2="2180"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line79" />
+    <text
+       class="mlbl"
+       x="160"
+       y="2172"
+       id="text79">21. POST /api/v1/auth/logout (REST — blacklist access token, delete refresh token from DB)</text>
+    <line
+       x1="1040"
+       y1="2204"
+       x2="148"
+       y2="2204"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line80" />
+    <text
+       class="mlbl"
+       x="500"
+       y="2196"
+       fill="#1D6FA8"
+       id="text80">204 No Content</text>
+    <line
+       x1="148"
+       y1="2244"
+       x2="572"
+       y2="2244"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line81" />
+    <text
+       class="mlbl"
+       x="160"
+       y="2236"
+       id="text81">22. STOMP DISCONNECT frame</text>
+    <rect
+       x="534"
+       y="2258"
+       width="220"
+       height="24"
+       rx="4"
+       class="action"
+       id="rect81" />
+    <text
+       class="note"
+       x="644"
+       y="2274"
+       text-anchor="middle"
+       id="text82">deregister session from registry</text>
+    <line
+       x1="588"
+       y1="2304.8936"
+       x2="1040"
+       y2="2304.8936"
+       class="c-green"
+       marker-end="url(#arr-green)"
+       id="line82" />
+    <text
+       class="mlbl"
+       x="600"
+       y="2296.8936"
+       id="text83">23. set users.online = false, lastSeen = now</text>
+    <line
+       x1="1040"
+       y1="2326.8936"
+       x2="588"
+       y2="2326.8936"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line83" />
+    <text
+       class="mlbl"
+       x="750"
+       y="2318.8936"
+       fill="#1D6FA8"
+       id="text84">acknowledged</text>
+    <line
+       x1="588"
+       y1="2352"
+       x2="148"
+       y2="2352"
+       class="c-orange"
+       marker-end="url(#arr-orange)"
+       id="line84" />
+    <text
+       class="mlbl"
+       x="160"
+       y="2344"
+       id="text85">24. presence broadcast → /topic/presence/{userId} { online: false, lastSeen }</text>
+    <line
+       x1="588"
+       y1="2390"
+       x2="148"
+       y2="2390"
+       class="c-blue"
+       marker-end="url(#arr-blue)"
+       id="line85" />
+    <text
+       class="mlbl"
+       x="230"
+       y="2382"
+       fill="#1D6FA8"
+       id="text86">25. WebSocket connection closed</text>
+    <rect
+       x="68"
+       y="2424"
+       width="1260"
+       height="63.915268"
+       rx="6"
+       fill="#efefed"
+       stroke="none"
+       id="rect86"
+       style="stroke-width:1.10867" />
+    <text
+       class="note"
+       x="88"
+       y="2443"
+       id="text87">Tab close fires the browser's beforeunload event — React SPA uses this to send the STOMP DISCONNECT frame before the page unloads.</text>
+    <text
+       class="note"
+       x="88"
+       y="2459"
+       id="text88">If the tab closes before DISCONNECT is sent, the server detects session loss via heartbeat timeout and automatically runs steps 23–24.</text>
+    <text
+       class="note"
+       x="88"
+       y="2475"
+       id="text89">Logout must call POST /auth/logout via REST before sending DISCONNECT — this ensures tokens are blacklisted even if the WebSocket close fails.</text>
+    <rect
+       x="44"
+       y="2600"
+       width="1312"
+       height="100"
+       rx="10"
+       fill="#fafaf8"
+       stroke="#d8d6cf"
+       stroke-width="0.8"
+       id="rect89" />
+    <text
+       class="slbl"
+       x="68"
+       y="2626"
+       id="text90">IMPLEMENTATION REFERENCE</text>
+    <text
+       class="ts"
+       x="68"
+       y="2652"
+       id="text91">▸ WebSocketConfig — STOMP broker setup, session registry, handshake interceptor wiring for JWT extraction</text>
+    <text
+       class="ts"
+       x="68"
+       y="2672"
+       id="text92">▸ UserRepository — online flag and lastSeen updates on connect and disconnect events</text>
+    <text
+       class="ts"
+       x="68"
+       y="2692"
+       id="text93">▸ The full message send + Kafka fan-out flow is covered separately in message_send_flow.md</text>
+  </g>
+</svg>

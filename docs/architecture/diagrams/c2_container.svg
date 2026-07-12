@@ -1,0 +1,1088 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1400 980"
+   role="img"
+   version="1.1"
+   id="svg92"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+    <title
+     id="title1">Orbit — C2 Container Diagram</title>
+  <desc
+     id="desc1">C4 Level 2 Container diagram showing the React SPA, Spring Boot monolith, and all external systems with communication protocols</desc>
+  <defs
+     id="defs6">
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#888780"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="arrow-blue"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="arrow-green"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="arrow-teal"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <marker
+       id="arrow-purple"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#534AB7"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path5" />
+    </marker>
+    <marker
+       id="arrow-orange"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B45309"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path6" />
+    </marker>
+    <style
+       id="style6">
+    text { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .th   { font-size: 15px; font-weight: 700; }
+    .thm  { font-size: 13px; font-weight: 600; }
+    .ts   { font-size: 12px; font-weight: 400; }
+    .tl   { font-size: 11px; font-weight: 400; fill: #5F5E5A; font-style: italic; }
+    .tc   { font-size: 11px; font-weight: 500; fill: #888780; }
+    .section-label { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1.2px; }
+    .rel-label { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+    .proto     { font-size: 10px; fill: #888780; font-weight: 600; letter-spacing: 0.5px; }
+
+    /* System boundary */
+    .boundary     { fill: #F7FBF9; stroke: #0F6E56; stroke-width: 1.5; stroke-dasharray: 10 5; }
+    .boundary-lbl { font-size: 12px; font-weight: 700; fill: #0F6E56; letter-spacing: 0.8px; }
+
+    /* Actor */
+    .actor-box { fill: #E8EEF7; stroke: #1D6FA8; stroke-width: 1.5; }
+    .actor-hdr { fill: #B8D0EA; stroke: none; }
+    .actor-txt { fill: #0D3F62; }
+
+    /* React SPA container — teal */
+    .react-box { fill: #C7F0E3; stroke: #0F6E56; stroke-width: 2; }
+    .react-hdr { fill: #5DCAA5; stroke: none; }
+    .react-txt { fill: #053D30; }
+
+    /* Spring Boot container — teal darker shade */
+    .spring-box { fill: #9FE1CB; stroke: #0F6E56; stroke-width: 2; }
+    .spring-hdr { fill: #3DB897; stroke: none; }
+    .spring-txt { fill: #042D24; }
+
+    /* External infra — warm grey */
+    .ext-box { fill: #F4F3F0; stroke: #888780; stroke-width: 1.2; }
+    .ext-hdr { fill: #D8D6CF; stroke: none; }
+    .ext-txt { fill: #3d3d3a; }
+
+    /* External AI — purple */
+    .ai-box  { fill: #EEEDFE; stroke: #534AB7; stroke-width: 1.2; }
+    .ai-hdr  { fill: #CECBF6; stroke: none; }
+    .ai-txt  { fill: #3C3489; }
+
+    /* Relation lines by type */
+    .rel-user   { stroke: #1D6FA8; stroke-width: 1.4; fill: none; }
+    .rel-intern { stroke: #0F6E56; stroke-width: 1.4; fill: none; }
+    .rel-data   { stroke: #0F6E56; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-kafka  { stroke: #B45309; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-ai     { stroke: #534AB7; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-infra  { stroke: #888780; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+  </style>
+  </defs>
+  <!-- ══════════════════════════════════════════════
+     OUTER BOUNDARY + TITLE
+══════════════════════════════════════════════ -->
+  <rect
+     x="20.019693"
+     y="20.019678"
+     width="1361.161"
+     height="939.96063"
+     rx="12.963438"
+     fill="none"
+     stroke="#d8d6cf"
+     stroke-width="1"
+     stroke-dasharray="10, 5"
+     id="rect6" />
+  <text
+     class="section-label"
+     x="40"
+     y="42"
+     id="text6">C4 MODEL — LEVEL 2 — CONTAINER DIAGRAM</text>
+  <!-- LEGEND -->
+  <g
+     id="g92"
+     transform="translate(98.605472,-5.1897617)">
+    <rect
+       x="950"
+       y="50"
+       width="310"
+       height="200"
+       rx="8"
+       fill="#fafaf8"
+       stroke="#d8d6cf"
+       stroke-width="0.8"
+       id="rect7" />
+    <text
+       class="section-label"
+       x="970"
+       y="72"
+       id="text7">LEGEND</text>
+    <rect
+       x="970"
+       y="82"
+       width="18"
+       height="14"
+       rx="3"
+       fill="#c7f0e3"
+       stroke="#0f6e56"
+       stroke-width="2"
+       id="rect8" />
+    <text
+       class="ts"
+       x="996"
+       y="94"
+       id="text8">Container — Frontend</text>
+    <rect
+       x="970"
+       y="104"
+       width="18"
+       height="14"
+       rx="3"
+       fill="#9fe1cb"
+       stroke="#0f6e56"
+       stroke-width="2"
+       id="rect9" />
+    <text
+       class="ts"
+       x="996"
+       y="116"
+       id="text9">Container — Backend</text>
+    <rect
+       x="970"
+       y="126"
+       width="18"
+       height="14"
+       rx="3"
+       fill="#e8eef7"
+       stroke="#1d6fa8"
+       stroke-width="1.5"
+       id="rect10" />
+    <text
+       class="ts"
+       x="996"
+       y="138"
+       id="text10">Person / Actor</text>
+    <rect
+       x="970"
+       y="148"
+       width="18"
+       height="14"
+       rx="3"
+       fill="#f4f3f0"
+       stroke="#888780"
+       stroke-width="1.2"
+       id="rect11" />
+    <text
+       class="ts"
+       x="996"
+       y="160"
+       id="text11">External System</text>
+    <rect
+       x="970"
+       y="170"
+       width="18"
+       height="14"
+       rx="3"
+       fill="#eeedfe"
+       stroke="#534ab7"
+       stroke-width="1.2"
+       id="rect12" />
+    <text
+       class="ts"
+       x="996"
+       y="182"
+       id="text12">External AI System</text>
+    <line
+       x1="970"
+       y1="198"
+       x2="1010"
+       y2="198"
+       stroke="#1d6fa8"
+       stroke-width="1.4"
+       marker-end="url(#arrow-blue)"
+       id="line12" />
+    <text
+       class="ts"
+       x="1018"
+       y="202"
+       id="text13">User / browser interaction</text>
+    <line
+       x1="970"
+       y1="218"
+       x2="1010"
+       y2="218"
+       stroke="#0f6e56"
+       stroke-width="1.4"
+       marker-end="url(#arrow-green)"
+       id="line13" />
+    <text
+       class="ts"
+       x="1018"
+       y="222"
+       id="text14">Internal container call</text>
+    <line
+       x1="970"
+       y1="238"
+       x2="1010"
+       y2="238"
+       stroke="#888780"
+       stroke-width="1.2"
+       stroke-dasharray="5, 3"
+       marker-end="url(#arrow)"
+       id="line14" />
+    <text
+       class="ts"
+       x="1018"
+       y="242"
+       id="text15">External system dependency</text>
+  </g>
+  <!-- ══════════════════════════════════════════════
+     ACTORS
+══════════════════════════════════════════════ -->
+  <!-- Registered User -->
+  <g
+     id="g93"
+     transform="translate(1.2232385,-131.49814)">
+    <rect
+       x="46"
+       y="310"
+       width="180"
+       height="110"
+       rx="8"
+       class="actor-box"
+       id="rect15" />
+    <rect
+       x="46"
+       y="310"
+       width="180"
+       height="30"
+       rx="8"
+       class="actor-hdr"
+       id="rect16" />
+    <rect
+       x="46"
+       y="328"
+       width="180"
+       height="12"
+       rx="0"
+       class="actor-hdr"
+       id="rect17" />
+    <text
+       class="th actor-txt"
+       x="136"
+       y="330"
+       text-anchor="middle"
+       id="text17">Registered User</text>
+    <line
+       x1="46"
+       y1="340"
+       x2="226"
+       y2="340"
+       stroke="#b8d0ea"
+       stroke-width="0.5"
+       id="line17" />
+    <text
+       class="ts"
+       x="136"
+       y="360"
+       text-anchor="middle"
+       id="text18">[Person]</text>
+    <text
+       class="tl"
+       x="136"
+       y="380"
+       text-anchor="middle"
+       id="text19">Full access — messaging,</text>
+    <text
+       class="tl"
+       x="136"
+       y="396"
+       text-anchor="middle"
+       id="text20">groups, profile, AI features</text>
+  </g>
+  <!-- Guest -->
+  <g
+     id="g94"
+     transform="translate(3.6697157,-103.36366)">
+    <rect
+       x="46"
+       y="454"
+       width="180"
+       height="110"
+       rx="8"
+       class="actor-box"
+       id="rect20" />
+    <rect
+       x="46"
+       y="454"
+       width="180"
+       height="30"
+       rx="8"
+       class="actor-hdr"
+       id="rect21" />
+    <rect
+       x="46"
+       y="472"
+       width="180"
+       height="12"
+       rx="0"
+       class="actor-hdr"
+       id="rect22" />
+    <text
+       class="th actor-txt"
+       x="136"
+       y="474"
+       text-anchor="middle"
+       id="text22">Guest</text>
+    <line
+       x1="46"
+       y1="484"
+       x2="226"
+       y2="484"
+       stroke="#b8d0ea"
+       stroke-width="0.5"
+       id="line22" />
+    <text
+       class="ts"
+       x="136"
+       y="504"
+       text-anchor="middle"
+       id="text23">[Person]</text>
+    <text
+       class="tl"
+       x="136"
+       y="524"
+       text-anchor="middle"
+       id="text24">Read-only group discovery.</text>
+    <text
+       class="tl"
+       x="136"
+       y="540"
+       text-anchor="middle"
+       id="text25">Register to participate.</text>
+  </g>
+  <!-- ══════════════════════════════════════════════
+     ORBIT SYSTEM BOUNDARY
+══════════════════════════════════════════════ -->
+  <rect
+     x="295.08386"
+     y="84.324799"
+     width="640"
+     height="840"
+     rx="14"
+     class="boundary"
+     id="rect25" />
+  <text
+     class="boundary-lbl"
+     x="615.08386"
+     y="110.3248"
+     text-anchor="middle"
+     id="text26">ORBIT [Software System]</text>
+  <!-- ── REACT SPA CONTAINER ── -->
+  <rect
+     x="321.08386"
+     y="122.3248"
+     width="580"
+     height="300"
+     rx="10"
+     class="react-box"
+     stroke-width="1.5"
+     id="rect26" />
+  <rect
+     x="321.08386"
+     y="122.3248"
+     width="580"
+     height="34"
+     rx="10"
+     class="react-hdr"
+     id="rect27" />
+  <rect
+     x="321.08386"
+     y="142.3248"
+     width="580"
+     height="14"
+     rx="0"
+     class="react-hdr"
+     id="rect28" />
+  <text
+     class="th react-txt"
+     x="611.08386"
+     y="146.3248"
+     text-anchor="middle"
+     id="text28">React SPA</text>
+  <line
+     x1="321.08386"
+     y1="156.3248"
+     x2="901.08386"
+     y2="156.3248"
+     stroke="#0f6e56"
+     stroke-width="0.5"
+     id="line28" />
+  <text
+     class="ts react-txt"
+     x="611.08386"
+     y="178.3248"
+     text-anchor="middle"
+     id="text29">[Container: React 19 + Vite]</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="204.3248"
+     text-anchor="middle"
+     id="text30">Served as a static bundle from Vercel's global CDN.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="224.3248"
+     text-anchor="middle"
+     id="text31">Runs entirely in the user's browser after initial load.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="260.3248"
+     text-anchor="middle"
+     id="text32">React Router for client-side navigation and protected routes.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="280.3248"
+     text-anchor="middle"
+     id="text33">Axios for REST API calls with JWT interceptor for token attach and refresh.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="300.3248"
+     text-anchor="middle"
+     id="text34">SockJS + STOMP.js for WebSocket connection and message subscriptions.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="320.3248"
+     text-anchor="middle"
+     id="text35">JWT stored in memory (access token) and httpOnly cookie (refresh token).</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="400.3248"
+     text-anchor="middle"
+     id="text36">Deployed on Vercel. Auto-deploy disabled — CI/CD via deploy hook only.</text>
+  <!-- ── SPRING BOOT CONTAINER ── -->
+  <rect
+     x="321.08386"
+     y="464.3248"
+     width="580"
+     height="430"
+     rx="10"
+     class="spring-box"
+     stroke-width="1.5"
+     id="rect36" />
+  <rect
+     x="321.08386"
+     y="464.3248"
+     width="580"
+     height="34"
+     rx="10"
+     class="spring-hdr"
+     id="rect37" />
+  <rect
+     x="321.08386"
+     y="484.3248"
+     width="580"
+     height="14"
+     rx="0"
+     class="spring-hdr"
+     id="rect38" />
+  <text
+     class="th spring-txt"
+     x="611.08386"
+     y="488.3248"
+     text-anchor="middle"
+     id="text38">Spring Boot Monolith</text>
+  <line
+     x1="321.08386"
+     y1="498.3248"
+     x2="901.08386"
+     y2="498.3248"
+     stroke="#0f6e56"
+     stroke-width="0.5"
+     id="line38" />
+  <text
+     class="ts spring-txt"
+     x="611.08386"
+     y="520.32483"
+     text-anchor="middle"
+     id="text39">[Container: Spring Boot 4.x — Java 21]</text>
+  <!-- internal package tags -->
+  <text
+     class="tl"
+     x="611.08386"
+     y="548.32483"
+     text-anchor="middle"
+     id="text40">Single deployable JAR. Modular internal package structure.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="568.32483"
+     text-anchor="middle"
+     id="text41">No Spring Cloud — monolith eliminates service discovery overhead.</text>
+  <!-- packages listed -->
+  <rect
+     x="341.08386"
+     y="582.32483"
+     width="540"
+     height="200"
+     rx="6"
+     fill="#c7f0e3"
+     stroke="#0f6e56"
+     stroke-width="0.5"
+     stroke-dasharray="4, 2"
+     id="rect41" />
+  <text
+     class="section-label"
+     x="611.08386"
+     y="602.32483"
+     text-anchor="middle"
+     id="text42">INTERNAL PACKAGES</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="626.32483"
+     id="text43">auth/ — JWT issuance, validation, refresh token rotation, BCrypt</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="646.32483"
+     id="text44">user/ — profile management, avatar upload to R2</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="666.32483"
+     id="text45">contact/ — connection requests, contact list, blocking</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="686.32483"
+     id="text46">group/ — group CRUD, membership, roles, invite tokens, pinning</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="706.32483"
+     id="text47">conversation/ — DM + group conversation records, mute, unread counts</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="726.32483"
+     id="text48">message/ — send, edit, delete, reactions, read receipts, file upload</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="746.32483"
+     id="text49">websocket/ — STOMP broker config, session registry, Kafka fan-out</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="766.32483"
+     id="text50">presence/ — online/offline tracking, typing indicators</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="786.32483"
+     id="text51">search/ — user search, group search, message search</text>
+  <text
+     class="ts"
+     x="371.08386"
+     y="806.32483"
+     id="text52">ai/ — Claude API client, summary, ask, replies, translate, tone</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="836.32483"
+     text-anchor="middle"
+     id="text53">Spring Security filter validates JWT once at entry point.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="856.32483"
+     text-anchor="middle"
+     id="text54">Identity propagated internally via SecurityContext — no re-validation per layer.</text>
+  <text
+     class="tl"
+     x="611.08386"
+     y="880.32483"
+     text-anchor="middle"
+     id="text55">Deployed on Render free tier. Deployed via Render API from GitHub Actions.</text>
+  <!-- ══════════════════════════════════════════════
+     EXTERNAL SYSTEMS — RIGHT COLUMN
+══════════════════════════════════════════════ -->
+  <!-- MongoDB Atlas -->
+  <rect
+     x="1082.1692"
+     y="322.35013"
+     width="230"
+     height="120"
+     rx="8"
+     class="ext-box"
+     id="rect55" />
+  <rect
+     x="1082.1692"
+     y="322.35013"
+     width="230"
+     height="30"
+     rx="8"
+     class="ext-hdr"
+     id="rect56" />
+  <rect
+     x="1082.1692"
+     y="340.35013"
+     width="230"
+     height="12"
+     rx="0"
+     class="ext-hdr"
+     id="rect57" />
+  <text
+     class="th ext-txt"
+     x="1197.1692"
+     y="342.35013"
+     text-anchor="middle"
+     id="text57">MongoDB Atlas</text>
+  <line
+     x1="1082.1692"
+     y1="352.35013"
+     x2="1312.1692"
+     y2="352.35013"
+     stroke="#c4c2bb"
+     stroke-width="0.5"
+     id="line57" />
+  <text
+     class="ts"
+     x="1197.1692"
+     y="372.35013"
+     text-anchor="middle"
+     id="text58">[External System]</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="394.35013"
+     text-anchor="middle"
+     id="text59">Managed MongoDB M0.</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="412.35013"
+     text-anchor="middle"
+     id="text60">All persistent data.</text>
+  <!-- Upstash Kafka -->
+  <rect
+     x="1082.1692"
+     y="472.35013"
+     width="230"
+     height="130"
+     rx="8"
+     class="ext-box"
+     id="rect60" />
+  <rect
+     x="1082.1692"
+     y="472.35013"
+     width="230"
+     height="30"
+     rx="8"
+     class="ext-hdr"
+     id="rect61" />
+  <rect
+     x="1082.1692"
+     y="490.35013"
+     width="230"
+     height="12"
+     rx="0"
+     class="ext-hdr"
+     id="rect62" />
+  <text
+     class="th ext-txt"
+     x="1197.1692"
+     y="492.35013"
+     text-anchor="middle"
+     id="text62">Upstash Kafka</text>
+  <line
+     x1="1082.1692"
+     y1="502.35013"
+     x2="1312.1692"
+     y2="502.35013"
+     stroke="#c4c2bb"
+     stroke-width="0.5"
+     id="line62" />
+  <text
+     class="ts"
+     x="1197.1692"
+     y="522.3501"
+     text-anchor="middle"
+     id="text63">[External System]</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="544.35016"
+     text-anchor="middle"
+     id="text64">Serverless Kafka broker.</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="562.35016"
+     text-anchor="middle"
+     id="text65">Topics: chat.messages,</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="580.35016"
+     text-anchor="middle"
+     id="text66">chat.presence, chat.notifications</text>
+  <!-- Cloudflare R2 -->
+  <rect
+     x="1082.1692"
+     y="634.35016"
+     width="230"
+     height="120"
+     rx="8"
+     class="ext-box"
+     id="rect66" />
+  <rect
+     x="1082.1692"
+     y="634.35016"
+     width="230"
+     height="30"
+     rx="8"
+     class="ext-hdr"
+     id="rect67" />
+  <rect
+     x="1082.1692"
+     y="652.35016"
+     width="230"
+     height="12"
+     rx="0"
+     class="ext-hdr"
+     id="rect68" />
+  <text
+     class="th ext-txt"
+     x="1197.1692"
+     y="654.35016"
+     text-anchor="middle"
+     id="text68">Cloudflare R2</text>
+  <line
+     x1="1082.1692"
+     y1="664.35016"
+     x2="1312.1692"
+     y2="664.35016"
+     stroke="#c4c2bb"
+     stroke-width="0.5"
+     id="line68" />
+  <text
+     class="ts"
+     x="1197.1692"
+     y="684.35016"
+     text-anchor="middle"
+     id="text69">[External System]</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="706.35016"
+     text-anchor="middle"
+     id="text70">Object storage. Avatars,</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="724.35016"
+     text-anchor="middle"
+     id="text71">group images, file uploads.</text>
+  <!-- Claude API -->
+  <rect
+     x="1082.1692"
+     y="786.35016"
+     width="230"
+     height="130"
+     rx="8"
+     class="ai-box"
+     id="rect71" />
+  <rect
+     x="1082.1692"
+     y="786.35016"
+     width="230"
+     height="30"
+     rx="8"
+     class="ai-hdr"
+     id="rect72" />
+  <rect
+     x="1082.1692"
+     y="804.35016"
+     width="230"
+     height="12"
+     rx="0"
+     class="ai-hdr"
+     id="rect73" />
+  <text
+     class="th ai-txt"
+     x="1197.1692"
+     y="806.35016"
+     text-anchor="middle"
+     id="text73">Claude API</text>
+  <line
+     x1="1082.1692"
+     y1="816.35016"
+     x2="1312.1692"
+     y2="816.35016"
+     stroke="#cecbf6"
+     stroke-width="0.5"
+     id="line73" />
+  <text
+     class="ts ai-txt"
+     x="1197.1692"
+     y="836.35016"
+     text-anchor="middle"
+     id="text74">[External AI System]</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="858.35016"
+     text-anchor="middle"
+     id="text75">AI features — Phase 4.</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="876.35016"
+     text-anchor="middle"
+     id="text76">Summary, @ask, replies,</text>
+  <text
+     class="tl"
+     x="1197.1692"
+     y="894.35016"
+     text-anchor="middle"
+     id="text77">translation, tone check.</text>
+  <!-- ══════════════════════════════════════════════
+     RELATION LINES
+══════════════════════════════════════════════ -->
+  <!-- Registered User → React SPA -->
+  <path
+     d="m 227.83486,231.79234 91.51907,21.82637"
+     class="rel-user"
+     marker-end="url(#arrow-blue)"
+     id="path77"
+  />
+  <text
+     class="rel-label"
+     x="295.40585"
+     y="172.96573"
+     id="text78"
+     transform="rotate(12.94141)">HTTPS</text>
+  <text
+     class="proto"
+     x="290.80365"
+     y="185.55443"
+     id="text79"
+     transform="rotate(12.665057)">browser</text>
+  <!-- Guest → React SPA -->
+  <path
+     d="m 229.89232,408.69373 89.46161,-91.61517"
+     class="rel-user"
+     marker-end="url(#arrow-blue)"
+     id="path79"
+  />
+  <text
+     class="rel-label"
+     x="-93.944427"
+     y="447.37091"
+     id="text80"
+     transform="rotate(-45.580258)">HTTPS</text>
+  <text
+     class="proto"
+     x="-101.26615"
+     y="459.91757"
+     id="text81"
+     transform="rotate(-45.426749)">read-only</text>
+  <!-- React SPA → Spring Boot (REST) -->
+  <path
+     d="m 565.2124,421.71318 v 42"
+     class="rel-intern"
+     marker-end="url(#arrow-green)"
+     id="path81" />
+  <text
+     class="rel-label"
+     x="573.37756"
+     y="446.44101"
+     id="text82">HTTPS /api/v1/**</text>
+  <text
+     class="proto"
+     x="504.87619"
+     y="445.76212"
+     id="text83">JSON REST</text>
+  <!-- React SPA → Spring Boot (WebSocket) — offset slightly right -->
+  <path
+     d="m 663.31624,421.71318 v 42"
+     class="rel-intern"
+     marker-end="url(#arrow-green)"
+     id="path83" />
+  <text
+     class="rel-label"
+     x="636"
+     y="436"
+     id="text84" />
+  <text
+     class="proto"
+     x="671.78717"
+     y="445.45633"
+     id="text85">WSS STOMP</text>
+  <!-- Spring Boot → MongoDB Atlas -->
+  <path
+     d="M 902.75663,584.61318 1082.1693,382.35014"
+     class="rel-data"
+     marker-end="url(#arrow-green)"
+     id="path85"
+  />
+  <text
+     class="rel-label"
+     x="288.14172"
+     y="1058.1656"
+     id="text86"
+     transform="rotate(-48.437209)">mongodb+srv</text>
+  <text
+     class="proto"
+     x="275.91312"
+     y="1078.173"
+     id="text87"
+     transform="rotate(-49.058227)">TLS enforced</text>
+  <!-- Spring Boot → Upstash Kafka -->
+  <path
+     d="M 902.75666,648.09946 1082.1693,542.35014"
+     class="rel-kafka"
+     marker-end="url(#arrow-orange)"
+     id="path87"
+  />
+  <text
+     class="rel-label"
+     x="538.10645"
+     y="1006.5687"
+     id="text88"
+     transform="rotate(-30.105758)">Kafka protocol</text>
+  <text
+     class="proto"
+     x="537.33099"
+     y="1027.7618"
+     id="text89"
+     transform="rotate(-30.398324)">SASL / SSL</text>
+  <!-- Spring Boot → Cloudflare R2 -->
+  <path
+     d="M 902.75666,706.08117 1082.1693,692.35014"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path89"
+  />
+  <text
+     class="rel-label"
+     x="905.49225"
+     y="776.01874"
+     id="text90"
+     transform="rotate(-4.8180498)">HTTPS S3 SDK</text>
+  <text
+     class="proto"
+     x="920.45929"
+     y="768.15393"
+     id="text91"
+     transform="rotate(-3.457314)">presigned URLs</text>
+  <!-- Spring Boot → Claude API -->
+  <path
+     d="m 902.14504,759.5981 180.02426,92.75204"
+     class="rel-ai"
+     marker-end="url(#arrow-purple)"
+     id="path91"
+  />
+  <text
+     class="rel-label"
+     x="1218.6722"
+     y="272.71414"
+     id="text92"
+     transform="rotate(26.552745)">HTTPS Phase 4</text>
+</svg>

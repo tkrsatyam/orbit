@@ -1,0 +1,1251 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1300 1200"
+   role="img"
+   version="1.1"
+   id="svg100"
+   sodipodi:docname="message_status.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview100"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="2.6705066"
+     inkscape:cx="617.2986"
+     inkscape:cy="503.08806"
+     inkscape:window-width="2560"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg100" />
+  <title
+     id="title1">Orbit — Message Status State Machine</title>
+  <defs
+     id="defs4">
+    <marker
+       id="ag"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="ab"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="ar"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B91C1C"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="ao"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B45309"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <style
+       id="style4">
+    text  { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .hdr  { font-size: 14px; font-weight: 700; }
+    .sub  { font-size: 11px; font-style: italic; fill: #5F5E5A; }
+    .slbl { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1px; }
+    .elbl { font-size: 11px; font-weight: 600; }
+    .note { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+    .ts   { font-size: 12px; }
+
+    /* state nodes */
+    .n-send { fill:#F4F3F0; stroke:#888780; stroke-width:1.5; stroke-dasharray:5 3; }
+    .h-send { fill:#D8D6CF; stroke:none; }
+
+    .n-sent { fill:#C7F0E3; stroke:#0F6E56; stroke-width:2; }
+    .h-sent { fill:#5DCAA5; stroke:none; }
+
+    .n-delv { fill:#9FE1CB; stroke:#0F6E56; stroke-width:2; }
+    .h-delv { fill:#3DB897; stroke:none; }
+
+    .n-read { fill:#5DCAA5; stroke:#0F6E56; stroke-width:2.5; }
+    .h-read { fill:#0F6E56; stroke:none; }
+
+    .n-edit { fill:#E8EEF7; stroke:#1D6FA8; stroke-width:2; }
+    .h-edit { fill:#B8D0EA; stroke:none; }
+
+    .n-fail { fill:#FCEFD9; stroke:#B45309; stroke-width:2; }
+    .h-fail { fill:#FCD34D; stroke:none; }
+
+    .n-del  { fill:#FEE2E2; stroke:#B91C1C; stroke-width:2.5; }
+    .h-del  { fill:#FCA5A5; stroke:none; }
+
+    /* arrow lines */
+    .tg  { stroke:#0F6E56; stroke-width:1.6; fill:none; }
+    .tb  { stroke:#1D6FA8; stroke-width:1.6; fill:none; }
+    .tr  { stroke:#B91C1C; stroke-width:1.6; fill:none; }
+    .to  { stroke:#B45309; stroke-width:1.6; fill:none; }
+    .tod { stroke:#B45309; stroke-width:1.6; fill:none; stroke-dasharray:5 3; }
+  </style>
+  </defs>
+  <!-- outer frame -->
+  <rect
+     x="20"
+     y="20"
+     width="1260"
+     height="1160"
+     rx="12"
+     fill="none"
+     stroke="#D8D6CF"
+     stroke-width="1"
+     stroke-dasharray="10 5"
+     id="rect4" />
+  <text
+     class="slbl"
+     x="44"
+     y="46"
+     id="text4">STATE MACHINE — MESSAGE STATUS</text>
+  <!-- ══════════════════ LEGEND ══════════════════ -->
+  <rect
+     x="44"
+     y="56"
+     width="1212"
+     height="52"
+     rx="8"
+     fill="#FAFAF8"
+     stroke="#D8D6CF"
+     stroke-width="0.8"
+     id="rect5" />
+  <rect
+     x="64"
+     y="68"
+     width="90"
+     height="28"
+     rx="4"
+     fill="#F4F3F0"
+     stroke="#888780"
+     stroke-width="1.5"
+     stroke-dasharray="5 3"
+     id="rect6" />
+  <text
+     class="note"
+     x="109"
+     y="86"
+     text-anchor="middle"
+     id="text6">Client only</text>
+  <rect
+     x="168"
+     y="68"
+     width="90"
+     height="28"
+     rx="4"
+     fill="#C7F0E3"
+     stroke="#0F6E56"
+     stroke-width="2"
+     id="rect7" />
+  <text
+     class="note"
+     x="213"
+     y="86"
+     text-anchor="middle"
+     id="text7">Persisted</text>
+  <rect
+     x="272"
+     y="68"
+     width="90"
+     height="28"
+     rx="4"
+     fill="#5DCAA5"
+     stroke="#0F6E56"
+     stroke-width="2.5"
+     id="rect8" />
+  <text
+     class="note"
+     x="317"
+     y="86"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text8">Terminal ✓</text>
+  <rect
+     x="376"
+     y="68"
+     width="90"
+     height="28"
+     rx="4"
+     fill="#E8EEF7"
+     stroke="#1D6FA8"
+     stroke-width="2"
+     id="rect9" />
+  <text
+     class="note"
+     x="421"
+     y="86"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text9">Orthogonal</text>
+  <rect
+     x="480"
+     y="68"
+     width="90"
+     height="28"
+     rx="4"
+     fill="#FEE2E2"
+     stroke="#B91C1C"
+     stroke-width="2.5"
+     id="rect10" />
+  <text
+     class="note"
+     x="525"
+     y="86"
+     text-anchor="middle"
+     fill="#7F1D1D"
+     id="text10">Terminal ✗</text>
+  <line
+     x1="590"
+     y1="82"
+     x2="630"
+     y2="82"
+     class="tg"
+     marker-end="url(#ag)"
+     id="line10" />
+  <text
+     class="note"
+     x="638"
+     y="86"
+     id="text11">Delivery</text>
+  <line
+     x1="720"
+     y1="82"
+     x2="760"
+     y2="82"
+     class="tb"
+     marker-end="url(#ab)"
+     id="line11" />
+  <text
+     class="note"
+     x="768"
+     y="86"
+     id="text12">Edit</text>
+  <line
+     x1="830"
+     y1="82"
+     x2="870"
+     y2="82"
+     class="tr"
+     marker-end="url(#ar)"
+     id="line12" />
+  <text
+     class="note"
+     x="878"
+     y="86"
+     id="text13">Delete</text>
+  <line
+     x1="950"
+     y1="82"
+     x2="990"
+     y2="82"
+     class="to"
+     marker-end="url(#ao)"
+     id="line13" />
+  <text
+     class="note"
+     x="998"
+     y="86"
+     id="text14">Fail / Retry</text>
+  <!--
+  ════════════════════════════════════════════════════
+  GRID  (all coordinates):
+
+  Column centres:
+    Left  (main delivery)  x = 160
+    Mid   (fail / edited)  x = 520
+    Right (deleted)        x = 900
+
+  Row top-edges (node height = 90, header = 28):
+    Row 0  initial dot     y = 178  (centre 178)
+    Row 1  SENDING         y = 210  (centre 255)
+    Row 2  SENT            y = 350  (centre 395)
+    Row 3  DELIVERED       y = 490  (centre 535)
+    Row 4  READ            y = 630  (centre 675)
+
+    FAILED  same row as SENDING   y = 210  centre (520, 255)
+    EDITED  same row as DELIVERED y = 490  centre (520, 535)
+    DELETED own row centre        y = 490  centre (900, 520)
+
+  Node width = 160  so left edge = centre-80, right edge = centre+80
+  ════════════════════════════════════════════════════
+-->
+  <!-- ══════════════════ INITIAL DOT ══════════════════ -->
+  <circle
+     cx="160"
+     cy="178"
+     r="12"
+     fill="#3d3d3a"
+     id="circle14" />
+  <text
+     class="note"
+     x="180"
+     y="183"
+     id="text15">start</text>
+  <!-- ══════════════════ STATE NODES ══════════════════ -->
+  <!-- SENDING  centre (160, 255) -->
+  <rect
+     x="80"
+     y="210"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-send"
+     id="rect15" />
+  <rect
+     x="80"
+     y="210"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-send"
+     id="rect16" />
+  <rect
+     x="80"
+     y="226"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-send"
+     id="rect17" />
+  <text
+     class="hdr"
+     x="160"
+     y="230"
+     text-anchor="middle"
+     fill="#5F5E5A"
+     id="text17">SENDING</text>
+  <line
+     x1="80"
+     y1="238"
+     x2="240"
+     y2="238"
+     stroke="#C4C2BB"
+     stroke-width="0.5"
+     id="line17" />
+  <text
+     class="sub"
+     x="160"
+     y="258"
+     text-anchor="middle"
+     id="text18">client-side only</text>
+  <text
+     class="sub"
+     x="160"
+     y="274"
+     text-anchor="middle"
+     id="text19">not persisted to DB</text>
+  <text
+     class="sub"
+     x="160"
+     y="290"
+     text-anchor="middle"
+     id="text20">React state only</text>
+  <!-- SENT  centre (160, 395) -->
+  <rect
+     x="80"
+     y="350"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-sent"
+     id="rect20" />
+  <rect
+     x="80"
+     y="350"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-sent"
+     id="rect21" />
+  <rect
+     x="80"
+     y="366"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-sent"
+     id="rect22" />
+  <text
+     class="hdr"
+     x="160"
+     y="370"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text22">SENT</text>
+  <line
+     x1="80"
+     y1="378"
+     x2="240"
+     y2="378"
+     stroke="#0F6E56"
+     stroke-width="0.5"
+     id="line22" />
+  <text
+     class="sub"
+     x="160"
+     y="398"
+     text-anchor="middle"
+     id="text23">document persisted</text>
+  <text
+     class="sub"
+     x="160"
+     y="414"
+     text-anchor="middle"
+     id="text24">Kafka published</text>
+  <text
+     class="sub"
+     x="160"
+     y="430"
+     text-anchor="middle"
+     id="text25">receipt sent to sender</text>
+  <!-- DELIVERED  centre (160, 535) -->
+  <rect
+     x="80"
+     y="490"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-delv"
+     id="rect25" />
+  <rect
+     x="80"
+     y="490"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-delv"
+     id="rect26" />
+  <rect
+     x="80"
+     y="506"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-delv"
+     id="rect27" />
+  <text
+     class="hdr"
+     x="160"
+     y="510"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text27">DELIVERED</text>
+  <line
+     x1="80"
+     y1="518"
+     x2="240"
+     y2="518"
+     stroke="#0F6E56"
+     stroke-width="0.5"
+     id="line27" />
+  <text
+     class="sub"
+     x="160"
+     y="538"
+     text-anchor="middle"
+     id="text28">WebSocket push</text>
+  <text
+     class="sub"
+     x="160"
+     y="554"
+     text-anchor="middle"
+     id="text29">reached a recipient</text>
+  <text
+     class="sub"
+     x="160"
+     y="570"
+     text-anchor="middle"
+     id="text30">client-side tracked</text>
+  <!-- READ  centre (160, 675) — terminal delivery -->
+  <rect
+     x="80"
+     y="630"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-read"
+     id="rect30" />
+  <rect
+     x="80"
+     y="630"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-read"
+     id="rect31" />
+  <rect
+     x="80"
+     y="646"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-read"
+     id="rect32" />
+  <text
+     class="hdr"
+     x="160"
+     y="650"
+     text-anchor="middle"
+     fill="#FFFFFF"
+     id="text32">READ</text>
+  <line
+     x1="80"
+     y1="658"
+     x2="240"
+     y2="658"
+     stroke="#0A5540"
+     stroke-width="0.5"
+     id="line32" />
+  <text
+     class="sub"
+     x="160"
+     y="678"
+     text-anchor="middle"
+     fill="#E8F8F2"
+     id="text33">readBy[] populated</text>
+  <text
+     class="sub"
+     x="160"
+     y="694"
+     text-anchor="middle"
+     fill="#E8F8F2"
+     id="text34">terminal delivery state</text>
+  <text
+     class="sub"
+     x="160"
+     y="710"
+     text-anchor="middle"
+     fill="#E8F8F2"
+     id="text35">cannot regress</text>
+  <!-- terminal double border -->
+  <rect
+     x="74"
+     y="624"
+     width="172"
+     height="102"
+     rx="13"
+     fill="none"
+     stroke="#0F6E56"
+     stroke-width="1.5"
+     stroke-dasharray="4 3"
+     id="rect35" />
+  <!-- FAILED  centre (520, 255) -->
+  <rect
+     x="440"
+     y="210"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-fail"
+     id="rect36" />
+  <rect
+     x="440"
+     y="210"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-fail"
+     id="rect37" />
+  <rect
+     x="440"
+     y="226"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-fail"
+     id="rect38" />
+  <text
+     class="hdr"
+     x="520"
+     y="230"
+     text-anchor="middle"
+     fill="#6B3A04"
+     id="text38">FAILED</text>
+  <line
+     x1="440"
+     y1="238"
+     x2="600"
+     y2="238"
+     stroke="#B45309"
+     stroke-width="0.5"
+     id="line38" />
+  <text
+     class="sub"
+     x="520"
+     y="258"
+     text-anchor="middle"
+     id="text39">server error or 429</text>
+  <text
+     class="sub"
+     x="520"
+     y="274"
+     text-anchor="middle"
+     id="text40">client-side only</text>
+  <text
+     class="sub"
+     x="520"
+     y="290"
+     text-anchor="middle"
+     id="text41">retry available</text>
+  <!-- EDITED  centre (520, 535) — orthogonal -->
+  <rect
+     x="440"
+     y="490"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-edit"
+     id="rect41" />
+  <rect
+     x="440"
+     y="490"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-edit"
+     id="rect42" />
+  <rect
+     x="440"
+     y="506"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-edit"
+     id="rect43" />
+  <text
+     class="hdr"
+     x="520"
+     y="510"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text43">EDITED</text>
+  <line
+     x1="440"
+     y1="518"
+     x2="600"
+     y2="518"
+     stroke="#B8D0EA"
+     stroke-width="0.5"
+     id="line43" />
+  <text
+     class="sub"
+     x="520"
+     y="538"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text44">content replaced</text>
+  <text
+     class="sub"
+     x="520"
+     y="554"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text45">edited: true</text>
+  <text
+     class="sub"
+     x="520"
+     y="570"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text46">orthogonal overlay</text>
+  <!-- orthogonal double border -->
+  <rect
+     x="434"
+     y="484"
+     width="172"
+     height="102"
+     rx="13"
+     fill="none"
+     stroke="#1D6FA8"
+     stroke-width="1.5"
+     stroke-dasharray="6 3"
+     id="rect46" />
+  <!-- DELETED  centre (900, 535) — terminal -->
+  <rect
+     x="820"
+     y="490"
+     width="160"
+     height="90"
+     rx="10"
+     class="n-del"
+     id="rect47" />
+  <rect
+     x="820"
+     y="490"
+     width="160"
+     height="28"
+     rx="10"
+     class="h-del"
+     id="rect48" />
+  <rect
+     x="820"
+     y="506"
+     width="160"
+     height="12"
+     rx="0"
+     class="h-del"
+     id="rect49" />
+  <text
+     class="hdr"
+     x="900"
+     y="510"
+     text-anchor="middle"
+     fill="#7F1D1D"
+     id="text49">DELETED</text>
+  <line
+     x1="820"
+     y1="518"
+     x2="980"
+     y2="518"
+     stroke="#F87171"
+     stroke-width="0.5"
+     id="line49" />
+  <text
+     class="sub"
+     x="900"
+     y="538"
+     text-anchor="middle"
+     fill="#7F1D1D"
+     id="text50">soft delete</text>
+  <text
+     class="sub"
+     x="900"
+     y="554"
+     text-anchor="middle"
+     fill="#7F1D1D"
+     id="text51">deleted: true, content: null</text>
+  <text
+     class="sub"
+     x="900"
+     y="570"
+     text-anchor="middle"
+     fill="#7F1D1D"
+     id="text52">document preserved</text>
+  <!-- terminal double border -->
+  <rect
+     x="814"
+     y="484"
+     width="172"
+     height="102"
+     rx="13"
+     fill="none"
+     stroke="#B91C1C"
+     stroke-width="1.5"
+     stroke-dasharray="4 3"
+     id="rect52" />
+  <!-- ══════════════════════════════════════════════════════
+     TRANSITIONS — all straight lines with 90-degree turns
+
+     Routing waypoints:
+       Left spine x=160
+       Fail/Edit col x=520
+       Del col x=900
+       Left gutter   x=44   (delete routes, retry)
+       Right gutter  x=990  (not used)
+       Mid-left ch.  x=340  (edit entry channel)
+       Mid-right ch. x=660  (delete entry channel from edit)
+       Del entry     x=760  (horizontal to deleted)
+
+       Row y-centres between nodes (for horizontal jogs):
+         between SENDING  /SENT      y=328
+         between SENT     /DELIVERED y=468
+         between DELIVERED/READ      y=608
+══════════════════════════════════════════════════════ -->
+  <!-- ── 1. initial → SENDING (straight down) ── -->
+  <line
+     x1="160"
+     y1="190"
+     x2="160"
+     y2="210"
+     class="tg"
+     marker-end="url(#ag)"
+     id="line52" />
+  <!-- ── 2. SENDING → SENT (straight down) ── -->
+  <line
+     x1="160"
+     y1="300"
+     x2="160"
+     y2="350"
+     class="tg"
+     marker-end="url(#ag)"
+     id="line53" />
+  <!-- label sits in the gap -->
+  <rect
+     x="166"
+     y="308"
+     width="168"
+     height="20"
+     rx="4"
+     fill="none"
+     id="rect53" />
+  <text
+     class="elbl"
+     x="168"
+     y="322"
+     fill="#0F6E56"
+     id="text53">server receipt received</text>
+  <!-- ── 3. SENDING → FAILED (straight right) ── -->
+  <line
+     x1="240"
+     y1="255"
+     x2="440"
+     y2="255"
+     class="tod"
+     marker-end="url(#ao)"
+     id="line54" />
+  <text
+     class="elbl"
+     x="256"
+     y="248"
+     fill="#B45309"
+     id="text54">server error / 429 / timeout</text>
+  <!-- ── 4. FAILED → SENDING (route below SENDING row, then left back) ──
+     Right edge of FAILED (600,255) → right of SENDING area (600,310) →
+     down to y=328 → left to x=160 → up into SENDING top? No — simpler:
+     just go below both nodes at y=322, left to x=160, up to SENDING bottom
+-->
+  <path
+     d="M 440 275 L 320 275 L 320 310 L 240 310"
+     class="to"
+     marker-end="url(#ao)"
+     id="path54" />
+  <text
+     class="elbl"
+     x="266"
+     y="272"
+     fill="#B45309"
+     id="text55">user retries</text>
+  <!-- ── 5. SENT → DELIVERED (straight down) ── -->
+  <line
+     x1="160"
+     y1="440"
+     x2="160"
+     y2="490"
+     class="tg"
+     marker-end="url(#ag)"
+     id="line55" />
+  <text
+     class="elbl"
+     x="168"
+     y="470"
+     fill="#0F6E56"
+     id="text56">WebSocket push reaches recipient</text>
+  <!-- ── 6. DELIVERED → READ (straight down) ── -->
+  <line
+     x1="160"
+     y1="580"
+     x2="160"
+     y2="630"
+     class="tg"
+     marker-end="url(#ag)"
+     id="line56" />
+  <text
+     class="elbl"
+     x="168"
+     y="610"
+     fill="#0F6E56"
+     id="text57">recipient opens conversation</text>
+  <!-- ── 7. SENT → EDITED
+     Right edge of SENT (240,395) → right channel x=340 → down to EDITED row y=535 → left into EDITED (440,535)
+-->
+  <path
+     d="m 240,395 h 116.94616 l 2.52957,119.87643 h 83.05384"
+     class="tb"
+     marker-end="url(#ab)"
+     id="path57"
+     sodipodi:nodetypes="cccc" />
+  <text
+     class="elbl"
+     x="275.5675"
+     y="389.05914"
+     fill="#1D6FA8"
+     id="text58">sender edits</text>
+  <!-- ── 8. DELIVERED → EDITED (straight right, same row y=535) ── -->
+  <line
+     x1="240"
+     y1="535"
+     x2="440"
+     y2="535"
+     class="tb"
+     marker-end="url(#ab)"
+     id="line58" />
+  <text
+     class="elbl"
+     x="256"
+     y="528"
+     fill="#1D6FA8"
+     id="text59">sender edits</text>
+  <!-- ── 9. READ → EDITED
+     Right edge of READ (240,675) → x=340 → up to y=555 → right into EDITED bottom area (440,555)
+-->
+  <path
+     d="M 240 675 L 360 675 L 360 555 L 440 555"
+     class="tb"
+     marker-end="url(#ab)"
+     id="path59" />
+  <text
+     class="elbl"
+     x="272.79611"
+     y="669.58868"
+     fill="#1D6FA8"
+     id="text60">sender edits</text>
+  <!-- ── 10. SENT → DELETED
+     Right edge SENT (240,395) → x=660 → down to y=515 → right to DELETED (820,515)
+-->
+  <path
+     d="m 240.0016,409.99843 h 497.82422 l 0.7465,96.39042 h 80.30502"
+     class="tr"
+     marker-end="url(#ar)"
+     id="path60"
+     sodipodi:nodetypes="cccc" />
+  <text
+     class="elbl"
+     x="460"
+     y="404"
+     fill="#B91C1C"
+     id="text61">sender / admin deletes</text>
+  <!-- ── 11. DELIVERED → DELETED (straight right, same row y=555) ── -->
+  <path
+     d="m 600.37446,550.88093 h 220"
+     class="tr"
+     marker-end="url(#ar)"
+     id="path61" />
+  <text
+     class="elbl"
+     x="612.37445"
+     y="543.88098"
+     fill="#B91C1C"
+     id="text62">sender / admin deletes</text>
+  <!-- ── 12. EDITED → DELETED (straight right, y=555 offset slightly) ── -->
+  <!-- EDITED right edge (600,535) → right to DELETED left (820,535) -->
+  <line
+     x1="600"
+     y1="528.25977"
+     x2="820"
+     y2="528.25977"
+     class="tr"
+     marker-end="url(#ar)"
+     id="line62" />
+  <!-- label above line -->
+  <text
+     class="elbl"
+     x="612"
+     y="521.25977"
+     fill="#B91C1C"
+     id="text63">sender / admin deletes</text>
+  <!-- ── 13. READ → DELETED
+     Right edge READ (240,675) → right gutter x=760 → up to y=575 → right to DELETED (820,575)
+-->
+  <path
+     d="m 240,695 501.46514,0.21935 -0.74892,-124.49353 78.53486,0.52957"
+     class="tr"
+     marker-end="url(#ar)"
+     id="path63"
+     sodipodi:nodetypes="cccc" />
+  <text
+     class="elbl"
+     x="477.88174"
+     y="687.70166"
+     fill="#B91C1C"
+     id="text64">sender / admin deletes</text>
+  <!-- ══════════════════════════════════════════════════════
+     NOTES — three info boxes at the bottom
+══════════════════════════════════════════════════════ -->
+  <!-- Box 1: Orthogonal explanation -->
+  <rect
+     x="44"
+     y="790"
+     width="380"
+     height="130"
+     rx="8"
+     fill="#EFF6FF"
+     stroke="#1D6FA8"
+     stroke-width="0.8"
+     id="rect64" />
+  <text
+     class="slbl"
+     x="64"
+     y="814"
+     fill="#1D6FA8"
+     id="text65">ORTHOGONAL STATE (EDITED)</text>
+  <text
+     class="note"
+     x="64"
+     y="836"
+     id="text66">EDITED overlaps the delivery lifecycle — it</text>
+  <text
+     class="note"
+     x="64"
+     y="852"
+     id="text67">does not replace it. A message can be</text>
+  <text
+     class="note"
+     x="64"
+     y="868"
+     id="text68">DELIVERED + EDITED or READ + EDITED</text>
+  <text
+     class="note"
+     x="64"
+     y="884"
+     id="text69">simultaneously. Stored as a separate</text>
+  <text
+     class="note"
+     x="64"
+     y="900"
+     id="text70">edited: Boolean field, not a single enum.</text>
+  <text
+     class="note"
+     x="64"
+     y="916"
+     id="text71">DELETED is NOT orthogonal — it terminates</text>
+  <!-- Box 2: MongoDB fields -->
+  <rect
+     x="444"
+     y="790"
+     width="380"
+     height="130"
+     rx="8"
+     fill="#FAFAF8"
+     stroke="#D8D6CF"
+     stroke-width="0.8"
+     id="rect71" />
+  <text
+     class="slbl"
+     x="464"
+     y="814"
+     id="text72">MONGODB FIELDS PER STATE</text>
+  <text
+     class="note"
+     x="464"
+     y="836"
+     id="text73">SENT      document inserted, deleted: false</text>
+  <text
+     class="note"
+     x="464"
+     y="852"
+     id="text74">DELIVERED client-side only — no DB field</text>
+  <text
+     class="note"
+     x="464"
+     y="868"
+     id="text75">READ      readBy[].userId populated</text>
+  <text
+     class="note"
+     x="464"
+     y="884"
+     id="text76">EDITED    edited: true, editedAt: ISODate</text>
+  <text
+     class="note"
+     x="464"
+     y="900"
+     id="text77">DELETED   deleted: true, content: null</text>
+  <text
+     class="note"
+     x="464"
+     y="916"
+     id="text78">SENDING / FAILED — React state only</text>
+  <!-- Box 3: DM vs Group -->
+  <rect
+     x="844"
+     y="790"
+     width="412"
+     height="130"
+     rx="8"
+     fill="#F0FAF6"
+     stroke="#0F6E56"
+     stroke-width="0.8"
+     id="rect78" />
+  <text
+     class="slbl"
+     x="864"
+     y="814"
+     fill="#0F6E56"
+     id="text79">DM vs GROUP BEHAVIOUR</text>
+  <text
+     class="note"
+     x="864"
+     y="836"
+     id="text80">DM:     DELIVERED and READ tracked</text>
+  <text
+     class="note"
+     x="864"
+     y="852"
+     id="text81">        per-message  (✓ / ✓✓ / blue ✓✓)</text>
+  <text
+     class="note"
+     x="864"
+     y="868"
+     id="text82">Group:  DELIVERED when push reaches</text>
+  <text
+     class="note"
+     x="864"
+     y="884"
+     id="text83">        any member session</text>
+  <text
+     class="note"
+     x="864"
+     y="900"
+     id="text84">        READ when any member opens convo</text>
+  <text
+     class="note"
+     x="864"
+     y="916"
+     id="text85">        Per-member state in readBy[] array</text>
+  <!-- Box 4: Invalid transitions -->
+  <rect
+     x="44"
+     y="940"
+     width="1212"
+     height="100"
+     rx="8"
+     fill="#FFF5F5"
+     stroke="#B91C1C"
+     stroke-width="0.8"
+     id="rect85" />
+  <text
+     class="slbl"
+     x="64"
+     y="964"
+     fill="#B91C1C"
+     id="text86">INVALID TRANSITIONS  (MessageService must reject with 409 Conflict)</text>
+  <text
+     class="note"
+     x="64"
+     y="986"
+     id="text87">DELETED → any state</text>
+  <text
+     class="note"
+     x="64"
+     y="1002"
+     id="text88">— terminal, no further transitions</text>
+  <text
+     class="note"
+     x="340"
+     y="986"
+     id="text89">READ → DELIVERED</text>
+  <text
+     class="note"
+     x="340"
+     y="1002"
+     id="text90">— delivery state cannot regress</text>
+  <text
+     class="note"
+     x="620"
+     y="986"
+     id="text91">IMAGE / FILE → EDITED</text>
+  <text
+     class="note"
+     x="620"
+     y="1002"
+     id="text92">— binary types cannot be edited</text>
+  <text
+     class="note"
+     x="900"
+     y="986"
+     id="text93">Edit / Delete by non-sender non-admin</text>
+  <text
+     class="note"
+     x="900"
+     y="1002"
+     id="text94">— ownership enforced in service layer</text>
+  <!-- WebSocket events box -->
+  <rect
+     x="44"
+     y="1060"
+     width="1212"
+     height="96"
+     rx="8"
+     fill="#FAFAF8"
+     stroke="#D8D6CF"
+     stroke-width="0.8"
+     id="rect94" />
+  <text
+     class="slbl"
+     x="64"
+     y="1084"
+     id="text95">WEBSOCKET EVENT PER TRANSITION</text>
+  <text
+     class="note"
+     x="64"
+     y="1106"
+     id="text96">→ SENT         STOMP receipt to sender with full message object</text>
+  <text
+     class="note"
+     x="64"
+     y="1122"
+     id="text97">→ DELIVERED    implicit — message arrives on /topic/conversations/{id}/messages</text>
+  <text
+     class="note"
+     x="540"
+     y="1106"
+     id="text98">→ READ         /topic/conversations/{id}/read  { messageId, userId, readAt }</text>
+  <text
+     class="note"
+     x="540"
+     y="1122"
+     id="text99">→ EDITED       /topic/conversations/{id}/messages/edited  { messageId, content, editedAt }</text>
+  <text
+     class="note"
+     x="540"
+     y="1138"
+     id="text100">→ DELETED      /topic/conversations/{id}/messages/deleted  { messageId }</text>
+</svg>

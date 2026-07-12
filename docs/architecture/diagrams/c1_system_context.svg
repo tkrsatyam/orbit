@@ -1,0 +1,1071 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1200 885"
+   role="img"
+   version="1.1"
+   id="svg79"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+    <title
+     id="title1">Orbit — C1 System Context Diagram</title>
+  <desc
+     id="desc1">C4 Level 1 System Context diagram showing Orbit and its external actors and dependencies</desc>
+  <defs
+     id="defs4">
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#888780"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="arrow-blue"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="arrow-green"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="arrow-purple"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#534AB7"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <style
+       id="style4">
+    text { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .th  { font-size: 15px; font-weight: 700; }
+    .ts  { font-size: 12px; font-weight: 400; }
+    .tl  { font-size: 11px; font-weight: 400; fill: #5F5E5A; font-style: italic; }
+    .tc  { font-size: 11px; font-weight: 500; fill: #888780; }
+    .section-label { font-size: 11px; font-weight: 600; fill: #888780; letter-spacing: 1px; }
+
+    /* Orbit — centre teal */
+    .orbit-box  { fill: #C7F0E3; stroke: #0F6E56; stroke-width: 2; }
+    .orbit-hdr  { fill: #5DCAA5; stroke: none; }
+    .orbit-txt  { fill: #053D30; }
+
+    /* Actors — slate blue */
+    .actor-box  { fill: #E8EEF7; stroke: #1D6FA8; stroke-width: 1.5; }
+    .actor-hdr  { fill: #B8D0EA; stroke: none; }
+    .actor-txt  { fill: #0D3F62; }
+
+    /* External infra — warm grey */
+    .ext-box    { fill: #F4F3F0; stroke: #888780; stroke-width: 1.2; }
+    .ext-hdr    { fill: #D8D6CF; stroke: none; }
+    .ext-txt    { fill: #3d3d3a; }
+
+    /* External AI — purple --&gt;
+    .ai-box     { fill: #EEEDFE; stroke: #534AB7; stroke-width: 1.2; }
+    .ai-hdr     { fill: #CECBF6; stroke: none; }
+    .ai-txt     { fill: #3C3489; }
+
+    /* Relation lines */
+    .rel-user   { stroke: #1D6FA8; stroke-width: 1.3; fill: none; }
+    .rel-infra  { stroke: #888780; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-ai     { stroke: #534AB7; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-data   { stroke: #0F6E56; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+    .rel-label  { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+  </style>
+  </defs>
+  <!-- ══════════════════════════════════
+     BACKGROUND BOUNDARY BOX
+══════════════════════════════════ -->
+  <rect
+     x="20.011732"
+     y="20.007494"
+     width="1159.9766"
+     height="843.78827"
+     rx="11.999757"
+     fill="none"
+     stroke="#d8d6cf"
+     stroke-width="0.938296"
+     stroke-dasharray="10, 5"
+     id="rect4" />
+  <text
+     class="section-label"
+     x="40"
+     y="42"
+     id="text4">C4 MODEL — LEVEL 1 — SYSTEM CONTEXT</text>
+  <!-- ══════════════════════════════════
+     LEGEND
+══════════════════════════════════ -->
+  <rect
+     x="867.66205"
+     y="46.51643"
+     width="283.96277"
+     height="162.29195"
+     rx="7.99895"
+     fill="#fafaf8"
+     stroke="#d8d6cf"
+     stroke-width="0.821967"
+     id="rect5" />
+  <text
+     class="section-label"
+     x="887.64343"
+     y="68.497795"
+     id="text5">LEGEND</text>
+  <rect
+     x="887.64343"
+     y="78.497795"
+     width="18"
+     height="14"
+     rx="3"
+     fill="#c7f0e3"
+     stroke="#0f6e56"
+     stroke-width="1.5"
+     id="rect6" />
+  <text
+     class="ts"
+     x="913.64343"
+     y="90.497795"
+     id="text6">Orbit (this system)</text>
+  <rect
+     x="887.64343"
+     y="100.4978"
+     width="18"
+     height="14"
+     rx="3"
+     fill="#e8eef7"
+     stroke="#1d6fa8"
+     stroke-width="1.5"
+     id="rect7" />
+  <text
+     class="ts"
+     x="913.64343"
+     y="112.4978"
+     id="text7">Person / Actor</text>
+  <rect
+     x="887.64343"
+     y="122.4978"
+     width="18"
+     height="14"
+     rx="3"
+     fill="#f4f3f0"
+     stroke="#888780"
+     stroke-width="1.2"
+     id="rect8" />
+  <text
+     class="ts"
+     x="913.64343"
+     y="134.49779"
+     id="text8">External System</text>
+  <rect
+     x="887.64343"
+     y="144.49779"
+     width="18"
+     height="14"
+     rx="3"
+     fill="#eeedfe"
+     stroke="#534ab7"
+     stroke-width="1.2"
+     id="rect9" />
+  <text
+     class="ts"
+     x="913.64343"
+     y="156.49779"
+     id="text9">External AI System</text>
+  <line
+     x1="887.64343"
+     y1="172.49779"
+     x2="927.64343"
+     y2="172.49779"
+     stroke="#1d6fa8"
+     stroke-width="1.3"
+     marker-end="url(#arrow-blue)"
+     id="line9" />
+  <text
+     class="ts"
+     x="937.64343"
+     y="176.49779"
+     id="text10">User interaction</text>
+  <line
+     x1="887.64343"
+     y1="188.49779"
+     x2="927.64343"
+     y2="188.49779"
+     stroke="#888780"
+     stroke-width="1.2"
+     stroke-dasharray="5, 3"
+     marker-end="url(#arrow)"
+     id="line10" />
+  <text
+     class="ts"
+     x="937.64343"
+     y="192.49779"
+     id="text11">System dependency</text>
+  <!-- ══════════════════════════════════
+     ACTORS — LEFT SIDE
+══════════════════════════════════ -->
+  <!-- Registered User -->
+  <g
+     id="g82"
+     transform="translate(-3.1205065,-79.884968)">
+    <rect
+       x="79.595764"
+       y="210.55603"
+       width="190"
+       height="110"
+       rx="8"
+       class="actor-box"
+       id="rect11" />
+    <rect
+       x="79.595764"
+       y="210.55603"
+       width="190"
+       height="30"
+       rx="8"
+       class="actor-hdr"
+       id="rect12" />
+    <rect
+       x="79.595764"
+       y="228.55603"
+       width="190"
+       height="12"
+       rx="0"
+       class="actor-hdr"
+       id="rect13" />
+    <text
+       class="th actor-txt"
+       x="174.59575"
+       y="230.55603"
+       text-anchor="middle"
+       id="text13">Registered User</text>
+    <line
+       x1="79.595764"
+       y1="240.55603"
+       x2="269.59576"
+       y2="240.55603"
+       stroke="#b8d0ea"
+       stroke-width="0.5"
+       id="line13" />
+    <text
+       class="ts"
+       x="174.59575"
+       y="260.55603"
+       text-anchor="middle"
+       id="text14">[Person]</text>
+    <text
+       class="tl"
+       x="174.59575"
+       y="280.55603"
+       text-anchor="middle"
+       id="text15">Sends messages, joins</text>
+    <text
+       class="tl"
+       x="174.59575"
+       y="296.55603"
+       text-anchor="middle"
+       id="text16">groups, manages profile</text>
+  </g>
+  <!-- Guest -->
+  <g
+     id="g83"
+     transform="translate(-2.4964052,-54.296813)">
+    <rect
+       x="79.595764"
+       y="360.55603"
+       width="190"
+       height="110"
+       rx="8"
+       class="actor-box"
+       id="rect16" />
+    <rect
+       x="79.595764"
+       y="360.55603"
+       width="190"
+       height="30"
+       rx="8"
+       class="actor-hdr"
+       id="rect17" />
+    <rect
+       x="79.595764"
+       y="378.55603"
+       width="190"
+       height="12"
+       rx="0"
+       class="actor-hdr"
+       id="rect18" />
+    <text
+       class="th actor-txt"
+       x="174.59575"
+       y="380.55603"
+       text-anchor="middle"
+       id="text18">Guest</text>
+    <line
+       x1="79.595764"
+       y1="390.55603"
+       x2="269.59576"
+       y2="390.55603"
+       stroke="#b8d0ea"
+       stroke-width="0.5"
+       id="line18" />
+    <text
+       class="ts"
+       x="174.59575"
+       y="410.55603"
+       text-anchor="middle"
+       id="text19">[Person]</text>
+    <text
+       class="tl"
+       x="174.59575"
+       y="430.55603"
+       text-anchor="middle"
+       id="text20">Browses public groups by topic.</text>
+    <text
+       class="tl"
+       x="174.59575"
+       y="446.55603"
+       text-anchor="middle"
+       id="text21">Registers to join or message</text>
+  </g>
+  <!-- ══════════════════════════════════
+     ORBIT — CENTRE
+══════════════════════════════════ -->
+  <g
+     id="g81"
+     transform="translate(-6.8023888,-287.91987)">
+    <rect
+       x="422.65668"
+       y="435.93115"
+       width="310"
+       height="260"
+       rx="12"
+       class="orbit-box"
+       id="rect21" />
+    <rect
+       x="422.65668"
+       y="435.93115"
+       width="310"
+       height="36"
+       rx="12"
+       class="orbit-hdr"
+       id="rect22" />
+    <rect
+       x="422.65668"
+       y="459.93115"
+       width="310"
+       height="12"
+       rx="0"
+       class="orbit-hdr"
+       id="rect23" />
+    <text
+       class="th orbit-txt"
+       x="577.65668"
+       y="461.93115"
+       text-anchor="middle"
+       id="text23">Orbit</text>
+    <line
+       x1="422.65668"
+       y1="471.93115"
+       x2="732.65668"
+       y2="471.93115"
+       stroke="#0f6e56"
+       stroke-width="0.5"
+       id="line23" />
+    <text
+       class="ts orbit-txt"
+       x="577.65668"
+       y="491.93115"
+       text-anchor="middle"
+       id="text24">[Software System]</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="523.93115"
+       text-anchor="middle"
+       id="text25">Real-time chat platform for</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="541.93115"
+       text-anchor="middle"
+       id="text26">people with shared goals.</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="573.93115"
+       text-anchor="middle"
+       id="text27">React SPA frontend.</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="591.93115"
+       text-anchor="middle"
+       id="text28">Spring Boot monolithic backend.</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="609.93115"
+       text-anchor="middle"
+       id="text29">WebSocket real-time messaging.</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="627.93115"
+       text-anchor="middle"
+       id="text30">Kafka fan-out across instances.</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="659.93115"
+       text-anchor="middle"
+       id="text31">AI-powered group features</text>
+    <text
+       class="tl"
+       x="577.65668"
+       y="675.93115"
+       text-anchor="middle"
+       id="text32">planned for Phase 4.</text>
+  </g>
+  <!-- ══════════════════════════════════
+     EXTERNAL SYSTEMS — RIGHT SIDE
+══════════════════════════════════ -->
+  <!-- MongoDB Atlas -->
+  <g
+     id="g79"
+     transform="translate(19.809049,161.04542)">
+    <rect
+       x="852"
+       y="96"
+       width="220"
+       height="110"
+       rx="8"
+       class="ext-box"
+       id="rect32" />
+    <rect
+       x="852"
+       y="96"
+       width="220"
+       height="30"
+       rx="8"
+       class="ext-hdr"
+       id="rect33" />
+    <rect
+       x="852"
+       y="114"
+       width="220"
+       height="12"
+       rx="0"
+       class="ext-hdr"
+       id="rect34" />
+    <text
+       class="th ext-txt"
+       x="962"
+       y="116"
+       text-anchor="middle"
+       id="text34">MongoDB Atlas</text>
+    <line
+       x1="852"
+       y1="126"
+       x2="1072"
+       y2="126"
+       stroke="#c4c2bb"
+       stroke-width="0.5"
+       id="line34" />
+    <text
+       class="ts"
+       x="962"
+       y="146"
+       text-anchor="middle"
+       id="text35">[External System]</text>
+    <text
+       class="tl"
+       x="962"
+       y="166"
+       text-anchor="middle"
+       id="text36">Managed MongoDB database.</text>
+    <text
+       class="tl"
+       x="962"
+       y="182"
+       text-anchor="middle"
+       id="text37">All persistent data storage.</text>
+  </g>
+  <!-- Upstash Kafka -->
+  <!-- extra line -->
+  <g
+     id="g91"
+     transform="translate(-9.9856209,4.3687092)">
+    <rect
+       x="884.65668"
+       y="405.93115"
+       width="220"
+       height="110"
+       rx="8"
+       class="ext-box"
+       id="rect37" />
+    <rect
+       x="884.65668"
+       y="405.93115"
+       width="220"
+       height="30"
+       rx="8"
+       class="ext-hdr"
+       id="rect38" />
+    <rect
+       x="884.65668"
+       y="423.93115"
+       width="220"
+       height="12"
+       rx="0"
+       class="ext-hdr"
+       id="rect39" />
+    <text
+       class="th ext-txt"
+       x="994.65668"
+       y="425.93115"
+       text-anchor="middle"
+       id="text39">Upstash Kafka</text>
+    <line
+       x1="884.65668"
+       y1="435.93115"
+       x2="1104.6566"
+       y2="435.93115"
+       stroke="#c4c2bb"
+       stroke-width="0.5"
+       id="line39" />
+    <text
+       class="ts"
+       x="994.65668"
+       y="455.93115"
+       text-anchor="middle"
+       id="text40">[External System]</text>
+    <text
+       class="tl"
+       x="994.65668"
+       y="475.93115"
+       text-anchor="middle"
+       id="text41">Managed Kafka broker.</text>
+    <text
+       class="tl"
+       x="994.65668"
+       y="491.93115"
+       text-anchor="middle"
+       id="text42">WebSocket fan-out across</text>
+    <text
+       class="tl"
+       x="994.65668"
+       y="507.93115"
+       text-anchor="middle"
+       id="text43">backend instances.</text>
+  </g>
+  <!-- Cloudflare R2 -->
+  <g
+     id="g92"
+     transform="translate(-9.9856209,5.6169118)">
+    <rect
+       x="884.65668"
+       y="553.93115"
+       width="220"
+       height="110"
+       rx="8"
+       class="ext-box"
+       id="rect43" />
+    <rect
+       x="884.65668"
+       y="553.93115"
+       width="220"
+       height="30"
+       rx="8"
+       class="ext-hdr"
+       id="rect44" />
+    <rect
+       x="884.65668"
+       y="571.93115"
+       width="220"
+       height="12"
+       rx="0"
+       class="ext-hdr"
+       id="rect45" />
+    <text
+       class="th ext-txt"
+       x="994.65668"
+       y="573.93115"
+       text-anchor="middle"
+       id="text45">Cloudflare R2</text>
+    <line
+       x1="884.65668"
+       y1="583.93115"
+       x2="1104.6566"
+       y2="583.93115"
+       stroke="#c4c2bb"
+       stroke-width="0.5"
+       id="line45" />
+    <text
+       class="ts"
+       x="994.65668"
+       y="603.93115"
+       text-anchor="middle"
+       id="text46">[External System]</text>
+    <text
+       class="tl"
+       x="994.65668"
+       y="623.93115"
+       text-anchor="middle"
+       id="text47">Object storage for avatars,</text>
+    <text
+       class="tl"
+       x="994.65668"
+       y="639.93115"
+       text-anchor="middle"
+       id="text48">group images, file uploads.</text>
+  </g>
+  <!-- Claude API -->
+  <!-- ══════════════════════════════════
+     EXTERNAL SYSTEMS — BOTTOM (CI/CD)
+══════════════════════════════════ -->
+  <!-- Vercel -->
+  <g
+     id="g84"
+     transform="translate(-181.89797,-320.78807)">
+    <rect
+       x="266.65668"
+       y="823.93115"
+       width="190"
+       height="110"
+       rx="8"
+       class="ext-box"
+       id="rect54" />
+    <rect
+       x="266.65668"
+       y="823.93115"
+       width="190"
+       height="30"
+       rx="8"
+       class="ext-hdr"
+       id="rect55" />
+    <rect
+       x="266.65668"
+       y="841.93115"
+       width="190"
+       height="12"
+       rx="0"
+       class="ext-hdr"
+       id="rect56" />
+    <text
+       class="th ext-txt"
+       x="361.65668"
+       y="843.93115"
+       text-anchor="middle"
+       id="text56">Vercel</text>
+    <line
+       x1="266.65668"
+       y1="853.93115"
+       x2="456.65668"
+       y2="853.93115"
+       stroke="#c4c2bb"
+       stroke-width="0.5"
+       id="line56" />
+    <text
+       class="ts"
+       x="361.65668"
+       y="873.93115"
+       text-anchor="middle"
+       id="text57">[External System]</text>
+    <text
+       class="tl"
+       x="361.65668"
+       y="893.93115"
+       text-anchor="middle"
+       id="text58">Hosts the React SPA.</text>
+    <text
+       class="tl"
+       x="361.65668"
+       y="909.93115"
+       text-anchor="middle"
+       id="text59">Deployed via deploy hook.</text>
+  </g>
+  <!-- Render -->
+  <g
+     id="g85"
+     transform="translate(-160.34337,-320.87363)">
+    <g
+       id="g87"
+       transform="translate(-4.9928105,1.8723039)">
+      <g
+         id="g88"
+         transform="translate(-12.482026,7.4892157)">
+        <g
+           id="g89"
+           transform="translate(5.6169118,-8.7374183)">
+          <rect
+             x="486.65668"
+             y="823.93115"
+             width="190"
+             height="110"
+             rx="8"
+             class="ext-box"
+             id="rect59" />
+          <rect
+             x="486.65668"
+             y="823.93115"
+             width="190"
+             height="30"
+             rx="8"
+             class="ext-hdr"
+             id="rect60" />
+          <rect
+             x="486.65668"
+             y="841.93115"
+             width="190"
+             height="12"
+             rx="0"
+             class="ext-hdr"
+             id="rect61" />
+          <text
+             class="th ext-txt"
+             x="581.65668"
+             y="843.93115"
+             text-anchor="middle"
+             id="text61">Render</text>
+          <line
+             x1="486.65668"
+             y1="853.93115"
+             x2="676.65668"
+             y2="853.93115"
+             stroke="#c4c2bb"
+             stroke-width="0.5"
+             id="line61" />
+          <text
+             class="ts"
+             x="581.65668"
+             y="873.93115"
+             text-anchor="middle"
+             id="text62">[External System]</text>
+          <text
+             class="tl"
+             x="581.65668"
+             y="893.93115"
+             text-anchor="middle"
+             id="text63">Hosts Spring Boot backend.</text>
+          <text
+             class="tl"
+             x="581.65668"
+             y="909.93115"
+             text-anchor="middle"
+             id="text64">Deployed via Render API.</text>
+        </g>
+      </g>
+    </g>
+  </g>
+  <!-- GitHub Actions -->
+  <g
+     id="g86"
+     transform="translate(-485.50777,-132.72203)">
+    <g
+       id="g90"
+       transform="translate(-10.150044,0.44130627)">
+      <rect
+         x="706.65668"
+         y="823.93115"
+         width="190"
+         height="110"
+         rx="8"
+         class="ext-box"
+         id="rect64" />
+      <rect
+         x="706.65668"
+         y="841.93115"
+         width="190"
+         height="12"
+         rx="0"
+         class="ext-hdr"
+         id="rect65" />
+      <rect
+         x="706.65668"
+         y="823.93115"
+         width="190"
+         height="30"
+         rx="8"
+         class="ext-hdr"
+         id="rect66" />
+      <text
+         class="th ext-txt"
+         x="801.65668"
+         y="843.93115"
+         text-anchor="middle"
+         id="text66">GitHub Actions</text>
+      <line
+         x1="706.65668"
+         y1="853.93115"
+         x2="896.65668"
+         y2="853.93115"
+         stroke="#c4c2bb"
+         stroke-width="0.5"
+         id="line66" />
+      <text
+         class="ts"
+         x="801.65668"
+         y="873.93115"
+         text-anchor="middle"
+         id="text67">[External System]</text>
+      <text
+         class="tl"
+         x="801.65668"
+         y="893.93115"
+         text-anchor="middle"
+         id="text68">CI/CD pipeline. Path-based</text>
+      <text
+         class="tl"
+         x="801.65668"
+         y="909.93115"
+         text-anchor="middle"
+         id="text69">triggers per monorepo path.</text>
+    </g>
+  </g>
+  <!-- ══════════════════════════════════
+     RELATION LINES
+══════════════════════════════════ -->
+  <!-- Registered User → Orbit -->
+  <path
+     d="m 267.28215,186.14055 146.88262,64.57194"
+     class="rel-user"
+     marker-end="url(#arrow-blue)"
+     id="path69" />
+  <text
+     class="rel-label"
+     x="366.80212"
+     y="58.899261"
+     id="text70"
+     transform="rotate(23.853868)">HTTPS / WSS</text>
+  <!-- Guest → Orbit -->
+  <path
+     d="M 268.34756,359.98946 413.90625,298.52432"
+     class="rel-user"
+     marker-end="url(#arrow-blue)"
+     id="path70" />
+  <text
+     class="rel-label"
+     x="144.4126"
+     y="433.30234"
+     id="text71"
+     transform="rotate(-23.060651)">HTTPS (read-only)</text>
+  <!-- Orbit → MongoDB Atlas -->
+  <path
+     d="m 727.36099,258.50839 143.61518,53.74227"
+     class="rel-data"
+     marker-end="url(#arrow-green)"
+     id="path71" />
+  <text
+     class="rel-label"
+     x="817.82739"
+     y="-9.7494316"
+     id="text72"
+     transform="rotate(20.147676)">reads / writes</text>
+  <!-- Orbit → Upstash Kafka -->
+  <path
+     d="M 726.85065,350.86164 873.55498,466.21027"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path72" />
+  <text
+     class="rel-label"
+     x="834.00568"
+     y="-165.51869"
+     id="text73"
+     transform="rotate(37.405237)">publish / consume</text>
+  <!-- Orbit → Cloudflare R2 -->
+  <path
+     d="M 701.76522,409.25861 874.06531,562.0918"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path73" />
+  <text
+     class="rel-label"
+     x="877.93896"
+     y="-157.58961"
+     id="text74"
+     transform="rotate(41.198853)">upload / presign</text>
+  <!-- Orbit → Claude API -->
+  <path
+     d="m 642.18888,408.65843 47.41041,152.21536"
+     class="rel-ai"
+     marker-end="url(#arrow-purple)"
+     id="path74" />
+  <text
+     class="rel-label"
+     x="625.58295"
+     y="-488.08273"
+     id="text75"
+     transform="rotate(72.033098)">HTTPS (Phase 4)</text>
+  <!-- Orbit → Vercel (hosted by) -->
+  <path
+     d="M 441.50911,409.15661 233.48207,501.89488"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path75" />
+  <text
+     class="rel-label"
+     x="106.57027"
+     y="551.0481"
+     id="text76"
+     transform="rotate(-24.173113)">hosted on</text>
+  <!-- Orbit → Render (hosted by) -->
+  <path
+     d="m 502.45245,408.84456 -64.65114,93.36238"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path76" />
+  <text
+     class="rel-label"
+     x="-133.40895"
+     y="642.16089"
+     id="text77"
+     transform="rotate(-55.549662)">hosted on</text>
+  <!-- GitHub Actions → Vercel -->
+  <path
+     d="M 268.49466,689.98936 180.75414,614.08468"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path77" />
+  <text
+     class="rel-label"
+     x="590.60706"
+     y="333.06473"
+     id="text78"
+     transform="rotate(41.567316)">deploy hook</text>
+  <!-- GitHub Actions → Render -->
+  <path
+     d="m 339.25955,690.10693 74.58959,-75.24272"
+     class="rel-infra"
+     marker-end="url(#arrow)"
+     id="path78" />
+  <text
+     class="rel-label"
+     x="-223.84662"
+     y="722.77716"
+     id="text79"
+     transform="rotate(-45.267123)">Render API</text>
+  <g
+     id="g5"
+     transform="matrix(0.95293785,0,0,0.86267975,-113.49048,-52.176082)">
+    <rect
+       x="726.59998"
+       y="712.59998"
+       width="230"
+       height="130"
+       rx="8"
+       class="ai-box"
+       id="rect71"
+       style="fill:#eeedfe;stroke:#534ab7;stroke-width:1.2" />
+    <rect
+       x="726.59998"
+       y="712.59998"
+       width="230"
+       height="30"
+       rx="8"
+       class="ai-hdr"
+       id="rect72"
+       style="fill:#cecbf6;stroke:none" />
+    <rect
+       x="726.59998"
+       y="730.59998"
+       width="230"
+       height="12"
+       rx="0"
+       class="ai-hdr"
+       id="rect73"
+       style="fill:#cecbf6;stroke:none" />
+    <line
+       x1="726.59998"
+       y1="742.59998"
+       x2="956.59998"
+       y2="742.59998"
+       stroke="#cecbf6"
+       stroke-width="0.5"
+       id="line73" />
+  </g>
+  <g
+     id="g4"
+     transform="translate(-150.75464,-151.53575)">
+    <g
+       id="g2"
+       transform="translate(154.66019,152.31686)">
+      <text
+         class="tl"
+         x="688.22296"
+         y="631.50836"
+         text-anchor="middle"
+         id="text52">Message summary, @ask bot,</text>
+      <text
+         class="tl"
+         x="688.22296"
+         y="647.50836"
+         text-anchor="middle"
+         id="text53">smart replies, translation,</text>
+      <text
+         class="tl"
+         x="688.22296"
+         y="663.50836"
+         text-anchor="middle"
+         id="text54">tone check. Phase 4 only.</text>
+    </g>
+    <text
+       class="th ai-txt"
+       x="841.59998"
+       y="732.59998"
+       text-anchor="middle"
+       id="text73-4"
+       style="font-weight:700;font-size:15px;font-family:ui-sans-serif, system-ui, sans-serif;fill:#3c3489">Claude API</text>
+    <text
+       class="ts ai-txt"
+       x="841.59998"
+       y="762.59998"
+       text-anchor="middle"
+       id="text74-8"
+       style="font-weight:400;font-size:12px;font-family:ui-sans-serif, system-ui, sans-serif;fill:#3c3489">[External AI System]</text>
+  </g>
+</svg>

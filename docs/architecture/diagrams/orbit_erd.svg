@@ -1,0 +1,1292 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1300 1500"
+   role="img"
+   version="1.1"
+   id="svg130"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <title
+     id="title1">Orbit ERD — MongoDB Collection Diagram</title>
+  <desc
+     id="desc1">Six MongoDB collections for Orbit chat app showing references and embedded subdocuments</desc>
+  <defs
+     id="defs1">
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#888780"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <style
+       id="style1">
+  text { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+  .th  { font-size: 14px; font-weight: 600; }
+  .ts  { font-size: 12px; font-weight: 400; }
+  .tl  { font-size: 11px; font-weight: 400; fill: #5F5E5A; }
+  .section-label { font-size: 11px; font-weight: 600; fill: #888780; letter-spacing: 1px; }
+  .c-teal-box   { fill: #E1F5EE; stroke: #0F6E56; }
+  .c-teal-hdr   { fill: #9FE1CB; }
+  .c-teal-txt   { fill: #085041; }
+  .c-purple-box { fill: #EEEDFE; stroke: #534AB7; }
+  .c-purple-hdr { fill: #CECBF6; }
+  .c-purple-txt { fill: #3C3489; }
+  .ref-line  { stroke: #1D9E75; stroke-width: 1.2; fill: none; }
+  .emb-line  { stroke: #7F77DD; stroke-width: 1.2; fill: none; stroke-dasharray: 6 3; }
+  .div-line  { stroke: #B4B2A9; stroke-width: 0.5; }
+</style>
+  </defs>
+  <!-- ════════════════════════════════════════════════════════
+     LEGEND
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="131.39453"
+     y="55.21624"
+     width="1020"
+     height="44"
+     rx="8"
+     fill="none"
+     stroke="#b4b2a9"
+     stroke-width="0.5"
+     id="rect1" />
+  <text
+     class="section-label"
+     x="151.39453"
+     y="73.21624"
+     id="text1">LEGEND</text>
+  <!-- ref arrow -->
+  <line
+     x1="221.39452"
+     y1="77.21624"
+     x2="271.39453"
+     y2="77.21624"
+     stroke="#1d9e75"
+     stroke-width="1.5"
+     marker-end="url(#arrow)"
+     id="line1" />
+  <text
+     class="ts"
+     x="281.39453"
+     y="81.21624"
+     id="text2">Reference (ObjectId)</text>
+  <!-- embedded dashed -->
+  <line
+     x1="451.39453"
+     y1="77.21624"
+     x2="501.39456"
+     y2="77.21624"
+     stroke="#7f77dd"
+     stroke-width="1.5"
+     stroke-dasharray="6, 3"
+     id="line2" />
+  <text
+     class="ts"
+     x="511.39456"
+     y="81.21624"
+     id="text3">Embedded subdocument</text>
+  <!-- collection box sample -->
+  <rect
+     x="681.39453"
+     y="63.21624"
+     width="14"
+     height="14"
+     rx="3"
+     fill="#e1f5ee"
+     stroke="#0f6e56"
+     stroke-width="0.5"
+     id="rect3" />
+  <text
+     class="ts"
+     x="703.39453"
+     y="75.21624"
+     id="text4">Collection</text>
+  <!-- embedded box sample -->
+  <rect
+     x="791.39453"
+     y="63.21624"
+     width="14"
+     height="14"
+     rx="3"
+     fill="#eeedfe"
+     stroke="#534ab7"
+     stroke-width="0.5"
+     stroke-dasharray="4, 2"
+     id="rect4" />
+  <text
+     class="ts"
+     x="813.39453"
+     y="75.21624"
+     id="text5">Embedded doc</text>
+  <!-- denorm note -->
+  <text
+     class="ts"
+     x="931.39453"
+     y="81.21624"
+     id="text6">✱ = denormalised snapshot field</text>
+  <!-- ════════════════════════════════════════════════════════
+     COLUMN HEADERS
+════════════════════════════════════════════════════════ -->
+  <text
+     class="section-label"
+     x="118.81729"
+     y="139.79347"
+     id="text7">COLLECTIONS</text>
+  <text
+     class="section-label"
+     x="748.65839"
+     y="135.60106"
+     id="text8">EMBEDDED SUBDOCUMENTS</text>
+  <!-- vertical divider between columns -->
+  <line
+     x1="659.12616"
+     y1="126.95498"
+     x2="659.12616"
+     y2="1422.3641"
+     class="div-line"
+     stroke-dasharray="8.72128, 4.36064"
+     id="line8" />
+  <!-- ════════════════════════════════════════════════════════
+     COLLECTION 1 — users  (y=110)
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="119.65578"
+     y="175.4016"
+     width="460"
+     height="204"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect8" />
+  <rect
+     x="119.65578"
+     y="175.4016"
+     width="460"
+     height="32"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect9" />
+  <rect
+     x="119.65578"
+     y="195.4016"
+     width="460"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect10" />
+  <text
+     class="th c-teal-txt"
+     x="349.65579"
+     y="197.4016"
+     text-anchor="middle"
+     id="text10">users</text>
+  <line
+     x1="119.65578"
+     y1="207.4016"
+     x2="579.65576"
+     y2="207.4016"
+     class="div-line"
+     id="line10" />
+  <text
+     class="ts"
+     x="139.65578"
+     y="227.4016"
+     id="text11">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="245.4016"
+     id="text12">email: String — unique, indexed, lowercase</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="263.40161"
+     id="text13">displayName: String — 2–50 chars, text-indexed for search</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="281.40161"
+     id="text14">passwordHash: String — BCrypt cost 12, null for OAuth</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="299.40161"
+     id="text15">avatarUrl: String — Cloudflare R2 URL, nullable</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="317.40161"
+     id="text16">online: Boolean | lastSeen: ISODate | role: USER | ADMIN</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="335.40161"
+     id="text17">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="139.65578"
+     y="367.40161"
+     id="text18">No embedded subdocuments</text>
+  <!-- ════════════════════════════════════════════════════════
+     COLLECTION 2 — contacts  (y=340)
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="119.65578"
+     y="405.40161"
+     width="460"
+     height="190"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect18" />
+  <rect
+     x="119.65578"
+     y="405.40161"
+     width="460"
+     height="32"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect19" />
+  <rect
+     x="119.65578"
+     y="425.40161"
+     width="460"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect20" />
+  <text
+     class="th c-teal-txt"
+     x="349.65579"
+     y="427.40161"
+     text-anchor="middle"
+     id="text20">contacts</text>
+  <line
+     x1="119.65578"
+     y1="437.40161"
+     x2="579.65576"
+     y2="437.40161"
+     class="div-line"
+     id="line20" />
+  <text
+     class="ts"
+     x="139.65578"
+     y="457.40161"
+     id="text21">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="475.40161"
+     id="text22">requesterId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="493.40161"
+     id="text23">receiverId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="511.40161"
+     id="text24">status: PENDING | CONNECTED | BLOCKED</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="529.40161"
+     id="text25">conversationId: ObjectId → conversations._id (null until CONNECTED)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="547.40161"
+     id="text26">blockedBy: ObjectId → users._id (null unless BLOCKED)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="565.40161"
+     id="text27">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="139.65578"
+     y="585.40161"
+     id="text28">No embedded subdocuments</text>
+  <!-- ════════════════════════════════════════════════════════
+     COLLECTION 3 — groups  (y=560)
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="119.65578"
+     y="625.40161"
+     width="460"
+     height="224"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect28" />
+  <rect
+     x="119.65578"
+     y="625.40161"
+     width="460"
+     height="32"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect29" />
+  <rect
+     x="119.65578"
+     y="645.40161"
+     width="460"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect30" />
+  <text
+     class="th c-teal-txt"
+     x="349.65579"
+     y="647.40161"
+     text-anchor="middle"
+     id="text30">groups</text>
+  <line
+     x1="119.65578"
+     y1="657.40161"
+     x2="579.65576"
+     y2="657.40161"
+     class="div-line"
+     id="line30" />
+  <text
+     class="ts"
+     x="139.65578"
+     y="677.40161"
+     id="text31">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="695.40161"
+     id="text32">name: String — unique, 3–100 chars</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="713.40161"
+     id="text33">description: String | topicTag: String | visibility: PUBLIC | PRIVATE</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="731.40161"
+     id="text34">avatarUrl: String | coverImageUrl: String (Cloudflare R2)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="749.40161"
+     id="text35">conversationId: ObjectId → conversations._id</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="767.40161"
+     id="text36">memberCount: Number — denormalised, kept in sync by service layer</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="785.40161"
+     id="text37">inviteToken: String | inviteTokenExpiresAt: ISODate (nullable)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="803.40161"
+     id="text38">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="139.65578"
+     y="823.40161"
+     id="text39">Embeds: members[ ] · pinnedMessages[ ]</text>
+  <!-- ════════════════════════════════════════════════════════
+     COLLECTION 4 — conversations  (y=814)
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="119.65578"
+     y="879.40161"
+     width="460"
+     height="192"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect39" />
+  <rect
+     x="119.65578"
+     y="879.40161"
+     width="460"
+     height="32"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect40" />
+  <rect
+     x="119.65578"
+     y="899.40161"
+     width="460"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect41" />
+  <text
+     class="th c-teal-txt"
+     x="349.65579"
+     y="901.40161"
+     text-anchor="middle"
+     id="text41">conversations</text>
+  <line
+     x1="119.65578"
+     y1="911.40161"
+     x2="579.65576"
+     y2="911.40161"
+     class="div-line"
+     id="line41" />
+  <text
+     class="ts"
+     x="139.65578"
+     y="931.40161"
+     id="text42">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="949.40161"
+     id="text43">type: DIRECT | GROUP</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="967.40161"
+     id="text44">participantIds: [ ObjectId ] → users._id (2 for DIRECT, N for GROUP)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="985.40161"
+     id="text45">groupId: ObjectId → groups._id (null for DIRECT)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1003.4017"
+     id="text46">mutedBy: [ ObjectId ] → users._id (sparse — muted users only)</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1021.4017"
+     id="text47">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="139.65578"
+     y="1041.4015"
+     id="text48">Embeds: lastMessage{ }</text>
+  <!-- ════════════════════════════════════════════════════════
+     COLLECTION 5 — messages  (y=1036 → give it room)
+════════════════════════════════════════════════════════ -->
+  <rect
+     x="119.65578"
+     y="1101.4015"
+     width="460"
+     height="208"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect48" />
+  <rect
+     x="119.65578"
+     y="1101.4015"
+     width="460"
+     height="32"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect49" />
+  <rect
+     x="119.65578"
+     y="1121.4015"
+     width="460"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect50" />
+  <text
+     class="th c-teal-txt"
+     x="349.65579"
+     y="1123.4015"
+     text-anchor="middle"
+     id="text50">messages</text>
+  <line
+     x1="119.65578"
+     y1="1133.4015"
+     x2="579.65576"
+     y2="1133.4015"
+     class="div-line"
+     id="line50" />
+  <text
+     class="ts"
+     x="139.65578"
+     y="1153.4015"
+     id="text51">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1171.4015"
+     id="text52">conversationId: ObjectId → conversations._id</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1189.4015"
+     id="text53">senderId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1207.4015"
+     id="text54">senderName: String ✱ — snapshot at send time</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1225.4015"
+     id="text55">type: TEXT | IMAGE | FILE | content: String | deleted: Boolean</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1243.4015"
+     id="text56">edited: Boolean | editedAt: ISODate</text>
+  <text
+     class="ts"
+     x="139.65578"
+     y="1261.4015"
+     id="text57">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="139.65578"
+     y="1289.4015"
+     id="text58">Embeds: quotedMessage{ } · file{ } · reactions[ ] · readBy[ ]</text>
+  <!-- NOTE: notifications omitted from left column — shown on right side
+     as it only holds references, no embedded docs -->
+  <!-- ════════════════════════════════════════════════════════
+     RIGHT COLUMN — EMBEDDED DOCS
+     Grouped under their parent collection
+════════════════════════════════════════════════════════ -->
+  <!-- ── GROUP 1: groups embeds ── -->
+  <text
+     class="section-label"
+     x="749.49689"
+     y="391.66461"
+     id="text59">INSIDE groups</text>
+  <line
+     x1="749.49689"
+     y1="397.66461"
+     x2="1249.4969"
+     y2="397.66461"
+     class="div-line"
+     id="line59" />
+  <!-- members[] -->
+  <rect
+     x="749.49689"
+     y="409.66461"
+     width="480"
+     height="114"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect59" />
+  <rect
+     x="749.49689"
+     y="409.66461"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect60" />
+  <rect
+     x="749.49689"
+     y="425.66461"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect61" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="429.66461"
+     text-anchor="middle"
+     id="text61">members[ ]</text>
+  <line
+     x1="749.49689"
+     y1="437.66461"
+     x2="1229.4969"
+     y2="437.66461"
+     class="div-line"
+     id="line61" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="457.66461"
+     id="text62">userId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="475.66461"
+     id="text63">role: ADMIN | MEMBER</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="493.66461"
+     id="text64">joinedAt: ISODate</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="515.66461"
+     id="text65">One entry per member. No uniqueness constraint — enforced by service layer.</text>
+  <!-- pinnedMessages[] -->
+  <rect
+     x="749.49689"
+     y="541.66461"
+     width="480"
+     height="130"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect65" />
+  <rect
+     x="749.49689"
+     y="541.66461"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect66" />
+  <rect
+     x="749.49689"
+     y="557.66461"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect67" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="561.66461"
+     text-anchor="middle"
+     id="text67">pinnedMessages[ ]</text>
+  <line
+     x1="749.49689"
+     y1="569.66461"
+     x2="1229.4969"
+     y2="569.66461"
+     class="div-line"
+     id="line67" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="589.66461"
+     id="text68">messageId: ObjectId → messages._id (UI deep-link only)</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="607.66461"
+     id="text69">content: String ✱ — snapshot at pin time (survives original deletion)</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="625.66461"
+     id="text70">senderId: ObjectId → users._id | senderName: String ✱</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="643.66461"
+     id="text71">pinnedBy: ObjectId → users._id | pinnedAt: ISODate</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="663.66461"
+     id="text72">Max 10 pins per group. Content snapshot — not a live reference.</text>
+  <!-- ── GROUP 2: conversations embeds ── -->
+  <text
+     class="section-label"
+     x="749.49689"
+     y="705.66461"
+     id="text73">INSIDE conversations</text>
+  <line
+     x1="749.49689"
+     y1="711.66461"
+     x2="1249.4969"
+     y2="711.66461"
+     class="div-line"
+     id="line73" />
+  <!-- lastMessage{} -->
+  <rect
+     x="749.49689"
+     y="723.66461"
+     width="480"
+     height="130"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect73" />
+  <rect
+     x="749.49689"
+     y="723.66461"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect74" />
+  <rect
+     x="749.49689"
+     y="739.66461"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect75" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="743.66461"
+     text-anchor="middle"
+     id="text75">lastMessage{ }</text>
+  <line
+     x1="749.49689"
+     y1="751.66461"
+     x2="1229.4969"
+     y2="751.66461"
+     class="div-line"
+     id="line75" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="771.66461"
+     id="text76">messageId: ObjectId → messages._id</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="789.66461"
+     id="text77">content: String ✱ — snapshot, set to null if last message deleted</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="807.66461"
+     id="text78">senderId: ObjectId → users._id | senderName: String ✱</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="825.66461"
+     id="text79">sentAt: ISODate</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="845.66461"
+     id="text80">Denormalised for conversation list rendering. Null until first message.</text>
+  <!-- ── GROUP 3: messages embeds ── -->
+  <text
+     class="section-label"
+     x="749.49689"
+     y="885.66461"
+     id="text81">INSIDE messages</text>
+  <line
+     x1="749.49689"
+     y1="891.66461"
+     x2="1249.4969"
+     y2="891.66461"
+     class="div-line"
+     id="line81" />
+  <!-- quotedMessage{} -->
+  <rect
+     x="749.49689"
+     y="903.66461"
+     width="480"
+     height="130"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect81" />
+  <rect
+     x="749.49689"
+     y="903.66461"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect82" />
+  <rect
+     x="749.49689"
+     y="919.66461"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect83" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="923.66461"
+     text-anchor="middle"
+     id="text83">quotedMessage{ }</text>
+  <line
+     x1="749.49689"
+     y1="931.66461"
+     x2="1229.4969"
+     y2="931.66461"
+     class="div-line"
+     id="line83" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="951.66461"
+     id="text84">messageId: ObjectId — UI deep-link only, NOT used for content retrieval</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="969.66461"
+     id="text85">content: String ✱ — snapshot at reply time, survives original deletion</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="987.66461"
+     id="text86">senderId: ObjectId → users._id | senderName: String ✱</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1005.6647"
+     id="text87">type: String — snapshot of original message type</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="1025.6647"
+     id="text88">Full embedded snapshot. If original deleted, quoted content still shows.</text>
+  <!-- file{} -->
+  <rect
+     x="749.49689"
+     y="1049.6646"
+     width="480"
+     height="114"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect88" />
+  <rect
+     x="749.49689"
+     y="1049.6646"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect89" />
+  <rect
+     x="749.49689"
+     y="1065.6646"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect90" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="1069.6646"
+     text-anchor="middle"
+     id="text90">file{ }</text>
+  <line
+     x1="749.49689"
+     y1="1077.6646"
+     x2="1229.4969"
+     y2="1077.6646"
+     class="div-line"
+     id="line90" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="1097.6646"
+     id="text91">fileId: String — Cloudflare R2 object key</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1115.6646"
+     id="text92">fileName: String | fileSize: Number (bytes) | mimeType: String</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1133.6646"
+     id="text93">url: String — presigned R2 URL, expires 1hr</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="1155.6646"
+     id="text94">Null for TEXT type. Refresh expired URL via GET /api/v1/files/{fileId}/url</text>
+  <!-- reactions[] -->
+  <rect
+     x="749.49689"
+     y="1181.6646"
+     width="480"
+     height="114"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect94" />
+  <rect
+     x="749.49689"
+     y="1181.6646"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect95" />
+  <rect
+     x="749.49689"
+     y="1197.6646"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect96" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="1201.6646"
+     text-anchor="middle"
+     id="text96">reactions[ ]</text>
+  <line
+     x1="749.49689"
+     y1="1209.6646"
+     x2="1229.4969"
+     y2="1209.6646"
+     class="div-line"
+     id="line96" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="1229.6646"
+     id="text97">userId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1247.6646"
+     id="text98">displayName: String ✱ — snapshot at reaction time</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1265.6646"
+     id="text99">emoji: String | reactedAt: ISODate</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="1287.6646"
+     id="text100">One per userId — enforced via $pull then $push in service layer (no DB constraint).</text>
+  <!-- readBy[] -->
+  <rect
+     x="749.49689"
+     y="1313.6646"
+     width="480"
+     height="96"
+     rx="8"
+     class="c-purple-box"
+     stroke-width="0.5"
+     stroke-dasharray="6, 3"
+     id="rect100" />
+  <rect
+     x="749.49689"
+     y="1313.6646"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect101" />
+  <rect
+     x="749.49689"
+     y="1329.6646"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-purple-hdr"
+     stroke-width="0"
+     id="rect102" />
+  <text
+     class="th c-purple-txt"
+     x="989.49689"
+     y="1333.6646"
+     text-anchor="middle"
+     id="text102">readBy[ ]</text>
+  <line
+     x1="749.49689"
+     y1="1341.6646"
+     x2="1229.4969"
+     y2="1341.6646"
+     class="div-line"
+     id="line102" />
+  <text
+     class="ts"
+     x="767.49689"
+     y="1361.6646"
+     id="text103">userId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="767.49689"
+     y="1379.6646"
+     id="text104">readAt: ISODate</text>
+  <text
+     class="tl"
+     x="767.49689"
+     y="1399.6646"
+     id="text105">Grows as participants read. userId added once via $addToSet equivalent.</text>
+  <!-- ── NOTIFICATIONS standalone box ── -->
+  <text
+     class="section-label"
+     x="747.81995"
+     y="174.52603"
+     id="text106">NOTIFICATIONS (references only)</text>
+  <line
+     x1="747.81995"
+     y1="180.52603"
+     x2="1247.8199"
+     y2="180.52603"
+     class="div-line"
+     id="line106" />
+  <rect
+     x="747.81995"
+     y="192.52603"
+     width="480"
+     height="162"
+     rx="8"
+     class="c-teal-box"
+     stroke-width="0.5"
+     id="rect106" />
+  <rect
+     x="747.81995"
+     y="192.52603"
+     width="480"
+     height="28"
+     rx="8"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect107" />
+  <rect
+     x="747.81995"
+     y="208.52603"
+     width="480"
+     height="12"
+     rx="0"
+     class="c-teal-hdr"
+     stroke-width="0"
+     id="rect108" />
+  <text
+     class="th c-teal-txt"
+     x="987.81989"
+     y="212.52603"
+     text-anchor="middle"
+     id="text108">notifications</text>
+  <line
+     x1="747.81995"
+     y1="220.52603"
+     x2="1227.8199"
+     y2="220.52603"
+     class="div-line"
+     id="line108" />
+  <text
+     class="ts"
+     x="765.81995"
+     y="240.52603"
+     id="text109">_id: ObjectId</text>
+  <text
+     class="ts"
+     x="765.81995"
+     y="258.52603"
+     id="text110">userId: ObjectId → users._id</text>
+  <text
+     class="ts"
+     x="765.81995"
+     y="276.52606"
+     id="text111">conversationId: ObjectId → conversations._id</text>
+  <text
+     class="ts"
+     x="765.81995"
+     y="294.52606"
+     id="text112">messageId: ObjectId → messages._id (MENTION type only)</text>
+  <text
+     class="ts"
+     x="765.81995"
+     y="312.52606"
+     id="text113">type: UNREAD_MESSAGE | MENTION | count: Number | read: Boolean</text>
+  <text
+     class="ts"
+     x="765.81995"
+     y="330.52606"
+     id="text114">createdAt: ISODate | updatedAt: ISODate</text>
+  <text
+     class="tl"
+     x="765.81995"
+     y="348.52606"
+     id="text115">No embedded subdocuments. One doc per user per conversation for UNREAD type.</text>
+  <!-- ════════════════════════════════════════════════════════
+     CROSS-COLLECTION REFERENCE ARROWS
+     (left column → left column only, clean horizontal/vertical paths)
+════════════════════════════════════════════════════════ -->
+  <!-- contacts.requesterId / receiverId → users -->
+  <path
+     d="m 579.65578,493.40159 h 20 v -248 h -20"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path115" />
+  <text
+     class="tl"
+     x="280.32513"
+     y="-605.33759"
+     id="text116"
+     transform="rotate(90.26351)"
+     style="font-size:11px">requesterId, receiverId, blockedBy</text>
+  <!-- contacts.conversationId → conversations -->
+  <path
+     d="m 579.95188,531.87416 h 29.7642 v 430.40709 h -29.7642"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path118" />
+  <!-- groups.conversationId → conversations -->
+  <path
+     d="m 579.53185,763.41183 h 11.91336 v 173.73195 h -11.91336"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path119" />
+  <!-- conversations.participantIds → users -->
+  <path
+     d="m 580.15485,987.11685 h 58.50032 v -761.0348 h -58.50032"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path120" />
+  <text
+     class="tl"
+     x="-685.91333"
+     y="636.52808"
+     id="text120"
+     transform="rotate(-89.693787)">participantIds, mutedBy</text>
+  <!-- conversations.groupId → groups -->
+  <path
+     d="M 119.79129,959.81778 H 95.420677 v -222.2804 h 24.370613"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path121" />
+  <text
+     class="tl"
+     x="-862.72821"
+     y="91.349953"
+     transform="rotate(-90)"
+     id="text122">groupId</text>
+  <!-- messages.conversationId → conversations -->
+  <path
+     d="M 119.61597,1194.7725 H 95.515117 V 984.96439 h 24.100853"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path122" />
+  <text
+     class="tl"
+     x="-1125.9099"
+     y="92.817291"
+     transform="rotate(-90)"
+     id="text123">conversationId</text>
+  <!-- messages.senderId → users -->
+  <path
+     d="M 119.7774,1232.0555 H 59.841757 V 276.96305 H 119.7774"
+     class="ref-line"
+     marker-end="url(#arrow)"
+     id="path123" />
+  <!-- ════════════════════════════════════════════════════════
+     EMBEDDED CONNECTOR LINES
+     (left collection → right embedded group)
+════════════════════════════════════════════════════════ -->
+  <!-- groups → members[] -->
+  <path
+     d="m 579.65842,718.37674 117.6076,0.43929 V 468.35138 l 52.22827,-0.43929"
+     class="emb-line"
+     id="path124"
+  />
+  <!-- groups → pinnedMessages[] -->
+  <path
+     d="M 579.63745,741.01886 H 721.0523 V 610.56207 l 28.44461,0.41924"
+     class="emb-line"
+     id="path125"
+  />
+  <!-- conversations → lastMessage{} -->
+  <path
+     d="m 579.51466,1014.8741 96.19463,0.5929 V 797.50704 l 73.78762,-0.5929"
+     class="emb-line"
+     id="path126"
+  />
+  <!-- messages → quotedMessage{} -->
+  <path
+     d="M 579.51466,1166.8634 H 698.5358 V 974.91247 h 50.96111"
+     class="emb-line"
+     id="path127"
+  />
+  <!-- messages → file{} -->
+  <path
+     d="m 579.80975,1193.3882 143.63581,-0.1639 v -77.7486 l 26.05271,0.1639"
+     class="emb-line"
+     id="path128"
+  />
+  <!-- messages → reactions[] -->
+  <path
+     d="m 579.22488,1221.5368 144.59643,-0.6637 v 25.9076 l 25.66893,0.6637"
+     class="emb-line"
+     id="path129"
+  />
+  <!-- messages → readBy[] -->
+  <path
+     d="m 579.51466,1248.4245 121.49341,-0.2964 v 130.4052 l 48.48884,0.2964"
+     class="emb-line"
+     id="path130"
+  />
+  <text
+     class="tl"
+     x="803.93756"
+     y="-599.77692"
+     transform="rotate(90.436381)"
+     id="text123-4"
+     style="font-weight:400;font-size:11px;font-family:ui-sans-serif, system-ui, sans-serif;fill:#5f5e5a">conversationId</text>
+  <text
+     class="tl"
+     x="746.10797"
+     y="-618.49744"
+     transform="rotate(90.436381)"
+     id="text123-4-2"
+     style="font-weight:400;font-size:11px;font-family:ui-sans-serif, system-ui, sans-serif;fill:#5f5e5a">conversationId</text>
+  <text
+     class="tl"
+     x="-785.06641"
+     y="57.428539"
+     transform="rotate(-90)"
+     id="text123-5"
+     style="font-weight:400;font-size:11px;font-family:ui-sans-serif, system-ui, sans-serif;fill:#5f5e5a">senderId</text>
+</svg>

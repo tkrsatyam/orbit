@@ -1,0 +1,1007 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1300 1000"
+   role="img"
+   version="1.1"
+   id="svg88"
+   sodipodi:docname="c3_component_layers.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview88"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="3.2046079"
+     inkscape:cx="593.05227"
+     inkscape:cy="415.8075"
+     inkscape:window-width="2560"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg88" />
+  <title
+     id="title1">Orbit — C3 Component Diagram (Layered View)</title>
+  <desc
+     id="desc1">Controller, Service, and Repository layers with straight vertical call relationships</desc>
+  <defs
+     id="defs2">
+    <marker
+       id="arrow-green"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="arrow-blue"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <style
+       id="style2">
+    text { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .th  { font-size: 13.5px; font-weight: 700; }
+    .ts  { font-size: 11px; font-weight: 400; }
+    .tl  { font-size: 10px; font-weight: 400; fill: #5F5E5A; font-style: italic; }
+    .section-label { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1.2px; }
+    .layer-label   { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1px; }
+
+    .entry-box { fill: #E8EEF7; stroke: #1D6FA8; stroke-width: 1.6; }
+    .entry-txt { fill: #0D3F62; }
+
+    .ctrl-box { fill: #C7F0E3; stroke: #0F6E56; stroke-width: 1.3; }
+    .ctrl-txt { fill: #053D30; }
+
+    .svc-box { fill: #9FE1CB; stroke: #0F6E56; stroke-width: 1.3; }
+    .svc-txt { fill: #042D24; }
+
+    .repo-box { fill: #5DCAA5; stroke: #0F6E56; stroke-width: 1.3; }
+    .repo-txt { fill: #03241D; }
+
+    .rel-call  { stroke: #0F6E56; stroke-width: 1.2; fill: none; }
+    .rel-cross { stroke: #1D6FA8; stroke-width: 1.1; fill: none; stroke-dasharray: 5 3; }
+  </style>
+    <marker
+       id="arrow-green-0"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M 2,1 8,5 2,9"
+         fill="none"
+         stroke="#0f6e56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1-9" />
+    </marker>
+    <marker
+       id="arrow"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M 2,1 8,5 2,9"
+         fill="none"
+         stroke="#888780"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1-8" />
+    </marker>
+    <marker
+       id="arrow-blue-2"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M 2,1 8,5 2,9"
+         fill="none"
+         stroke="#1d6fa8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2-4" />
+    </marker>
+  </defs>
+  <rect
+     x="20.005293"
+     y="20.005297"
+     width="1259.9894"
+     height="960.00677"
+     rx="11.999899"
+     fill="none"
+     stroke="#d8d6cf"
+     stroke-width="0.999394"
+     stroke-dasharray="10, 5"
+     id="rect2" />
+  <text
+     class="section-label"
+     x="40"
+     y="44"
+     id="text2">C3 — LAYERED VIEW  (1 of 2)  ·  Standard request flow: Entry Point → Controller → Service → Repository</text>
+  <text
+     class="tl"
+     x="40"
+     y="62"
+     id="text3">See c3_component_crosscutting.svg for Kafka, WebSocket fan-out, and external client wrapper flows.</text>
+  <!-- ── ENTRY POINT ── -->
+  <text
+     class="layer-label"
+     x="60"
+     y="106"
+     id="text4">ENTRY POINT</text>
+  <rect
+     x="60"
+     y="114"
+     width="1170"
+     height="50"
+     rx="8"
+     class="entry-box"
+     id="rect4" />
+  <text
+     class="th entry-txt"
+     x="80"
+     y="136"
+     id="text5">Spring Security Filter Chain</text>
+  <text
+     class="ts entry-txt"
+     x="80"
+     y="154"
+     id="text6">Validates JWT once per request. Populates SecurityContext. No re-validation downstream.</text>
+  <!-- vertical connector down to all controllers -->
+  <line
+     x1="645"
+     y1="164"
+     x2="645"
+     y2="186"
+     stroke="#1D6FA8"
+     stroke-width="1.3"
+     marker-end="url(#arrow-blue)"
+     id="line6" />
+  <!-- ── CONTROLLER LAYER ── -->
+  <text
+     class="layer-label"
+     x="60"
+     y="208"
+     id="text7">CONTROLLER LAYER</text>
+  <g
+     id="controllers">
+    <rect
+       x="60"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect7" />
+    <text
+       class="ts ctrl-txt"
+       x="129"
+       y="240"
+       text-anchor="middle"
+       id="text8">AuthController</text>
+    <text
+       class="tl"
+       x="129"
+       y="258"
+       text-anchor="middle"
+       id="text9">/auth/**</text>
+    <rect
+       x="206"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect9" />
+    <text
+       class="ts ctrl-txt"
+       x="275"
+       y="240"
+       text-anchor="middle"
+       id="text10">UserController</text>
+    <text
+       class="tl"
+       x="275"
+       y="258"
+       text-anchor="middle"
+       id="text11">/users/**</text>
+    <rect
+       x="352"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect11" />
+    <text
+       class="ts ctrl-txt"
+       x="421"
+       y="240"
+       text-anchor="middle"
+       id="text12">ContactController</text>
+    <text
+       class="tl"
+       x="421"
+       y="258"
+       text-anchor="middle"
+       id="text13">/contacts/**</text>
+    <rect
+       x="498"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect13" />
+    <text
+       class="ts ctrl-txt"
+       x="567"
+       y="240"
+       text-anchor="middle"
+       id="text14">GroupController</text>
+    <text
+       class="tl"
+       x="567"
+       y="258"
+       text-anchor="middle"
+       id="text15">/groups/**</text>
+    <rect
+       x="644"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect15" />
+    <text
+       class="ts ctrl-txt"
+       x="713"
+       y="240"
+       text-anchor="middle"
+       id="text16">ConversationController</text>
+    <text
+       class="tl"
+       x="713"
+       y="258"
+       text-anchor="middle"
+       id="text17">/conversations/**</text>
+    <rect
+       x="790"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect17" />
+    <text
+       class="ts ctrl-txt"
+       x="859"
+       y="240"
+       text-anchor="middle"
+       id="text18">MessageController</text>
+    <text
+       class="tl"
+       x="859"
+       y="258"
+       text-anchor="middle"
+       id="text19">/messages/**</text>
+    <rect
+       x="936"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect19" />
+    <text
+       class="ts ctrl-txt"
+       x="1005"
+       y="240"
+       text-anchor="middle"
+       id="text20">SearchController</text>
+    <text
+       class="tl"
+       x="1005"
+       y="258"
+       text-anchor="middle"
+       id="text21">/search/**</text>
+    <rect
+       x="1082"
+       y="216"
+       width="138"
+       height="56"
+       rx="6"
+       class="ctrl-box"
+       id="rect21" />
+    <text
+       class="ts ctrl-txt"
+       x="1151"
+       y="240"
+       text-anchor="middle"
+       id="text22">AiController</text>
+    <text
+       class="tl"
+       x="1151"
+       y="258"
+       text-anchor="middle"
+       id="text23">/ai/**  (Phase 4)</text>
+  </g>
+  <!-- straight verticals: controller → service, all 8 lanes -->
+  <line
+     x1="129"
+     y1="272"
+     x2="129"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line23" />
+  <line
+     x1="275"
+     y1="272"
+     x2="275"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line24" />
+  <line
+     x1="421"
+     y1="272"
+     x2="421"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line25" />
+  <line
+     x1="567"
+     y1="272"
+     x2="567"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line26" />
+  <line
+     x1="713"
+     y1="272"
+     x2="713"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line27" />
+  <line
+     x1="859"
+     y1="272"
+     x2="859"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line28" />
+  <line
+     x1="1005"
+     y1="272"
+     x2="1005"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line29" />
+  <line
+     x1="1151"
+     y1="272"
+     x2="1151"
+     y2="318"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line30" />
+  <!-- ── SERVICE LAYER ── -->
+  <text
+     class="layer-label"
+     x="60"
+     y="312"
+     id="text30">SERVICE LAYER</text>
+  <path
+     d="m 629.44694,356 h 20.48202"
+     class="rel-cross"
+     id="path55"
+     sodipodi:nodetypes="cc" />
+  <g
+     id="services">
+    <rect
+       x="60"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect30" />
+    <text
+       class="ts svc-txt"
+       x="129"
+       y="344"
+       text-anchor="middle"
+       id="text31">AuthService</text>
+    <text
+       class="tl"
+       x="129"
+       y="362"
+       text-anchor="middle"
+       id="text32">JWT issue, BCrypt,</text>
+    <text
+       class="tl"
+       x="129"
+       y="376"
+       text-anchor="middle"
+       id="text33">refresh rotation</text>
+    <rect
+       x="206"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect33" />
+    <text
+       class="ts svc-txt"
+       x="275"
+       y="344"
+       text-anchor="middle"
+       id="text34">UserService</text>
+    <text
+       class="tl"
+       x="275"
+       y="362"
+       text-anchor="middle"
+       id="text35">Profile, avatar</text>
+    <text
+       class="tl"
+       x="275"
+       y="376"
+       text-anchor="middle"
+       id="text36">upload coordination *</text>
+    <rect
+       x="352"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect36" />
+    <text
+       class="ts svc-txt"
+       x="421"
+       y="344"
+       text-anchor="middle"
+       id="text37">ContactService</text>
+    <text
+       class="tl"
+       x="421"
+       y="362"
+       text-anchor="middle"
+       id="text38">Requests, accept,</text>
+    <text
+       class="tl"
+       x="421"
+       y="376"
+       text-anchor="middle"
+       id="text39">block → calls ConvoSvc</text>
+    <rect
+       x="498"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect39" />
+    <text
+       class="ts svc-txt"
+       x="567"
+       y="344"
+       text-anchor="middle"
+       id="text40">GroupService</text>
+    <text
+       class="tl"
+       x="567"
+       y="362"
+       text-anchor="middle"
+       id="text41">CRUD, roles, invites,</text>
+    <text
+       class="tl"
+       x="567"
+       y="376"
+       text-anchor="middle"
+       id="text42">pins → calls ConvoSvc</text>
+    <rect
+       x="644"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect42" />
+    <text
+       class="ts svc-txt"
+       x="713"
+       y="344"
+       text-anchor="middle"
+       id="text43">ConversationService</text>
+    <text
+       class="tl"
+       x="713"
+       y="362"
+       text-anchor="middle"
+       id="text44">Mute, unread sync,</text>
+    <text
+       class="tl"
+       x="713"
+       y="376"
+       text-anchor="middle"
+       id="text45">lastMessage snapshot</text>
+    <rect
+       x="790"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect45" />
+    <text
+       class="ts svc-txt"
+       x="859"
+       y="344"
+       text-anchor="middle"
+       id="text46">MessageService</text>
+    <text
+       class="tl"
+       x="859"
+       y="362"
+       text-anchor="middle"
+       id="text47">Send, edit, delete,</text>
+    <text
+       class="tl"
+       x="859"
+       y="376"
+       text-anchor="middle"
+       id="text48">reactions *  see diagram 2</text>
+    <rect
+       x="936"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect48" />
+    <text
+       class="ts svc-txt"
+       x="1005"
+       y="344"
+       text-anchor="middle"
+       id="text49">SearchService</text>
+    <text
+       class="tl"
+       x="1005"
+       y="362"
+       text-anchor="middle"
+       id="text50">User, group,</text>
+    <text
+       class="tl"
+       x="1005"
+       y="376"
+       text-anchor="middle"
+       id="text51">message search</text>
+    <rect
+       x="1082"
+       y="318"
+       width="138"
+       height="76"
+       rx="6"
+       class="svc-box"
+       id="rect51" />
+    <text
+       class="ts svc-txt"
+       x="1151"
+       y="344"
+       text-anchor="middle"
+       id="text52">AiService</text>
+    <text
+       class="tl"
+       x="1151"
+       y="362"
+       text-anchor="middle"
+       id="text53">Prompt build,</text>
+    <text
+       class="tl"
+       x="1151"
+       y="376"
+       text-anchor="middle"
+       id="text54">response parse *</text>
+  </g>
+  <!-- cross-service calls — short horizontal dashed, same row, no diagonal -->
+  <path
+     d="m 456.04509,395.35896 0.0935,22.74575 223.03606,0.0162 -0.0935,-22.74576"
+     class="rel-cross"
+     marker-end="url(#arrow-blue)"
+     id="path54"
+     sodipodi:nodetypes="cccc" />
+  <text
+     class="tl"
+     x="582.52429"
+     y="414.15002"
+     id="text55">accept() / create() →</text>
+  <!-- straight verticals: service → repository -->
+  <line
+     x1="274.95435"
+     y1="393.73502"
+     x2="220.25206"
+     y2="439.01154"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line56" />
+  <line
+     x1="125.71131"
+     y1="394.47021"
+     x2="183.15346"
+     y2="439.11285"
+     class="rel-call"
+     marker-end="url(#arrow-green-0)"
+     id="line56-8"
+     style="fill:none;stroke:#0f6e56;stroke-width:0.741509;marker-end:url(#arrow-green-0)" />
+  <line
+     x1="421"
+     y1="394"
+     x2="421"
+     y2="440"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line57" />
+  <line
+     x1="567"
+     y1="394"
+     x2="567"
+     y2="440"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line58" />
+  <line
+     x1="713"
+     y1="394"
+     x2="713"
+     y2="440"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line59" />
+  <line
+     x1="859"
+     y1="394"
+     x2="859"
+     y2="440"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line60" />
+  <line
+     x1="1005"
+     y1="394"
+     x2="1005"
+     y2="440"
+     class="rel-call"
+     marker-end="url(#arrow-green)"
+     id="line61" />
+  <!-- ── REPOSITORY LAYER ── -->
+  <text
+     class="layer-label"
+     x="60"
+     y="434"
+     id="text61">REPOSITORY LAYER  (Spring Data MongoDB)</text>
+  <g
+     id="g88"
+     transform="translate(70.167696)">
+    <rect
+       x="60"
+       y="440"
+       width="139"
+       height="48"
+       rx="6"
+       class="repo-box"
+       id="rect61" />
+    <text
+       class="ts repo-txt"
+       x="129"
+       y="468"
+       text-anchor="middle"
+       id="text62">UserRepository</text>
+  </g>
+  <rect
+     x="352"
+     y="440"
+     width="138"
+     height="48"
+     rx="6"
+     class="repo-box"
+     id="rect64" />
+  <text
+     class="ts repo-txt"
+     x="421"
+     y="468"
+     text-anchor="middle"
+     id="text65">ContactRepository</text>
+  <rect
+     x="498"
+     y="440"
+     width="138"
+     height="48"
+     rx="6"
+     class="repo-box"
+     id="rect65" />
+  <text
+     class="ts repo-txt"
+     x="567"
+     y="468"
+     text-anchor="middle"
+     id="text66">GroupRepository</text>
+  <rect
+     x="644"
+     y="440"
+     width="138"
+     height="48"
+     rx="6"
+     class="repo-box"
+     id="rect66" />
+  <text
+     class="ts repo-txt"
+     x="713"
+     y="468"
+     text-anchor="middle"
+     id="text67">ConversationRepo</text>
+  <rect
+     x="790"
+     y="440"
+     width="138"
+     height="48"
+     rx="6"
+     class="repo-box"
+     id="rect67" />
+  <text
+     class="ts repo-txt"
+     x="859"
+     y="468"
+     text-anchor="middle"
+     id="text68">MessageRepository</text>
+  <rect
+     x="936"
+     y="440"
+     width="138"
+     height="48"
+     rx="6"
+     class="repo-box"
+     id="rect68" />
+  <text
+     class="ts repo-txt"
+     x="1005"
+     y="468"
+     text-anchor="middle"
+     id="text69">NotificationRepo</text>
+  <!-- AiService → MessageRepository (reads context, no write) -->
+  <text
+     class="tl"
+     x="978.5437"
+     y="505.17212"
+     id="text70">reads context</text>
+  <!-- ══════════════════════════════════════════
+     LEGEND
+══════════════════════════════════════════ -->
+  <rect
+     x="60"
+     y="520"
+     width="1170"
+     height="56"
+     rx="8"
+     fill="#FAFAF8"
+     stroke="#D8D6CF"
+     stroke-width="0.8"
+     id="rect70" />
+  <rect
+     x="80"
+     y="534"
+     width="16"
+     height="13"
+     rx="3"
+     class="entry-box"
+     stroke-width="1.4"
+     id="rect71" />
+  <text
+     class="ts"
+     x="104"
+     y="546"
+     id="text71">Entry point</text>
+  <rect
+     x="200"
+     y="534"
+     width="16"
+     height="13"
+     rx="3"
+     class="ctrl-box"
+     stroke-width="1.3"
+     id="rect72" />
+  <text
+     class="ts"
+     x="224"
+     y="546"
+     id="text72">Controller</text>
+  <rect
+     x="320"
+     y="534"
+     width="16"
+     height="13"
+     rx="3"
+     class="svc-box"
+     stroke-width="1.3"
+     id="rect73" />
+  <text
+     class="ts"
+     x="344"
+     y="546"
+     id="text73">Service</text>
+  <rect
+     x="420"
+     y="534"
+     width="16"
+     height="13"
+     rx="3"
+     class="repo-box"
+     stroke-width="1.3"
+     id="rect74" />
+  <text
+     class="ts"
+     x="444"
+     y="546"
+     id="text74">Repository</text>
+  <line
+     x1="560"
+     y1="540"
+     x2="600"
+     y2="540"
+     stroke="#0F6E56"
+     stroke-width="1.2"
+     marker-end="url(#arrow-green)"
+     id="line74" />
+  <text
+     class="ts"
+     x="608"
+     y="544"
+     id="text75">Standard layer call</text>
+  <line
+     x1="800"
+     y1="540"
+     x2="840"
+     y2="540"
+     stroke="#1D6FA8"
+     stroke-width="1.1"
+     stroke-dasharray="5 3"
+     marker-end="url(#arrow-blue)"
+     id="line75" />
+  <text
+     class="ts"
+     x="848"
+     y="544"
+     id="text76">Cross-service call (same row, no diagonal)</text>
+  <!-- ══════════════════════════════════════════
+     NOTES
+══════════════════════════════════════════ -->
+  <rect
+     x="60"
+     y="600"
+     width="1170"
+     height="360"
+     rx="10"
+     fill="#FAFAF8"
+     stroke="#D8D6CF"
+     stroke-width="0.8"
+     id="rect76" />
+  <text
+     class="section-label"
+     x="84"
+     y="628"
+     id="text77">READING NOTES</text>
+  <text
+     class="ts"
+     x="84"
+     y="656"
+     id="text78">▸ Every column above is a straight vertical path: Controller → Service → Repository. No diagonal lines, no crossing arrows.</text>
+  <text
+     class="ts"
+     x="84"
+     y="680"
+     id="text79">▸ UserController and ContactService both ultimately reach UserRepository — there is no separate repository per service, only per collection.</text>
+  <text
+     class="ts"
+     x="84"
+     y="704"
+     id="text80">▸ ContactService → ConversationService: on accepting a connection request, a DM conversation is created in the same transaction.</text>
+  <text
+     class="ts"
+     x="84"
+     y="728"
+     id="text81">▸ GroupService → ConversationService: on group creation, a group conversation is created in the same transaction.</text>
+  <text
+     class="ts"
+     x="84"
+     y="752"
+     id="text82">▸ AiService reads conversation history via MessageRepository to build prompt context — it does not write through MessageService.</text>
+  <text
+     class="ts"
+     x="84"
+     y="776"
+     id="text83">▸ MessageService's full set of cross-cutting responsibilities (Kafka publish, file upload via R2, AI trigger) is shown separately</text>
+  <text
+     class="ts"
+     x="84"
+     y="796"
+     id="text84">  in c3_component_crosscutting.svg — this diagram only shows its standard repository call.</text>
+  <text
+     class="ts"
+     x="84"
+     y="824"
+     id="text85">▸ Repositories never call other repositories. Every cross-collection consistency rule lives in the service layer — see erd.md</text>
+  <text
+     class="ts"
+     x="84"
+     y="844"
+     id="text86">  Service Layer Integrity Checklist for the exact ordering of each multi-step operation.</text>
+  <text
+     class="ts"
+     x="84"
+     y="872"
+     id="text87">▸ AiController and AiService are scoped to Phase 4 only and can be entirely excluded from the Phase 1–3 build.</text>
+  <text
+     class="ts"
+     x="84"
+     y="900"
+     id="text88">▸ This diagram intentionally omits Kafka, WebSocket, and external client wrapper components — see the companion diagram below.</text>
+  <path
+     d="m 1151.4668,395.64006 0.058,112.13618 -291.45843,0.0165 -0.058,-18.49356"
+     class="rel-cross"
+     marker-end="url(#arrow-blue-2)"
+     id="path54-5"
+     sodipodi:nodetypes="cccc"
+     style="fill:none;stroke:#1d6fa8;stroke-width:0.686564;stroke-dasharray:3.12075, 1.87245;marker-end:url(#arrow-blue-2)" />
+</svg>
