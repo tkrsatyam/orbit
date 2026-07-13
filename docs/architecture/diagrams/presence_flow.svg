@@ -1,0 +1,1663 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="100%"
+   viewBox="0 0 1500 2800"
+   role="img"
+   version="1.1"
+   id="svg125"
+   sodipodi:docname="presence_flow.svg"
+   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview125"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="1.1445028"
+     inkscape:cx="671.4706"
+     inkscape:cy="2530.7932"
+     inkscape:window-width="2560"
+     inkscape:window-height="1351"
+     inkscape:window-x="-9"
+     inkscape:window-y="-9"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg125" />
+  <title
+     id="title1">Orbit — Presence and Typing Indicator Flow</title>
+  <defs
+     id="defs4">
+    <marker
+       id="ag"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#0F6E56"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path1" />
+    </marker>
+    <marker
+       id="ab"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#1D6FA8"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path2" />
+    </marker>
+    <marker
+       id="ao"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B45309"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path3" />
+    </marker>
+    <marker
+       id="ar"
+       viewBox="0 0 10 10"
+       refX="8"
+       refY="5"
+       markerWidth="6"
+       markerHeight="6"
+       orient="auto-start-reverse">
+      <path
+         d="M2 1L8 5L2 9"
+         fill="none"
+         stroke="#B91C1C"
+         stroke-width="1.5"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+         id="path4" />
+    </marker>
+    <style
+       id="style4">
+    text  { font-family: ui-sans-serif, system-ui, sans-serif; fill: #3d3d3a; }
+    .hdr  { font-size: 14px; font-weight: 700; }
+    .sub  { font-size: 11px; font-style: italic; fill: #5F5E5A; }
+    .lbl  { font-size: 12px; }
+    .slbl { font-size: 11px; font-weight: 700; fill: #888780; letter-spacing: 1px; }
+    .plbl { font-size: 13px; font-weight: 700; }
+    .note { font-size: 11px; fill: #5F5E5A; font-style: italic; }
+    .ll   { stroke: #C4C2BB; stroke-width: 1; stroke-dasharray: 6 4; fill: none; }
+    .cg   { stroke: #0F6E56; stroke-width: 1.4; fill: none; }
+    .cb   { stroke: #1D6FA8; stroke-width: 1.4; fill: none; stroke-dasharray: 6 3; }
+    .co   { stroke: #B45309; stroke-width: 1.4; fill: none; }
+    .cr   { stroke: #B91C1C; stroke-width: 1.4; fill: none; stroke-dasharray: 5 3; }
+    /* participant boxes */
+    .p1 { fill:#C7F0E3; stroke:#0F6E56; stroke-width:1.5; }
+    .p2 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1.5; }
+    .p3 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1.5; }
+    .p4 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1.5; }
+    .p5 { fill:#FCEFD9; stroke:#B45309; stroke-width:1.5; }
+    .p6 { fill:#F4F3F0; stroke:#888780; stroke-width:1.5; }
+    .p7 { fill:#E8EEF7; stroke:#1D6FA8; stroke-width:1.5; }
+    /* activation boxes */
+    .a1 { fill:#C7F0E3; stroke:#0F6E56; stroke-width:1; }
+    .a2 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1; }
+    .a3 { fill:#9FE1CB; stroke:#0F6E56; stroke-width:1; }
+    .a4 { fill:#5DCAA5; stroke:#0F6E56; stroke-width:1; }
+    .a5 { fill:#FCEFD9; stroke:#B45309; stroke-width:1; }  /* KafkaProducer */
+    .a6 { fill:#F4F3F0; stroke:#888780; stroke-width:1; }  /* KafkaConsumer+Upstash */
+    /* bands */
+    .band-g { fill:#F0FAF6; stroke:#0F6E56; stroke-width:1; stroke-dasharray:6 4; }
+    .band-o { fill:#FFFBEB; stroke:#B45309; stroke-width:1; stroke-dasharray:6 4; }
+    .band-b { fill:#EFF6FF; stroke:#1D6FA8; stroke-width:1; stroke-dasharray:6 4; }
+    .band-r { fill:#FFF5F5; stroke:#B91C1C; stroke-width:1; stroke-dasharray:6 4; }
+    .band-gr{ fill:#F7F6F4; stroke:#888780; stroke-width:1; stroke-dasharray:6 4; }
+    .ibox  { fill:#FFFFFF; stroke:#B4B2A9; stroke-width:0.8; }
+    .good  { fill:#D1FAE5; stroke:#0F6E56; stroke-width:0.8; }
+    .warn  { fill:#FEF9C3; stroke:#CA8A04; stroke-width:0.8; }
+    .info  { fill:#DBEAFE; stroke:#1D6FA8; stroke-width:0.8; }
+    .err   { fill:#FEE2E2; stroke:#B91C1C; stroke-width:0.8; }
+  </style>
+  </defs>
+  <!-- outer frame -->
+  <rect
+     x="20"
+     y="20"
+     width="1460"
+     height="2760"
+     rx="14"
+     fill="none"
+     stroke="#D8D6CF"
+     stroke-width="1"
+     stroke-dasharray="10 5"
+     id="rect4" />
+  <text
+     class="slbl"
+     x="44"
+     y="46"
+     id="text4">SEQUENCE DIAGRAM — PRESENCE AND TYPING INDICATOR FLOW</text>
+  <!-- LEGEND -->
+  <rect
+     x="1135.6208"
+     y="52.871902"
+     width="308.92151"
+     height="174.88101"
+     rx="4.9427443"
+     fill="#fafaf8"
+     stroke="#d8d6cf"
+     stroke-width="0.588011"
+     id="rect5" />
+  <text
+     class="slbl"
+     x="1157.7268"
+     y="76.977898"
+     id="text5">LEGEND</text>
+  <line
+     x1="1157.7268"
+     y1="96.977898"
+     x2="1217.7268"
+     y2="96.977898"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line5" />
+  <text
+     class="lbl"
+     x="1227.7268"
+     y="100.9779"
+     id="text6">Call / internal trigger</text>
+  <line
+     x1="1157.7268"
+     y1="120.9779"
+     x2="1217.7268"
+     y2="120.9779"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line6" />
+  <text
+     class="lbl"
+     x="1227.7268"
+     y="124.9779"
+     id="text7">Response / return (dashed)</text>
+  <line
+     x1="1157.7268"
+     y1="144.97791"
+     x2="1217.7268"
+     y2="144.97791"
+     class="co"
+     marker-end="url(#ao)"
+     id="line7" />
+  <text
+     class="lbl"
+     x="1227.7268"
+     y="148.97791"
+     id="text8">Kafka event (chat.presence topic)</text>
+  <line
+     x1="1157.7268"
+     y1="168.97791"
+     x2="1217.7268"
+     y2="168.97791"
+     class="cr"
+     marker-end="url(#ar)"
+     id="line8" />
+  <text
+     class="lbl"
+     x="1227.7268"
+     y="172.97791"
+     id="text9">Error / timeout path</text>
+  <rect
+     x="1162.726"
+     y="188.47287"
+     width="14"
+     height="24"
+     rx="2"
+     class="a6"
+     id="rect10" />
+  <text
+     class="lbl"
+     x="1189.5221"
+     y="204.47287"
+     id="text11">Activation Box</text>
+  <!-- ═══════════════════════════════════════
+     PARTICIPANT HEADERS  y=90
+     x-centres:
+       React=90   WsCfg=260  PresSvc=440  UserRepo=620
+       KafkaProd=800  KafkaCons+Upstash=980  Contacts=1220
+═══════════════════════════════════════ -->
+  <!-- LIFELINES -->
+  <!-- ═══════════════════════════════════════════════════════════
+     FLOW A — USER COMES ONLINE  y=240→680
+═══════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 302: WebSocket connected note -->
+  <!-- row 340: session connect event fires -->
+  <!-- row 376: update online=true -->
+  <!-- row 410: ack -->
+  <!-- row 440: build presence event ibox -->
+  <!-- row 476: publish to Kafka producer -->
+  <!-- row 510: Kafka producer → Upstash (event stored) -->
+  <!-- row 544: ack from broker back to producer -->
+  <!-- row 566: ack from producer back to PresenceService -->
+  <!-- row 590: KafkaConsumer picks up event and delivers -->
+  <!-- row 620: contacts see green dot -->
+  <!-- row 648: note -->
+  <!-- ═══════════════════════════════════════════════════════════
+     FLOW B — TYPING INDICATOR  y=720→1080
+═══════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 782: trigger note -->
+  <!-- row 820: STOMP SEND -->
+  <!-- row 856: delegate to PresenceService -->
+  <!-- row 884: no DB ibox -->
+  <!-- row 914: publish to Kafka producer -->
+  <!-- row 946: producer → Upstash -->
+  <!-- row 970: ack broker → producer -->
+  <!-- row 990: KafkaConsumer delivers to conversation subscribers -->
+  <!-- row 1018: contacts see typing -->
+  <!-- row 1044: notes -->
+  <!-- ═══════════════════════════════════════════════════════════
+     FLOW C — CLEAN DISCONNECT  y=1120→1500
+═══════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 1182: STOMP DISCONNECT frame -->
+  <!-- row 1218: SessionDisconnectEvent -->
+  <!-- row 1248: deregister session ibox -->
+  <!-- row 1282: update online=false -->
+  <!-- row 1316: ack -->
+  <!-- row 1348: publish offline event -->
+  <!-- row 1382: producer → Upstash -->
+  <!-- row 1408: ack broker → producer -->
+  <!-- row 1430: ack producer → PresenceService -->
+  <!-- row 1452: deliver to contacts -->
+  <!-- row 1476: green dot goes grey -->
+  <!-- note -->
+  <!-- ═══════════════════════════════════════════════════════════
+     FLOW D — UNEXPECTED DISCONNECT  y=1540→1920
+═══════════════════════════════════════════════════════════ -->
+  <!-- activations -->
+  <!-- row 1590: heartbeat missed note -->
+  <!-- row 1632: heartbeat timeout triggers event -->
+  <!-- row 1660: deregister session ibox -->
+  <!-- row 1700: update online=false -->
+  <!-- row 1734: ack -->
+  <!-- row 1768: publish offline -->
+  <!-- row 1802: producer → Upstash -->
+  <!-- row 1828: ack broker → producer -->
+  <!-- row 1850: ack producer → PresenceService -->
+  <!-- row 1872: KafkaConsumer delivers -->
+  <!-- row 1898: dot goes grey -->
+  <!-- note -->
+  <!-- ═══════════════════════════════════════════════════════════
+     FLOW E — MULTI-INSTANCE PRESENCE FAN-OUT  y=1960→2220
+═══════════════════════════════════════════════════════════ -->
+  <!-- instance labels -->
+  <!-- activations -->
+  <!-- row 2060: Instance A publishes presence -->
+  <!-- row 2090: publish to Kafka -->
+  <!-- row 2120: producer → Upstash -->
+  <!-- row 2150: ack -->
+  <!-- row 2172: ALL instances consume -->
+  <!-- instance behaviour notes -->
+  <!-- ═══════════════════════════════════════════════════════════
+     BOTTOM NOTES  y=2260
+═══════════════════════════════════════════════════════════ -->
+  <rect
+     x="44"
+     y="267.93469"
+     width="92"
+     height="82"
+     rx="8"
+     class="p1"
+     id="rect11" />
+  <text
+     class="hdr"
+     x="90"
+     y="295.93469"
+     text-anchor="middle"
+     fill="#053D30"
+     id="text12">React</text>
+  <text
+     class="sub"
+     x="90"
+     y="313.93469"
+     text-anchor="middle"
+     id="text13">SPA</text>
+  <text
+     class="sub"
+     x="90"
+     y="331.93469"
+     text-anchor="middle"
+     id="text14">User's browser</text>
+  <rect
+     x="164"
+     y="267.93469"
+     width="192"
+     height="82"
+     rx="8"
+     class="p2"
+     id="rect14" />
+  <text
+     class="hdr"
+     x="260"
+     y="293.93469"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text15">WebSocketConfig</text>
+  <text
+     class="sub"
+     x="260"
+     y="311.93469"
+     text-anchor="middle"
+     id="text16">Session lifecycle</text>
+  <text
+     class="sub"
+     x="260"
+     y="329.93469"
+     text-anchor="middle"
+     id="text17">+ heartbeat monitor</text>
+  <rect
+     x="364"
+     y="267.93469"
+     width="152"
+     height="82"
+     rx="8"
+     class="p3"
+     id="rect17" />
+  <text
+     class="hdr"
+     x="440"
+     y="293.93469"
+     text-anchor="middle"
+     fill="#042D24"
+     id="text18">PresenceService</text>
+  <text
+     class="sub"
+     x="440"
+     y="311.93469"
+     text-anchor="middle"
+     id="text19">online / offline</text>
+  <text
+     class="sub"
+     x="440"
+     y="329.93469"
+     text-anchor="middle"
+     id="text20">+ typing logic</text>
+  <rect
+     x="524"
+     y="267.93469"
+     width="192"
+     height="82"
+     rx="8"
+     class="p4"
+     id="rect20" />
+  <text
+     class="hdr"
+     x="620"
+     y="293.93469"
+     text-anchor="middle"
+     fill="#03241D"
+     id="text21">User</text>
+  <text
+     class="sub"
+     x="620"
+     y="311.93469"
+     text-anchor="middle"
+     id="text22">Repository</text>
+  <text
+     class="sub"
+     x="620"
+     y="329.93469"
+     text-anchor="middle"
+     id="text23">(MongoDB)</text>
+  <rect
+     x="724"
+     y="267.93469"
+     width="152"
+     height="82"
+     rx="8"
+     class="p5"
+     id="rect23" />
+  <text
+     class="hdr"
+     x="800"
+     y="293.93469"
+     text-anchor="middle"
+     fill="#6B3A04"
+     id="text24">Kafka</text>
+  <text
+     class="sub"
+     x="800"
+     y="311.93469"
+     text-anchor="middle"
+     id="text25">Producer</text>
+  <text
+     class="sub"
+     x="800"
+     y="329.93469"
+     text-anchor="middle"
+     id="text26">chat.presence</text>
+  <rect
+     x="884"
+     y="267.93469"
+     width="192"
+     height="82"
+     rx="8"
+     class="p6"
+     id="rect26" />
+  <text
+     class="hdr"
+     x="980"
+     y="291.93469"
+     text-anchor="middle"
+     id="text27">KafkaConsumer</text>
+  <text
+     class="sub"
+     x="980"
+     y="309.93469"
+     text-anchor="middle"
+     id="text28">+ Upstash Kafka</text>
+  <text
+     class="sub"
+     x="980"
+     y="327.93469"
+     text-anchor="middle"
+     id="text29">chat.presence topic</text>
+  <rect
+     x="1124"
+     y="267.93469"
+     width="312"
+     height="82"
+     rx="8"
+     class="p7"
+     id="rect29" />
+  <text
+     class="hdr"
+     x="1280"
+     y="293.93469"
+     text-anchor="middle"
+     fill="#0D3F62"
+     id="text30">Subscribed Contacts</text>
+  <text
+     class="sub"
+     x="1280"
+     y="311.93469"
+     text-anchor="middle"
+     id="text31">browsers subscribed to</text>
+  <text
+     class="sub"
+     x="1280"
+     y="329.93469"
+     text-anchor="middle"
+     id="text32">/topic/presence/{userId}</text>
+  <line
+     x1="90"
+     y1="349.93469"
+     x2="90"
+     y2="2525.166"
+     class="ll"
+     id="line32" />
+  <line
+     x1="260"
+     y1="349.93469"
+     x2="260"
+     y2="2525.166"
+     class="ll"
+     id="line33" />
+  <line
+     x1="440"
+     y1="349.93469"
+     x2="440"
+     y2="2525.166"
+     class="ll"
+     id="line34" />
+  <line
+     x1="620"
+     y1="349.93469"
+     x2="620"
+     y2="2525.166"
+     class="ll"
+     id="line35" />
+  <line
+     x1="800"
+     y1="349.93469"
+     x2="800"
+     y2="2525.166"
+     class="ll"
+     id="line36" />
+  <line
+     x1="980"
+     y1="349.93469"
+     x2="980"
+     y2="2525.166"
+     class="ll"
+     id="line37" />
+  <line
+     x1="1280"
+     y1="349.93469"
+     x2="1280"
+     y2="2525.166"
+     class="ll"
+     id="line38" />
+  <rect
+     x="44"
+     y="417.93469"
+     width="1412"
+     height="440"
+     rx="10"
+     class="band-g"
+     id="rect38" />
+  <text
+     class="plbl"
+     x="68"
+     y="447.93469"
+     fill="#0F6E56"
+     id="text38">FLOW A — USER COMES ONLINE</text>
+  <rect
+     x="82.986786"
+     y="467.92148"
+     width="14.026432"
+     height="351.93036"
+     rx="2.0037758"
+     class="a1"
+     id="rect39" />
+  <rect
+     x="252.97751"
+     y="503.9122"
+     width="14.044991"
+     height="305.46402"
+     rx="2.0064273"
+     class="a2"
+     id="rect40" />
+  <rect
+     x="432.99512"
+     y="516.33875"
+     width="14.009768"
+     height="254.76732"
+     rx="2.0013955"
+     class="a3"
+     id="rect41" />
+  <rect
+     x="612.9259"
+     y="548.63824"
+     width="14.148244"
+     height="57.430958"
+     rx="2.0211778"
+     class="a4"
+     id="rect42" />
+  <rect
+     x="793.03241"
+     y="639.9671"
+     width="13.935164"
+     height="113.91503"
+     rx="1.9907378"
+     class="a5"
+     id="rect43" />
+  <rect
+     x="972.97479"
+     y="673.90948"
+     width="14.050411"
+     height="107.81802"
+     rx="2.0072017"
+     class="a6"
+     id="rect44" />
+  <rect
+     x="68"
+     y="467.93469"
+     width="660"
+     height="26"
+     rx="6"
+     class="good"
+     id="rect45" />
+  <text
+     class="note"
+     x="88"
+     y="484.93469"
+     fill="#065F46"
+     id="text45">WebSocket connection established — JWT validated, STOMP CONNECTED frame sent (see websocket_lifecycle.md Phase 1)</text>
+  <line
+     x1="267"
+     y1="519.93469"
+     x2="433"
+     y2="519.93469"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line45" />
+  <text
+     class="lbl"
+     x="274"
+     y="511.93469"
+     id="text46">1. SessionConnectEvent → PresenceService.handleConnect(userId)</text>
+  <line
+     x1="447"
+     y1="555.93469"
+     x2="613"
+     y2="555.93469"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line46" />
+  <text
+     class="lbl"
+     x="454"
+     y="547.93469"
+     id="text47">2. update users.online = true, lastSeen = now</text>
+  <line
+     x1="613"
+     y1="589.93469"
+     x2="447"
+     y2="589.93469"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line47" />
+  <text
+     class="lbl"
+     x="470"
+     y="582.93469"
+     fill="#1D6FA8"
+     id="text48">acknowledged</text>
+  <rect
+     x="398"
+     y="609.93469"
+     width="280"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect48" />
+  <text
+     class="note"
+     x="538"
+     y="626.93469"
+     text-anchor="middle"
+     id="text49">build presence event { userId, online: true, lastSeen }</text>
+  <line
+     x1="447"
+     y1="655.93469"
+     x2="793"
+     y2="655.93469"
+     class="co"
+     marker-end="url(#ao)"
+     id="line49" />
+  <text
+     class="lbl"
+     x="454"
+     y="647.93469"
+     id="text50">3. publish → chat.presence { userId, online: true, lastSeen }</text>
+  <line
+     x1="807"
+     y1="689.93469"
+     x2="973"
+     y2="689.93469"
+     class="co"
+     marker-end="url(#ao)"
+     id="line50" />
+  <text
+     class="lbl"
+     x="816"
+     y="682.93469"
+     id="text51">4. event stored on chat.presence partition (Upstash Kafka)</text>
+  <line
+     x1="973"
+     y1="723.93469"
+     x2="807"
+     y2="723.93469"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line51" />
+  <text
+     class="lbl"
+     x="830"
+     y="716.93469"
+     fill="#1D6FA8"
+     id="text52">broker ack</text>
+  <line
+     x1="793"
+     y1="743.93469"
+     x2="447"
+     y2="743.93469"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line52" />
+  <text
+     class="lbl"
+     x="490"
+     y="736.93469"
+     fill="#1D6FA8"
+     id="text53">ack</text>
+  <line
+     x1="973"
+     y1="769.93469"
+     x2="1280"
+     y2="769.93469"
+     class="co"
+     marker-end="url(#ao)"
+     id="line53" />
+  <text
+     class="lbl"
+     x="988"
+     y="761.93469"
+     id="text54">5. KafkaConsumer delivers → /topic/presence/{userId} (all subscribed contacts)</text>
+  <rect
+     x="1124"
+     y="787.93469"
+     width="312"
+     height="26"
+     rx="6"
+     class="good"
+     id="rect54" />
+  <text
+     class="note"
+     x="1280"
+     y="804.93469"
+     text-anchor="middle"
+     id="text55">contact's green dot appears instantly</text>
+  <rect
+     x="68"
+     y="827.93469"
+     width="1388"
+     height="16"
+     rx="4"
+     fill="#e8f8f2"
+     stroke="none"
+     id="rect55" />
+  <text
+     class="note"
+     x="88"
+     y="840.93469"
+     id="text56">Presence events are NOT persisted beyond the users.online flag. They are ephemeral Kafka events consumed and discarded after WebSocket delivery.</text>
+  <rect
+     x="44.014782"
+     y="897.94965"
+     width="1411.9705"
+     height="380.93948"
+     rx="9.9997902"
+     class="band-o"
+     id="rect56" />
+  <text
+     class="plbl"
+     x="68"
+     y="927.93469"
+     fill="#B45309"
+     id="text57">FLOW B — TYPING INDICATOR (ephemeral — no DB write, short TTL)</text>
+  <rect
+     x="82.974785"
+     y="947.90948"
+     width="14.050436"
+     height="262.3432"
+     rx="2.007205"
+     class="a1"
+     id="rect57" />
+  <rect
+     x="252.96936"
+     y="983.90405"
+     width="14.061273"
+     height="224.60657"
+     rx="2.0087533"
+     class="a2"
+     id="rect58" />
+  <rect
+     x="432.98636"
+     y="1017.9211"
+     width="14.027265"
+     height="177.54236"
+     rx="2.003895"
+     class="a3"
+     id="rect59" />
+  <rect
+     x="793"
+     y="1075.9347"
+     width="14"
+     height="100"
+     rx="2"
+     class="a5"
+     id="rect60" />
+  <rect
+     x="973"
+     y="1107.9347"
+     width="14"
+     height="90"
+     rx="2"
+     class="a6"
+     id="rect61" />
+  <rect
+     x="68"
+     y="949.93469"
+     width="840"
+     height="26"
+     rx="6"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect62" />
+  <text
+     class="note"
+     x="88"
+     y="966.93469"
+     id="text62">Triggered when user starts typing. React SPA sends a STOMP SEND frame every 2 seconds while typing continues. No MongoDB write at any point.</text>
+  <line
+     x1="97"
+     y1="999.93469"
+     x2="253"
+     y2="999.93469"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line62" />
+  <text
+     class="lbl"
+     x="104"
+     y="991.93469"
+     id="text63">1. STOMP SEND → /app/conversations/{id}/typing { typing: true }</text>
+  <line
+     x1="267"
+     y1="1035.9347"
+     x2="433"
+     y2="1035.9347"
+     class="cg"
+     marker-end="url(#ag)"
+     id="line63" />
+  <text
+     class="lbl"
+     x="274"
+     y="1027.9347"
+     id="text64">2. PresenceService.handleTyping(conversationId, userId, typing: true)</text>
+  <rect
+     x="398"
+     y="1051.9347"
+     width="280"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect64" />
+  <text
+     class="note"
+     x="538"
+     y="1068.9347"
+     text-anchor="middle"
+     id="text65">NO MongoDB write — typing is purely ephemeral</text>
+  <line
+     x1="447"
+     y1="1093.9347"
+     x2="793"
+     y2="1093.9347"
+     class="co"
+     marker-end="url(#ao)"
+     id="line65" />
+  <text
+     class="lbl"
+     x="454"
+     y="1085.9347"
+     id="text66">3. publish → chat.presence { conversationId, userId, displayName, typing: true }</text>
+  <line
+     x1="807"
+     y1="1125.9347"
+     x2="973"
+     y2="1125.9347"
+     class="co"
+     marker-end="url(#ao)"
+     id="line66" />
+  <text
+     class="lbl"
+     x="816"
+     y="1118.9347"
+     id="text67">4. event stored on chat.presence partition</text>
+  <line
+     x1="973"
+     y1="1149.9347"
+     x2="807"
+     y2="1149.9347"
+     class="cb"
+     marker-end="url(#ab)"
+     id="line67" />
+  <text
+     class="lbl"
+     x="830"
+     y="1142.9347"
+     fill="#1D6FA8"
+     id="text68">broker ack</text>
+  <line
+     x1="973"
+     y1="1169.9347"
+     x2="1280"
+     y2="1169.9347"
+     class="co"
+     marker-end="url(#ao)"
+     id="line68" />
+  <text
+     class="lbl"
+     x="988"
+     y="1162.9347"
+     id="text69">5. KafkaConsumer delivers → /topic/conversations/{id}/typing (all participants)</text>
+  <rect
+     x="1124"
+     y="1183.9347"
+     width="312"
+     height="26"
+     rx="6"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect69" />
+  <text
+     class="note"
+     x="1280"
+     y="1200.9347"
+     text-anchor="middle"
+     id="text70">&quot;Satyam is typing…&quot; shown to others</text>
+  <rect
+     x="68"
+     y="1219.9347"
+     width="1367.9039"
+     height="36"
+     rx="5.9131293"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect70"
+     style="stroke-width:0.992734" />
+  <text
+     class="note"
+     x="88"
+     y="1236.9347"
+     id="text71">When user stops typing, React SPA sends { typing: false } after a 3-second debounce. Same Kafka publish and WebSocket delivery occur.</text>
+  <text
+     class="note"
+     x="88"
+     y="1250.9347"
+     id="text72">Recipients auto-clear the indicator after 5 seconds even without a { typing: false } event — guards against missed stop events on disconnect.</text>
+  <g
+     id="g128"
+     transform="translate(-4.6989159e-8,198.03075)">
+    <rect
+       x="44.023331"
+       y="1120.0236"
+       width="1411.9534"
+       height="415.1684"
+       rx="9.9996691"
+       class="band-b"
+       id="rect72" />
+    <text
+       class="plbl"
+       x="68"
+       y="1150"
+       fill="#1D6FA8"
+       id="text73">FLOW C — USER GOES OFFLINE (clean disconnect — STOMP DISCONNECT received)</text>
+    <rect
+       x="83"
+       y="1170"
+       width="14"
+       height="312"
+       rx="2"
+       class="a1"
+       id="rect73" />
+    <rect
+       x="253.02161"
+       y="1180.6831"
+       width="13.956793"
+       height="301.29532"
+       rx="1.9938276"
+       class="a2"
+       id="rect74" />
+    <rect
+       x="433.02783"
+       y="1215.8156"
+       width="13.944327"
+       height="246.15659"
+       rx="1.9920468"
+       class="a3"
+       id="rect75" />
+    <rect
+       x="612.93817"
+       y="1269.9382"
+       width="14.12365"
+       height="60.901329"
+       rx="2.0176642"
+       class="a4"
+       id="rect76" />
+    <rect
+       x="793"
+       y="1344"
+       width="14"
+       height="100"
+       rx="2"
+       class="a5"
+       id="rect77" />
+    <rect
+       x="973"
+       y="1378"
+       width="14"
+       height="90"
+       rx="2"
+       class="a6"
+       id="rect78" />
+    <line
+       x1="97"
+       y1="1184"
+       x2="253"
+       y2="1184"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line78" />
+    <text
+       class="lbl"
+       x="104"
+       y="1176"
+       id="text78">1. STOMP DISCONNECT frame (or browser beforeunload event)</text>
+    <line
+       x1="267"
+       y1="1220"
+       x2="433"
+       y2="1220"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line79" />
+    <text
+       class="lbl"
+       x="274"
+       y="1212"
+       id="text79">2. SessionDisconnectEvent → PresenceService.handleDisconnect(userId)</text>
+    <rect
+       x="218"
+       y="1238"
+       width="280"
+       height="26"
+       rx="4"
+       class="ibox"
+       id="rect79" />
+    <text
+       class="note"
+       x="358"
+       y="1255"
+       text-anchor="middle"
+       id="text80">WebSocketConfig deregisters session from registry</text>
+    <line
+       x1="447"
+       y1="1284"
+       x2="613"
+       y2="1284"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line80" />
+    <text
+       class="lbl"
+       x="454"
+       y="1276"
+       id="text81">3. update users.online = false, lastSeen = now</text>
+    <line
+       x1="613"
+       y1="1318"
+       x2="447"
+       y2="1318"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line81" />
+    <text
+       class="lbl"
+       x="470"
+       y="1311"
+       fill="#1D6FA8"
+       id="text82">acknowledged</text>
+    <line
+       x1="447"
+       y1="1350"
+       x2="793"
+       y2="1350"
+       class="co"
+       marker-end="url(#ao)"
+       id="line82" />
+    <text
+       class="lbl"
+       x="454"
+       y="1342"
+       id="text83">4. publish → chat.presence { userId, online: false, lastSeen }</text>
+    <line
+       x1="807"
+       y1="1384"
+       x2="973"
+       y2="1384"
+       class="co"
+       marker-end="url(#ao)"
+       id="line83" />
+    <text
+       class="lbl"
+       x="816"
+       y="1377"
+       id="text84">5. event stored on chat.presence partition</text>
+    <line
+       x1="973"
+       y1="1410"
+       x2="807"
+       y2="1410"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line84" />
+    <text
+       class="lbl"
+       x="830"
+       y="1403"
+       fill="#1D6FA8"
+       id="text85">broker ack</text>
+    <line
+       x1="793"
+       y1="1432"
+       x2="447"
+       y2="1432"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line85" />
+    <text
+       class="lbl"
+       x="490"
+       y="1425"
+       fill="#1D6FA8"
+       id="text86">ack</text>
+    <line
+       x1="973"
+       y1="1454"
+       x2="1280"
+       y2="1454"
+       class="co"
+       marker-end="url(#ao)"
+       id="line86" />
+    <text
+       class="lbl"
+       x="988"
+       y="1447"
+       id="text87">6. KafkaConsumer delivers → /topic/presence/{userId} (subscribed contacts)</text>
+    <rect
+       x="1124"
+       y="1468"
+       width="312"
+       height="26"
+       rx="6"
+       class="info"
+       id="rect87" />
+    <text
+       class="note"
+       x="1280"
+       y="1485"
+       text-anchor="middle"
+       id="text88">contact's green dot turns grey instantly</text>
+    <rect
+       x="68.617828"
+       y="1503.4139"
+       width="1366.9938"
+       height="16"
+       rx="3.9394634"
+       fill="#dbeafe"
+       stroke="none"
+       id="rect88"
+       style="stroke-width:0.992404" />
+    <text
+       class="note"
+       x="88.617828"
+       y="1516.4139"
+       id="text89">REST logout calls POST /api/v1/auth/logout before DISCONNECT — tokens are blacklisted before the session is torn down. See websocket_lifecycle.md Phase 5.</text>
+  </g>
+  <g
+     id="g127"
+     transform="translate(-4.6989159e-8,232.98042)">
+    <rect
+       x="44.023319"
+       y="1540.0232"
+       width="1411.9534"
+       height="415.49432"
+       rx="9.99967"
+       class="band-r"
+       id="rect89" />
+    <text
+       class="plbl"
+       x="68"
+       y="1570"
+       fill="#B91C1C"
+       id="text90">FLOW D — UNEXPECTED DISCONNECT (network drop / heartbeat timeout)</text>
+    <rect
+       x="252.97295"
+       y="1623.9535"
+       width="14.054111"
+       height="278.07352"
+       rx="2.0077302"
+       class="a2"
+       id="rect90" />
+    <rect
+       x="433.02948"
+       y="1630.2272"
+       width="13.941055"
+       height="247.74335"
+       rx="1.9915793"
+       class="a3"
+       id="rect91" />
+    <rect
+       x="612.89789"
+       y="1696.401"
+       width="14.204238"
+       height="49.93063"
+       rx="2.029177"
+       class="a4"
+       id="rect92" />
+    <rect
+       x="793"
+       y="1760"
+       width="14"
+       height="100"
+       rx="2"
+       class="a5"
+       id="rect93" />
+    <rect
+       x="973"
+       y="1794"
+       width="14"
+       height="90"
+       rx="2"
+       class="a6"
+       id="rect94" />
+    <rect
+       x="68"
+       y="1590"
+       width="660"
+       height="26"
+       rx="6"
+       class="err"
+       id="rect95" />
+    <text
+       class="note"
+       x="88"
+       y="1607"
+       fill="#7F1D1D"
+       id="text95">No STOMP DISCONNECT received. Server detects dead session via heartbeat timeout (50s = 2 × 25s interval).</text>
+    <line
+       x1="267"
+       y1="1634"
+       x2="433"
+       y2="1634"
+       class="cr"
+       marker-end="url(#ar)"
+       id="line95" />
+    <text
+       class="lbl"
+       x="274"
+       y="1626"
+       fill="#B91C1C"
+       id="text96">1. heartbeat timeout → SessionDisconnectEvent → PresenceService.handleDisconnect(userId)</text>
+    <rect
+       x="218"
+       y="1652"
+       width="280"
+       height="26"
+       rx="4"
+       class="ibox"
+       id="rect96" />
+    <text
+       class="note"
+       x="358"
+       y="1669"
+       text-anchor="middle"
+       id="text97">WebSocketConfig deregisters session from registry</text>
+    <line
+       x1="447"
+       y1="1702"
+       x2="613"
+       y2="1702"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line97" />
+    <text
+       class="lbl"
+       x="454"
+       y="1694"
+       id="text98">2. update users.online = false, lastSeen = now</text>
+    <line
+       x1="613"
+       y1="1736"
+       x2="447"
+       y2="1736"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line98" />
+    <text
+       class="lbl"
+       x="470"
+       y="1729"
+       fill="#1D6FA8"
+       id="text99">acknowledged</text>
+    <line
+       x1="447"
+       y1="1770"
+       x2="793"
+       y2="1770"
+       class="co"
+       marker-end="url(#ao)"
+       id="line99" />
+    <text
+       class="lbl"
+       x="454"
+       y="1762"
+       id="text100">3. publish → chat.presence { userId, online: false, lastSeen }</text>
+    <line
+       x1="807"
+       y1="1804"
+       x2="973"
+       y2="1804"
+       class="co"
+       marker-end="url(#ao)"
+       id="line100" />
+    <text
+       class="lbl"
+       x="816"
+       y="1797"
+       id="text101">4. event stored on chat.presence partition</text>
+    <line
+       x1="973"
+       y1="1830"
+       x2="807"
+       y2="1830"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line101" />
+    <text
+       class="lbl"
+       x="830"
+       y="1823"
+       fill="#1D6FA8"
+       id="text102">broker ack</text>
+    <line
+       x1="793"
+       y1="1852"
+       x2="447"
+       y2="1852"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line102" />
+    <text
+       class="lbl"
+       x="490"
+       y="1845"
+       fill="#1D6FA8"
+       id="text103">ack</text>
+    <line
+       x1="973"
+       y1="1874"
+       x2="1280"
+       y2="1874"
+       class="co"
+       marker-end="url(#ao)"
+       id="line103" />
+    <text
+       class="lbl"
+       x="988"
+       y="1867"
+       id="text104">5. KafkaConsumer delivers → /topic/presence/{userId} (subscribed contacts)</text>
+    <rect
+       x="1124"
+       y="1888"
+       width="312"
+       height="26"
+       rx="6"
+       class="err"
+       id="rect104" />
+    <text
+       class="note"
+       x="1280"
+       y="1905"
+       text-anchor="middle"
+       id="text105">contact's green dot turns grey</text>
+    <rect
+       x="68"
+       y="1924.0317"
+       width="1368.7777"
+       height="16"
+       rx="3.9446042"
+       fill="#fee2e2"
+       stroke="none"
+       id="rect105"
+       style="stroke-width:0.993051" />
+    <text
+       class="note"
+       x="88"
+       y="1937.0317"
+       fill="#7F1D1D"
+       id="text106">Steps 2–5 are identical to Flow C. The only difference is the trigger — heartbeat timeout instead of a clean DISCONNECT frame.</text>
+  </g>
+  <g
+     id="g126"
+     transform="translate(-4.6989159e-8,267.05636)">
+    <rect
+       x="44.011967"
+       y="1960.0121"
+       width="1411.9761"
+       height="272.20786"
+       rx="9.9998302"
+       class="band-gr"
+       id="rect106" />
+    <text
+       class="plbl"
+       x="68"
+       y="1990"
+       fill="#888780"
+       id="text107">FLOW E — MULTI-INSTANCE PRESENCE FAN-OUT</text>
+    <rect
+       x="68"
+       y="2006"
+       width="360"
+       height="28"
+       rx="6"
+       fill="#e8eef7"
+       stroke="#1d6fa8"
+       stroke-width="0.8"
+       id="rect107" />
+    <text
+       class="note"
+       x="248"
+       y="2024"
+       text-anchor="middle"
+       id="text108">Instance A (user's WebSocket session connects here)</text>
+    <rect
+       x="1124"
+       y="2006"
+       width="312"
+       height="28"
+       rx="6"
+       fill="#e8eef7"
+       stroke="#1d6fa8"
+       stroke-width="0.8"
+       id="rect108" />
+    <text
+       class="note"
+       x="1280"
+       y="2024"
+       text-anchor="middle"
+       id="text109">Instance B (contact's session may be here)</text>
+    <rect
+       x="253"
+       y="2048"
+       width="14"
+       height="148"
+       rx="2"
+       class="a2"
+       id="rect109" />
+    <rect
+       x="433.04251"
+       y="2057.5076"
+       width="13.914964"
+       height="118.44983"
+       rx="1.987852"
+       class="a3"
+       id="rect110" />
+    <rect
+       x="793.05255"
+       y="2089.5176"
+       width="13.894948"
+       height="98.42981"
+       rx="1.9849925"
+       class="a5"
+       id="rect111" />
+    <rect
+       x="973.35803"
+       y="2118.0049"
+       width="14.150858"
+       height="64.202049"
+       rx="2.0215509"
+       class="a6"
+       id="rect112" />
+    <line
+       x1="267"
+       y1="2062"
+       x2="433"
+       y2="2062"
+       class="cg"
+       marker-end="url(#ag)"
+       id="line112" />
+    <text
+       class="lbl"
+       x="274"
+       y="2054"
+       id="text112">1. PresenceService on Instance A handles connect/disconnect</text>
+    <line
+       x1="447"
+       y1="2092"
+       x2="793"
+       y2="2092"
+       class="co"
+       marker-end="url(#ao)"
+       id="line113" />
+    <text
+       class="lbl"
+       x="454"
+       y="2084"
+       id="text113">2. publish → chat.presence (Upstash Kafka)</text>
+    <line
+       x1="807"
+       y1="2122"
+       x2="973"
+       y2="2122"
+       class="co"
+       marker-end="url(#ao)"
+       id="line114" />
+    <text
+       class="lbl"
+       x="816"
+       y="2115"
+       id="text114">3. event stored on topic partition</text>
+    <line
+       x1="973"
+       y1="2152"
+       x2="807"
+       y2="2152"
+       class="cb"
+       marker-end="url(#ab)"
+       id="line115" />
+    <text
+       class="lbl"
+       x="830"
+       y="2145"
+       fill="#1D6FA8"
+       id="text115">broker ack</text>
+    <line
+       x1="973"
+       y1="2174"
+       x2="1280"
+       y2="2174"
+       class="co"
+       marker-end="url(#ao)"
+       id="line116" />
+    <text
+       class="lbl"
+       x="988"
+       y="2167"
+       id="text116">4. ALL instances consume from chat.presence — each checks its local session registry</text>
+    <rect
+       x="68"
+       y="2196"
+       width="660"
+       height="28"
+       rx="6"
+       fill="#f4f3f0"
+       stroke="none"
+       id="rect116" />
+    <text
+       class="note"
+       x="88"
+       y="2214"
+       id="text117">Instance A: checks registry → delivers to any contact sessions it holds</text>
+    <rect
+       x="740"
+       y="2196"
+       width="660"
+       height="28"
+       rx="6"
+       fill="#f4f3f0"
+       stroke="none"
+       id="rect117" />
+    <text
+       class="note"
+       x="760"
+       y="2214"
+       id="text118">Instance B: checks registry → delivers to any contact sessions it holds</text>
+  </g>
+  <g
+     id="g125"
+     transform="translate(-4.6989159e-8,276.66752)">
+    <rect
+       x="44"
+       y="2260"
+       width="1412"
+       height="200"
+       rx="10"
+       fill="#fafaf8"
+       stroke="#d8d6cf"
+       stroke-width="0.8"
+       id="rect118" />
+    <text
+       class="slbl"
+       x="68"
+       y="2288"
+       id="text119">DESIGN NOTES</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2314"
+       id="text120">▸ Presence events publish to chat.presence — separate from chat.messages. Short retention configured on this topic (minutes not days) since events are ephemeral.</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2338"
+       id="text121">▸ Typing indicators are never persisted to MongoDB. They are the lightest events in the system — pure Kafka publish → WebSocket delivery with no DB involvement.</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2362"
+       id="text122">▸ users.online and lastSeen are the only presence fields persisted. Both updated on connect and disconnect by PresenceService via UserRepository.</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2386"
+       id="text123">▸ Multiple open tabs: online is set to false only when ALL sessions for that userId disconnect — tracked by counting active sessions per userId in WebSocketConfig.</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2410"
+       id="text124">▸ Contacts who are offline when a presence event fires simply miss it. On next connect they fetch current status via GET /api/v1/contacts — users.online provides current state.</text>
+    <text
+       class="lbl"
+       x="68"
+       y="2434"
+       id="text125">▸ React SPA subscribes to /topic/presence/{contactId} per contact on connect (websocket_lifecycle.md Phase 2, step 8). Re-established on every reconnection.</text>
+  </g>
+</svg>
