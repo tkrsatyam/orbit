@@ -76,6 +76,21 @@ Verify containers are running:
 docker compose ps
 ```
 
+### Kafbat UI — Kafka Dashboard (local only)
+
+Kafbat UI is included in docker-compose.yml for local development only. It provides a visual dashboard to inspect Kafka topics, browse messages, and monitor consumer group offsets.
+
+Access it at: http://localhost:8090
+
+This is useful from Phase 1 onward when Kafka is first used. It is especially important when debugging the WebSocket fan-out — you can confirm whether a message was successfully published to chat.messages before investigating the consumer or WebSocket delivery side.
+
+What to check in Kafbat during development:
+- Topics tab: confirms chat.messages, chat.presence, and chat.notifications exist
+- Messages tab per topic: shows the exact payload of each published event
+- Consumer Groups tab: shows the orbit-backend consumer group and its offset per partition — if offset is not advancing, the consumer is not picking up events
+
+Kafbat is a local development tool only. It is not deployed to Render or any production environment.
+
 ### Step 3 — Configure backend environment
 
 ```bash
@@ -227,6 +242,17 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      
+  kafbat-ui:
+    image: ghcr.io/kafbat/kafka-ui:latest
+    container_name: orbit-kafbat-ui
+    ports:
+      - "8090:8080"
+    depends_on:
+      - kafka
+    environment:
+      KAFKA_CLUSTERS_0_NAME: orbit-local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
 
 volumes:
   orbit-mongo-data:

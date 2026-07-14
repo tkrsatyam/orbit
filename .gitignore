@@ -32,3 +32,6 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# Misc
+/ORBIT_PROJECT_INSTRUCTIONS.md
