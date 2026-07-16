@@ -40,6 +40,7 @@ The minimum viable product. Everything in this phase must be complete and demo-r
 - Typing indicator ("Satyam is typing...")
 - Read receipts (delivered / seen)
 - Online / offline presence indicator per contact
+- Server-side unread count (via GET /api/v1/conversations) — no live push yet, refreshed on load/reconnect
 
 ### Groups
 - Create a group with a name, description, and topic tag
@@ -72,9 +73,9 @@ Builds on the working core to add interactions and quality of life features that
 ### Message Interactions
 - Emoji reactions on any message
 - Quoted reply — reply to a specific message with the original shown inline above your reply
-- Unread message count badge per conversation in the sidebar
 
 ### Notifications
+- Unread message count badge per conversation in the sidebar, updated live without a refetch (chat.notifications Kafka topic → /user/queue/notifications). Phase 1 already computes and stores unreadCount; this phase adds real-time delivery to already-connected clients.
 - Browser desktop notifications for new messages when the tab is not in focus (Web Notifications API — no backend required)
 
 ### User Profile Updates

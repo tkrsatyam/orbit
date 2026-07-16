@@ -123,7 +123,7 @@ These components are not part of the standard request layer stack but are used b
 Configures the STOMP message broker, registers the `/ws` endpoint with SockJS fallback, defines the `/topic` and `/user/queue` destination prefixes, and maintains the session registry used to determine which WebSocket sessions are held by this specific backend instance.
 
 ### KafkaProducerConfig
-Publishes events to the three Kafka topics defined in `TECH_STACK.md` and `DEPLOYMENT.md` — `chat.messages`, `chat.presence`, and `chat.notifications`. Called by `MessageService` on every send and by the presence-handling logic on typing and online/offline state changes.
+Publishes events to the three Kafka topics defined in `TECH_STACK.md` and `DEPLOYMENT.md` — `chat.messages`, `chat.presence`, and (Phase 2 only) `chat.notifications`. Called by `MessageService` on every send (`chat.messages`) and by the presence-handling logic on typing and online/offline state changes (`chat.presence`). `chat.notifications` is not published to in Phase 1 — unreadCount is written directly via `NotificationRepository` with no Kafka step, per `message_send_flow.md`.
 
 ### KafkaConsumerConfig
 Consumes from all three Kafka topics. For each event, checks the local session registry maintained by `WebSocketConfig` and delivers to any matching sessions held by this instance. This is the component that implements the horizontal scaling solution documented in `discussions/002_websocket_scaling.md`.

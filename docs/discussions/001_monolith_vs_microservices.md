@@ -75,14 +75,15 @@ One Spring Boot 4.x application handles all backend responsibilities, organised 
 com.orbit
 ├── auth/
 ├── user/
+├── contact/
 ├── group/
 ├── conversation/
 ├── message/
 ├── websocket/
 ├── presence/
-├── file/
 ├── search/
-└── ai/
+├── ai/
+└── common/
 ```
 
 Each package owns its own controllers, services, repositories, and models. Cross-package dependencies are minimised and always go through service interfaces, never directly between repositories.  

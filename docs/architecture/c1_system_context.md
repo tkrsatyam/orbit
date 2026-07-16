@@ -36,7 +36,7 @@ A person who has not yet created an account. Can browse public groups and filter
 Managed MongoDB database hosted on Atlas free tier (M0 cluster). Stores all persistent data for Orbit — users, contacts, groups, conversations, messages, and notifications. Orbit's Spring Boot backend connects via the `mongodb+srv://` protocol. Data is encrypted at rest by Atlas by default.
 
 ### Upstash Kafka
-Serverless managed Kafka broker. Used for WebSocket fan-out — when a message arrives at one backend instance, it is published to a Kafka topic and consumed by all running instances, each of which delivers the message to any WebSocket sessions it holds. This makes the monolithic backend horizontally scalable without microservices. Three topics are used: `chat.messages`, `chat.presence`, and `chat.notifications`.
+Serverless managed Kafka broker. Used for WebSocket fan-out — when a message arrives at one backend instance, it is published to a Kafka topic and consumed by all running instances, each of which delivers the message to any WebSocket sessions it holds. This makes the monolithic backend horizontally scalable without microservices. Three topics are used: `chat.messages`, `chat.presence`, and (Phase 2 only) `chat.notifications` for real-time unread-count push to already-connected clients.
 
 ### Cloudflare R2
 S3-compatible object storage used for all binary content — user avatars, group avatars, group cover images, and file and image message attachments. Files are uploaded from the backend directly to R2. Access is via presigned URLs that expire after one hour, preventing unauthorised direct access. Introduced in Phase 2 (avatars) and Phase 3 (file uploads).

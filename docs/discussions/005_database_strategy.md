@@ -140,9 +140,10 @@ Instead of foreign keys, collections reference each other by ID:
 {
   _id: ObjectId,
   name: "FAANG Interview Prep",
-  memberIds: [ObjectId, ObjectId, ...],  // references users
-  adminIds: [ObjectId],
-  conversationId: ObjectId               // references conversations
+  members: [
+    { userId: ObjectId, role: "ADMIN", joinedAt: ISODate }
+  ],                                      // embedded, references users
+  conversationId: ObjectId                // references conversations
 }
 
 // Message document

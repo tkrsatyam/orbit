@@ -528,6 +528,7 @@ Notes:
 
 ### PATCH /api/v1/conversations/{conversationId}/mute
 
+**(Phase 2)**  
 Mute or unmute a conversation.
 
 Auth: Required — must be a participant
@@ -617,6 +618,7 @@ Notes:
 
 ### POST /api/v1/conversations/{conversationId}/messages/{messageId}/reactions
 
+**(Phase 2)**  
 Add or update a reaction on a message.
 
 Auth: Required — must be a participant
@@ -644,6 +646,7 @@ Notes:
 
 ### DELETE /api/v1/conversations/{conversationId}/messages/{messageId}/reactions
 
+**(Phase 2)**  
 Remove the authenticated user's reaction from a message.
 
 Auth: Required
@@ -652,7 +655,7 @@ Response: 204
 
 ---
 
-## File Upload Endpoints
+## File Upload Endpoints (Phase 3)
 
 ### POST /api/v1/conversations/{conversationId}/messages/upload
 
@@ -932,6 +935,7 @@ Response: 200
 
 ### POST /api/v1/groups/{groupId}/avatar
 
+**(Phase 2)**  
 Upload or replace group avatar.
 
 Auth: Required — Admin only
@@ -950,6 +954,7 @@ Response 200:
 
 ### POST /api/v1/groups/{groupId}/cover
 
+**(Phase 2)**  
 Upload or replace group cover image.
 
 Auth: Required — Admin only
@@ -968,6 +973,7 @@ Response 200:
 
 ### POST /api/v1/groups/{groupId}/messages/{messageId}/pin
 
+**(Phase 2)**  
 Pin a message in a group.
 
 Auth: Required — Admin only
@@ -978,6 +984,7 @@ Response: 204
 
 ### DELETE /api/v1/groups/{groupId}/messages/{messageId}/pin
 
+**(Phase 2)**  
 Unpin a message in a group.
 
 Auth: Required — Admin only
@@ -986,7 +993,7 @@ Response: 204
 
 ---
 
-## Search Endpoints
+## Search Endpoints (Phase 3)
 
 ### GET /api/v1/search/messages?q={query}&conversationId={id}
 

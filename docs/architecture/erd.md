@@ -97,11 +97,12 @@ Notes:
 - A CONNECTED status means both users are contacts
 - To query "are user A and user B contacts", query where (requesterId=A AND receiverId=B) OR (requesterId=B AND receiverId=A)
 - On ACCEPT: status updated to CONNECTED, conversationId populated, DM conversation document created simultaneously in a transaction
-- On BLOCK: status updated to BLOCKED, blockedBy set to the blocking user Existing CONNECTED relationship is overwritten
+- On BLOCK: status updated to BLOCKED, blockedBy set to the blocking user. Existing CONNECTED relationship is overwritten
+- On REMOVE (unfriend): the contacts document is deleted entirely — no NONE status is stored, since NONE is just the absence of a document. See [`discussions/006_contact_removal_strategy.md`](../discussions/006_contact_removal_strategy.md) for the reasoning.
 
 Integrity rules:
 - On conversation deletion: set conversationId to null
-- Contact document persists even after unfriending for audit trail — status set back to NONE via soft reset (delete and allow re-request)
+- On unfriend/remove: hard delete the contacts document
 
 ---
 

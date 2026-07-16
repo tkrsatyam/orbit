@@ -279,7 +279,7 @@ Architecture documentation lives in `docs/`. When making changes that affect the
 
 ### Backend (Spring Boot)
 
-- Package structure follows the feature-package layout defined in `docs/architecture/c3_component.md` — one package per domain (`auth`, `user`, `group`, `conversation`, `message`, `websocket`, `presence`, `search`, `ai`)
+- Package structure follows the feature-package layout defined in `docs/architecture/c3_component.md` — one package per domain (`auth`, `user`, `contact`, `group`, `conversation`, `message`, `websocket`, `presence`, `search`, `ai`, `common`)
 - Controllers contain no business logic — delegate to service immediately
 - Services own all transactional boundaries — `@Transactional` only in service layer
 - Repositories never call other repositories — cross-collection operations belong in the service layer

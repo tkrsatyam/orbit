@@ -32,29 +32,31 @@ Before any network call is made, the React SPA appends the message to the conver
 
 ### Step-by-Step
 
-**1. STOMP SEND frame**
+**1. STOMP SEND frame**  
 The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`.
 
-**2. Rate limit check**
+**2. Rate limit check**  
 `RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and processing stops.
 
-**3. Persist to MongoDB** ← critical step
+**3. Persist to MongoDB** ← critical step  
 `MessageService` inserts the message document via `MessageRepository`. The document includes `conversationId`, `senderId`, `senderName` (snapshot), `type`, `content`, `deleted: false`, `edited: false`, and `createdAt`. MongoDB assigns the `_id`. This step happens before any Kafka publish — see the Error Paths section for the reason.
 
-**4. Update lastMessage snapshot**
+**4. Update lastMessage snapshot**  
 `ConversationRepository` updates the `lastMessage` embedded document on the conversation with a content snapshot, `senderId`, `senderName`, and `sentAt`. This denormalised field powers the conversation list display without requiring a message query.
 
-**5. Upsert unread notification**
+**5. Upsert unread notification**  
 `NotificationRepository` increments the `unreadCount` for every participant in the conversation except the sender, using an upsert on `{ userId, conversationId }`. This ensures offline recipients have an accurate unread count when they reconnect.
 
-**6. Publish to Kafka**
+**6. Publish to Kafka**  
 `KafkaProducerConfig` publishes an event to the `chat.messages` topic containing the `messageId`, `conversationId`, `recipientIds[]`, and the full message payload. The Kafka broker (Upstash) acknowledges receipt.
 
-**7. Return receipt to sender**
+**7. Return receipt to sender**  
 `MessageService` returns the saved message object (with its assigned `_id`) to the sender via a STOMP receipt frame. The React SPA uses this to replace the optimistic message's temporary state with the final confirmed message.
 
-**8. Kafka consumer delivers to recipients**
+**8. Kafka consumer delivers to recipients**  
 `KafkaConsumerConfig` on every running backend instance consumes the event. Each instance checks its local WebSocket session registry. The instance holding a session for a recipient delivers the message via STOMP to `/topic/conversations/{conversationId}/messages`. Instances with no relevant sessions discard the event silently.
+
+**Phase note:** Steps 1–7 above are the complete Phase 1 flow. There is no Kafka publish for notifications in Phase 1 — `unreadCount` is written directly to MongoDB and read back via `GET /api/v1/conversations` on load or reconnect. Real-time push of unread-count changes to an already-open client (via `chat.notifications` → `/user/queue/notifications`) is a Phase 2 addition — see `TECH_STACK.md` Kafka Topics and `FEATURES.md` Phase 2 Notifications.
 
 ### What Happens if the Recipient is Offline
 

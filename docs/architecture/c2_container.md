@@ -50,7 +50,7 @@ The Spring Boot application is the single backend container for Orbit. It is a m
 - REST API serving all application endpoints under `/api/v1/`
 - WebSocket server via Spring's STOMP broker — accepts connections, manages subscriptions, routes messages to `/topic/` and `/user/queue/` destinations
 - JWT validation at the Spring Security filter chain entry point — validated once per request, identity propagated internally via SecurityContext. No re-validation at service or repository layer
-- Kafka producer — publishes message events to `chat.messages`, presence events to `chat.presence`, and notification events to `chat.notifications`
+- Kafka producer — publishes message events to `chat.messages`, presence events to `chat.presence`, and (Phase 2 only) notification events to `chat.notifications` for real-time unread-count push
 - Kafka consumer — consumes from all three topics and delivers events to relevant WebSocket sessions held by this instance
 - MongoDB data access via Spring Data MongoDB repositories and aggregation pipelines
 - File upload handling — receives multipart requests, streams files to Cloudflare R2 via the AWS S3 SDK, stores presigned URL metadata on the message document

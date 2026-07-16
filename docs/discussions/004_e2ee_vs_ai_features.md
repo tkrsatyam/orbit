@@ -79,13 +79,13 @@ Orbit's value proposition is AI-augmented group communication for people with sh
 
 The following security measures are in place:
 
-| Layer | Implementation |
-|---|---|
-| Encryption in transit | TLS enforced by Vercel and Render |
-| Password security | BCrypt hashing, cost factor 12 |
-| Authentication | JWT, access token 15min, refresh token 7 days |
-| Encryption at rest | Neon managed PostgreSQL + MongoDB Atlas |
-| Input validation | Server-side validation on all endpoints |
+| Layer                 | Implementation                                |
+|-----------------------|-----------------------------------------------|
+| Encryption in transit | TLS enforced by Vercel and Render             |
+| Password security     | BCrypt hashing, cost factor 12                |
+| Authentication        | JWT, access token 15min, refresh token 7 days |
+| Encryption at rest    | MongoDB Atlas                                 |
+| Input validation      | Server-side validation on all endpoints       |
 
 ### Recruiter / Interviewer Answer
 
