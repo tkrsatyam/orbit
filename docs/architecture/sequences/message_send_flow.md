@@ -60,7 +60,7 @@ The event is stored on the topic partition and the Upstash broker returns an ack
 
 ### What Happens if the Recipient is Offline
 
-If no instance holds a WebSocket session for a recipient, the event is consumed and discarded by all instances. The recipient is not lost — they will see the message on their next conversation history fetch, and their unread count (incremented in step 5) will indicate the missed message.
+If no instance holds a WebSocket session for a recipient, the event is consumed and discarded by all instances. The recipient is not lost — they will see the message on their next conversation history fetch, and their unread count (incremented in step 4) will indicate the missed message.
 
 ---
 
