@@ -41,32 +41,32 @@ Backend: `http://localhost:8080`
 
 Orbit uses Jira to track all work items. The GitHub for Jira app connects this repository to the Jira project so that branches, commits, and pull requests automatically appear in the Jira Development panel for each work item.
 
-**The Jira project key for Orbit is `OR`** (update this once the Jira project is created and the key is confirmed).
+**The Jira project key for Orbit is `ORDM`** 
 
 ### Quick Reference
 
 ```
-Branch    →  git checkout -b OR-123-short-description
-Commit    →  git commit -m "OR-123 what you changed"
-PR title  →  [OR-123] What the PR does
+Branch    →  git checkout -b ORDM-123-short-description
+Commit    →  git commit -m "ORDM-123 what you changed"
+PR title  →  [ORDM-123] What the PR does
 ```
 
 ### Finding Your Jira Key
 
-Every Jira work item has a unique key in the format `OR-123`.
+Every Jira work item has a unique key in the format `ORDM-123`.
 
-| Where to look | What you see |
-|---|---|
-| Board card | Key displayed at the bottom of the card |
-| Work item detail page | Key shown in the breadcrumb and URL |
-| Backlog list | Key shown in the leftmost column |
+| Where to look         | What you see                            |
+|-----------------------|-----------------------------------------|
+| Board card            | Key displayed at the bottom of the card |
+| Work item detail page | Key shown in the breadcrumb and URL     |
+| Backlog list          | Key shown in the leftmost column        |
 
 The key is case-insensitive for GitHub matching, but use uppercase to be safe.
 
 ### Branch Naming
 
 ```
-OR-{ticket-number}-{short-description}
+ORDM-{ticket-number}-{short-description}
 ```
 
 - Jira key comes first — this is what the GitHub for Jira integration uses to link the branch
@@ -75,17 +75,17 @@ OR-{ticket-number}-{short-description}
 
 **Examples:**
 ```
-OR-12-websocket-stomp-config
-OR-24-message-send-service
-OR-31-react-conversation-list
-OR-45-fix-kafka-consumer-offset
-OR-67-mongodb-message-indexes
+ORDM-12-websocket-stomp-config
+ORDM-24-message-send-service
+ORDM-31-react-conversation-list
+ORDM-45-fix-kafka-consumer-offset
+ORDM-67-mongodb-message-indexes
 ```
 
 ### Commit Messages
 
 ```
-OR-{ticket-number} brief description of what changed
+ORDM-{ticket-number} brief description of what changed
 ```
 
 - Key must appear at the start of the commit message
@@ -94,9 +94,9 @@ OR-{ticket-number} brief description of what changed
 
 **Examples:**
 ```bash
-git commit -m "OR-12 configure STOMP broker with SockJS fallback"
-git commit -m "OR-24 implement persist-before-publish in MessageService"
-git commit -m "OR-31 add conversation list with unread count badge"
+git commit -m "ORDM-12 configure STOMP broker with SockJS fallback"
+git commit -m "ORDM-24 implement persist-before-publish in MessageService"
+git commit -m "ORDM-31 add conversation list with unread count badge"
 ```
 
 **Housekeeping commits** unrelated to a ticket can omit the key:
@@ -108,35 +108,35 @@ git commit -m "docs: fix typo in ERD"
 **Smart Commits** (optional — requires Smart Commits enabled in Jira):
 ```bash
 # Transition ticket to In Review
-git commit -m "OR-24 #in-review MessageService send flow complete"
+git commit -m "ORDM-24 #in-review MessageService send flow complete"
 
 # Log time worked
-git commit -m "OR-24 #time 3h implement Kafka fan-out in MessageService"
+git commit -m "ORDM-24 #time 3h implement Kafka fan-out in MessageService"
 
 # Add a comment to the Jira ticket
-git commit -m "OR-24 #comment tested locally, all flows working"
+git commit -m "ORDM-24 #comment tested locally, all flows working"
 
 # Transition and log time together
-git commit -m "OR-24 #done #time 5h complete Phase 1 message send flow"
+git commit -m "ORDM-24 #done #time 5h complete Phase 1 message send flow"
 ```
 
 ### What Shows Up in the Jira Development Panel
 
-| GitHub action | Appears in Jira if… |
-|---|---|
-| Branch | Branch name contains the key anywhere |
-| Commit | Commit message contains the key anywhere |
-| Pull Request | PR title contains the key |
-| Build status | GitHub Actions workflow connected via GitHub for Jira |
-| Deployment | Deployment environment tracked via GitHub Environments |
+| GitHub action | Appears in Jira if…                                    |
+|---------------|--------------------------------------------------------|
+| Branch        | Branch name contains the key anywhere                  |
+| Commit        | Commit message contains the key anywhere               |
+| Pull Request  | PR title contains the key                              |
+| Build status  | GitHub Actions workflow connected via GitHub for Jira  |
+| Deployment    | Deployment environment tracked via GitHub Environments |
 
 ### Workflow Summary
 
 ```
-1. Pick a Jira ticket  →  note the key (e.g. OR-42)
-2. git checkout -b OR-42-feature-name
-3. git commit -m "OR-42 description of change"   ← repeat for every commit
-4. Push branch → open PR with title "[OR-42] Feature name"
+1. Pick a Jira ticket  →  note the key (e.g. ORDM-42)
+2. git checkout -b ORDM-42-feature-name
+3. git commit -m "ORDM-42 description of change"   ← repeat for every commit
+4. Push branch → open PR with title "[ORDM-42] Feature name"
 5. Jira Development panel now shows: branch ✓ · commits ✓ · pull request ✓
 ```
 
@@ -148,10 +148,10 @@ If development information is not appearing in Jira, work through this checklist
 Go to Jira → Settings → Apps → GitHub for Jira. Confirm the app is installed and `tkrsatyam/orbit` is listed under connected repositories. If the repo is missing, click Add repository and authorise access.
 
 **2. Key not in the right place**  
-Branch names must contain the key anywhere in the name. Commit messages must contain the key anywhere in the body. PR title must contain the key — the PR description alone is not enough. Double-check for typos: `RO-123` instead of `OR-123` will silently fail.
+Branch names must contain the key anywhere in the name. Commit messages must contain the key anywhere in the body. PR title must contain the key — the PR description alone is not enough. Double-check for typos: `RO-123` instead of `ORDM-123` will silently fail.
 
 **3. Wrong project key**  
-Jira project keys are shown in Project Settings → Details. If the key is not `OR`, update all examples in this guide.
+Jira project keys are shown in Project Settings → Details. If the key is not `ORDM`, update all examples in this guide.
 
 **4. Delay in sync**  
 Jira does not update in real time. After a push, wait up to 60 seconds for commits and branches to appear. After a PR is opened or merged, allow 1–2 minutes. If nothing appears after 5 minutes, move to the steps below.
@@ -184,21 +184,21 @@ Build status comes from GitHub Actions — most standard actions report status t
 ### Title Format
 
 ```
-[OR-123] Short description of what the PR does
+[ORDM-123] Short description of what the PR does
 ```
 
 **Examples:**
 ```
-[OR-12] WebSocket STOMP broker configuration
-[OR-24] Message send flow with Kafka fan-out
-[OR-31] Conversation list UI with real-time updates
+[ORDM-12] WebSocket STOMP broker configuration
+[ORDM-24] Message send flow with Kafka fan-out
+[ORDM-31] Conversation list UI with real-time updates
 ```
 
 ### PR Description Template
 
 ```markdown
 ## Jira
-[OR-123](https://your-jira-site.atlassian.net/browse/OR-123)
+[ORDM-123](https://your-jira-site.atlassian.net/browse/ORDM-123)
 
 ## What changed
 - Concise bullet list of what this PR does
@@ -227,9 +227,9 @@ Build status comes from GitHub Actions — most standard actions report status t
 
 Two independent GitHub Actions workflows run on push to `main`:
 
-| Workflow | Triggered by | What it does |
-|---|---|---|
-| `deploy-backend.yml` | Changes in `backend/**` | Builds JAR, runs tests, deploys to Render via API |
+| Workflow              | Triggered by             | What it does                                             |
+|-----------------------|--------------------------|----------------------------------------------------------|
+| `deploy-backend.yml`  | Changes in `backend/**`  | Builds JAR, runs tests, deploys to Render via API        |
 | `deploy-frontend.yml` | Changes in `frontend/**` | Runs `npm ci`, builds, deploys to Vercel via Deploy Hook |
 
 Changes to `docs/**` trigger neither pipeline.
@@ -250,14 +250,14 @@ When a GitHub Issue is labelled with `bug`, a GitHub Actions workflow (`jira-bug
 
 **Required GitHub Secrets for this workflow:**
 
-| Secret | Description |
-|---|---|
-| `JIRA_BASE_URL` | Your Jira site URL e.g. `https://yoursite.atlassian.net` |
+| Secret            | Description                                                  |
+|-------------------|--------------------------------------------------------------|
+| `JIRA_BASE_URL`   | Your Jira site URL e.g. `https://yoursite.atlassian.net`     |
 | `JIRA_AUTH_TOKEN` | Base64-encoded `email:api-token` for Jira API authentication |
 
 The sync is one-directional — GitHub Issue → Jira Bug. Manual Jira tickets are not synced back to GitHub Issues.
 
-The workflow and conversion script (`.github/scripts/create-jira-bug.mjs`) are adapted from the companion project (JobTrackr). The only change needed is the project key — `OR` instead of `JD` — inside the script payload.
+The workflow and conversion script (`.github/scripts/create-jira-bug.mjs`) are adapted from the companion project (JobTrackr). The only change needed is the project key — `ORDM` instead of `JD` — inside the script payload.
 
 ---
 
@@ -265,13 +265,13 @@ The workflow and conversion script (`.github/scripts/create-jira-bug.mjs`) are a
 
 Architecture documentation lives in `docs/`. When making changes that affect the architecture — new endpoints, schema changes, new components — update the relevant doc alongside the code change and include it in the same PR.
 
-| Changed | Update |
-|---|---|
-| New REST endpoint or WebSocket destination | `docs/API_CONTRACTS.md` |
-| New MongoDB collection or field | `docs/architecture/erd.md` |
-| New backend package or component | `docs/architecture/c3_component.md` |
-| New external system dependency | `docs/architecture/c1_system_context.md` and `docs/architecture/c2_container.md` |
-| New architectural decision | Add an ADR to `docs/discussions/` using `docs/_templates/DISCUSSION_TEMPLATE.md` |
+| Changed                                    | Update                                                                           |
+|--------------------------------------------|----------------------------------------------------------------------------------|
+| New REST endpoint or WebSocket destination | `docs/API_CONTRACTS.md`                                                          |
+| New MongoDB collection or field            | `docs/architecture/erd.md`                                                       |
+| New backend package or component           | `docs/architecture/c3_component.md`                                              |
+| New external system dependency             | `docs/architecture/c1_system_context.md` and `docs/architecture/c2_container.md` |
+| New architectural decision                 | Add an ADR to `docs/discussions/` using `docs/_templates/DISCUSSION_TEMPLATE.md` |
 
 ---
 
