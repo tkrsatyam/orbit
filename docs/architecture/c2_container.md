@@ -72,6 +72,7 @@ The Spring Boot application is the single backend container for Orbit. It is a m
 | `presence/` | Online/offline tracking via WebSocket lifecycle events, typing indicator handling |
 | `search/` | User search, public group search, in-conversation message search |
 | `ai/` | Claude API client, prompt construction, all five AI feature handlers |
+| `common/` | Exception handling, Kafka producer config, R2 storage client, schema migration, bot user seeding, Mongo config |
 
 **Deployment notes:** Deployed on Render's free tier with 512MB RAM. The instance spins down after 15 minutes of inactivity — first request after spin-down triggers a 30–60 second cold start. Deployments are triggered via the Render API from the GitHub Actions backend pipeline after build and tests pass. See `DEPLOYMENT.md` for full setup instructions.
 

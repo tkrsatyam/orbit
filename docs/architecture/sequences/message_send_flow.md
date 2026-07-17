@@ -33,22 +33,22 @@ Before any network call is made, the React SPA appends the message to the conver
 ### Step-by-Step
 
 **1. STOMP SEND frame**  
-The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`.
+The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`. Immediately on arrival, `RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and nothing below is reached.
 
-**2. Rate limit check**  
-`RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and processing stops.
-
-**3. Persist to MongoDB** ← critical step  
+**2. Persist to MongoDB** ← critical step  
 `MessageService` inserts the message document via `MessageRepository`. The document includes `conversationId`, `senderId`, `senderName` (snapshot), `type`, `content`, `deleted: false`, `edited: false`, and `createdAt`. MongoDB assigns the `_id`. This step happens before any Kafka publish — see the Error Paths section for the reason.
 
-**4. Update lastMessage snapshot**  
+**3. Update lastMessage snapshot**  
 `ConversationRepository` updates the `lastMessage` embedded document on the conversation with a content snapshot, `senderId`, `senderName`, and `sentAt`. This denormalised field powers the conversation list display without requiring a message query.
 
-**5. Upsert unread notification**  
+**4. Upsert unread notification**  
 `NotificationRepository` increments the `unreadCount` for every participant in the conversation except the sender, using an upsert on `{ userId, conversationId }`. This ensures offline recipients have an accurate unread count when they reconnect.
 
-**6. Publish to Kafka**  
-`KafkaProducerConfig` publishes an event to the `chat.messages` topic containing the `messageId`, `conversationId`, `recipientIds[]`, and the full message payload. The Kafka broker (Upstash) acknowledges receipt.
+**5. Publish to Kafka**  
+`KafkaProducerConfig` publishes an event to the `chat.messages` topic containing the `messageId`, `conversationId`, `recipientIds[]`, and the full message payload.
+
+**6. Kafka broker acknowledges receipt**  
+The event is stored on the topic partition and the Upstash broker returns an ack to `KafkaProducerConfig`.
 
 **7. Return receipt to sender**  
 `MessageService` returns the saved message object (with its assigned `_id`) to the sender via a STOMP receipt frame. The React SPA uses this to replace the optimistic message's temporary state with the final confirmed message.
@@ -56,7 +56,7 @@ The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/s
 **8. Kafka consumer delivers to recipients**  
 `KafkaConsumerConfig` on every running backend instance consumes the event. Each instance checks its local WebSocket session registry. The instance holding a session for a recipient delivers the message via STOMP to `/topic/conversations/{conversationId}/messages`. Instances with no relevant sessions discard the event silently.
 
-**Phase note:** Steps 1–7 above are the complete Phase 1 flow. There is no Kafka publish for notifications in Phase 1 — `unreadCount` is written directly to MongoDB and read back via `GET /api/v1/conversations` on load or reconnect. Real-time push of unread-count changes to an already-open client (via `chat.notifications` → `/user/queue/notifications`) is a Phase 2 addition — see `TECH_STACK.md` Kafka Topics and `FEATURES.md` Phase 2 Notifications.
+**Phase note:** Steps 1–8 above are the complete Phase 1 flow. There is no Kafka publish for notifications in Phase 1 — `unreadCount` is written directly to MongoDB and read back via `GET /api/v1/conversations` on load or reconnect. Real-time push of unread-count changes to an already-open client (via `chat.notifications` → `/user/queue/notifications`) is a Phase 2 addition — see `TECH_STACK.md` Kafka Topics and `FEATURES.md` Phase 2 Notifications.
 
 ### What Happens if the Recipient is Offline
 
@@ -78,7 +78,7 @@ File and image messages follow a different entry path — they use the REST endp
 On successful R2 upload, `MessageService` inserts the message document with `type: IMAGE` or `FILE` and an embedded `file` subdocument containing `fileId` (R2 object key), `fileName`, `mimeType`, and the presigned URL (1-hour expiry).
 
 **4. Remainder of flow**
-Steps 4 through 8 from Flow A continue identically — update lastMessage, upsert notifications, publish to Kafka, fan-out delivery.
+Steps 3 through 8 from Flow A continue identically — update lastMessage, upsert notifications, publish to Kafka, fan-out delivery.
 
 ### Presigned URL Expiry
 
@@ -90,7 +90,7 @@ The presigned R2 URL stored on the message expires after one hour. When a client
 
 When the WebSocket connection is not available — either not yet established on initial load, or dropped during a SockJS backoff retry — the React SPA falls back to the REST endpoint `POST /api/v1/conversations/{conversationId}/messages`.
 
-The internal processing in `MessageService` is identical to Flow A from step 3 onward — persist, lastMessage update, notification upsert, Kafka publish, WebSocket fan-out. The only difference is the entry point: HTTP request/response instead of STOMP frame.
+The internal processing in `MessageService` is identical to Flow A from step 2 onward — persist, lastMessage update, notification upsert, Kafka publish, WebSocket fan-out. The only difference is the entry point: HTTP request/response instead of STOMP frame.
 
 The REST endpoint returns a 201 with the full message object. The React SPA uses an idempotency key (a client-generated UUID sent in the request) so that duplicate submissions caused by retry logic return the already-persisted message rather than creating a duplicate.
 
@@ -118,7 +118,7 @@ No message is created anywhere — the failure is clean.
 
 ### E2 — Kafka Publish Fails After MongoDB Persist
 
-This is the more complex failure case. The message has been persisted to MongoDB (step 3 succeeded) but `KafkaProducerConfig` cannot reach the Upstash broker (step 6 fails).
+This is the more complex failure case. The message has been persisted to MongoDB (step 2 succeeded) but `KafkaProducerConfig` cannot reach the Upstash broker (step 5 fails).
 
 Spring Kafka applies automatic retries before surfacing the exception — the default production configuration is three retries with 1s/2s/4s exponential backoff. If all retries fail, a `KafkaProducerException` is thrown.
 
