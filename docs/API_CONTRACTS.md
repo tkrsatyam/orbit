@@ -302,6 +302,17 @@ Response 200:
       "connectionStatus": "CONNECTED"
     }
 
+Response 200 — when a BLOCKED relationship exists between the requester and target (either direction where the requester is the blocked party):
+
+    {
+      "id": "64f1a2b3c4d5e6f7a8b9c0d1",
+      "available": false
+    }
+
+Notes:
+- Returned as a normal 200 with a reduced shape, not a 403/404 — this prevents the requester from being able to distinguish "user doesn't exist" from "user blocked me" from response status alone. See `discussions/007_blocking_behavior.md`.
+- Applies only when the requester is the blocked party. The blocking user retains full, normal profile access to the user they blocked.
+
 ---
 
 ## Contact Endpoints
@@ -523,6 +534,7 @@ Response 200:
 Notes:
 - deleted: true messages return with content: null — the document is preserved for conversation continuity ("This message was deleted" shown on frontend)
 - quotedMessage contains a snapshot of the quoted message at time of reply — not a live reference, so deleted quoted messages still show their content in the reply
+- This response merges results from `messages` and `blockedMessages`, scoped to `senderId == requester` for the blockedMessages portion. This means a user viewing their own conversation history sees their own blocked-out messages exactly as sent, while the recipient who blocked them never sees these documents at all. See `discussions/007_blocking_behavior.md`.
 
 ---
 
@@ -583,6 +595,9 @@ Request:
 
 Response 201: full message object (same shape as GET messages response)
 
+Notes:
+- If the sender is currently blocked by the conversation's other participant, the response is still 201 with an identical-looking message object — the sender receives no indication the message was blocked. Internally, the message is persisted to `blockedMessages` instead of `messages`, and no Kafka publish occurs, so the recipient never receives it. See `discussions/007_blocking_behavior.md`.
+
 ---
 
 ### PATCH /api/v1/conversations/{conversationId}/messages/{messageId}
@@ -599,6 +614,9 @@ Request:
 
 Response 200: updated message object
 
+Notes:
+- `MessageService` looks up the message by ID in both `messages` and `blockedMessages`, since a message sent while blocked may live in either collection
+
 ---
 
 ### DELETE /api/v1/conversations/{conversationId}/messages/{messageId}
@@ -612,7 +630,8 @@ Response: 204
 Notes:
 - Soft delete — deleted: true, content set to null
 - Document preserved for conversation continuity
-- WebSocket event broadcast to all participants
+- WebSocket event broadcast to all participants (no-op for blockedMessages documents, since there are no other participants with visibility into them)
+- `MessageService` looks up the message by ID in both `messages` and `blockedMessages`
 
 ---
 
@@ -1019,6 +1038,9 @@ Response 200:
         }
       ]
     }
+
+Notes:
+- Same merge behavior as `GET .../conversations/{conversationId}/messages` — results are drawn from both `messages` and `blockedMessages` (scoped to `senderId == requester` for the latter), using the compound text index defined on each collection. See `discussions/007_blocking_behavior.md`.
 
 ---
 

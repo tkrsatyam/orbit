@@ -97,7 +97,7 @@ Notes:
 - A CONNECTED status means both users are contacts
 - To query "are user A and user B contacts", query where (requesterId=A AND receiverId=B) OR (requesterId=B AND receiverId=A)
 - On ACCEPT: status updated to CONNECTED, conversationId populated, DM conversation document created simultaneously in a transaction
-- On BLOCK: status updated to BLOCKED, blockedBy set to the blocking user. Existing CONNECTED relationship is overwritten
+- On BLOCK: status updated to BLOCKED, blockedBy set to the blocking user. Existing CONNECTED relationship is overwritten. Full behavioral spec (profile visibility, presence, messaging, groups) is documented in [`discussions/007_blocking_behavior.md`](../discussions/007_blocking_behavior.md) — this collection only tracks the relationship status, not the enforcement logic
 - On REMOVE (unfriend): the contacts document is deleted entirely — no NONE status is stored, since NONE is just the absence of a document. See [`discussions/006_contact_removal_strategy.md`](../discussions/006_contact_removal_strategy.md) for the reasoning.
 
 Integrity rules:
@@ -279,6 +279,66 @@ Notes:
 Integrity rules:
 - On user deletion: set deleted: true, content: null for all messages by that user — do not hard delete
 - On conversation deletion: hard delete all messages in that conversationId in batches to avoid memory pressure on large conversations
+- If the sender is blocked by the recipient at send time, the message is diverted to the `blockedMessages` collection below instead of being inserted here — see [`discussions/007_blocking_behavior.md`](../discussions/007_blocking_behavior.md)
+
+---
+
+## Collection: blockedMessages
+
+Stores messages sent by a user (B) to a contact who has blocked them (A). Structurally a sibling of `messages`, not a flag on it — kept as a separate collection so no existing or future read path over `messages` (history, search, unread counts, Phase 4 AI summary) needs to know this data exists. Full reasoning: [`discussions/007_blocking_behavior.md`](../discussions/007_blocking_behavior.md).
+
+Only the sender (B) will ever see documents in this collection. The recipient (A) never queries or receives them — not via WebSocket, not via history fetch, not after unblocking.
+
+    {
+      _id:              ObjectId,
+      conversationId:   ObjectId,     -- ref: conversations._id, indexed
+      senderId:         ObjectId,     -- ref: users._id — the blocked sender (B)
+      senderName:       String,       -- snapshot at send time, same as messages
+      type:             String,       -- enum: TEXT | IMAGE | FILE
+      content:          String,       -- null when deleted: true, null for IMAGE/FILE
+      deleted:          Boolean,      -- soft delete flag, default false
+      edited:           Boolean,      -- default false
+      editedAt:         ISODate,      -- null until first edit
+      quotedMessage: {
+        messageId:      ObjectId,
+        content:        String,
+        senderId:       ObjectId,
+        senderName:     String,
+        type:           String
+      },                              -- null if not a reply
+      file: {
+        fileId:         String,
+        fileName:       String,
+        fileSize:       Number,
+        mimeType:       String,
+        url:            String
+      },                              -- null for TEXT type
+      reactions: [
+        {
+          userId:       ObjectId,
+          displayName:  String,
+          emoji:        String,
+          reactedAt:    ISODate
+        }
+      ],                              -- B reacting to their own echoed message
+      createdAt:        ISODate,
+      updatedAt:        ISODate
+    }
+
+Indexes:
+- { conversationId: 1, senderId: 1, createdAt: -1 } (B's own history, paginated — mirrors messages' primary pattern, scoped to sender)
+- { conversationId: 1, senderId: 1, content: "text" } (compound text index — scoped search, mirrors messages' search index, for Phase 3 `GET /api/v1/search/messages`)
+
+Notes:
+- No `readBy` field. No user other than B will ever read this document — there is no possible value to record.
+- Every other field intentionally mirrors `messages` exactly, so `MessageResponse` mapping and frontend rendering require no special-case logic when a blockedMessages document is merged into a history or search response.
+- `GET /api/v1/conversations/{conversationId}/messages` and (Phase 3) `GET /api/v1/search/messages` merge results from `messages` and `blockedMessages`, scoped strictly to `senderId == requester`. This scoping is what prevents A from ever seeing B's blocked messages — no additional block-status check is needed at read time.
+- Edit, delete, and reaction operations on a message by ID check both `messages` and `blockedMessages`, since a message sent while blocked could be in either.
+
+Integrity rules:
+- On user deletion: hard delete all blockedMessages documents by that user (unlike messages, there is no "preserve for conversation continuity" need, since no other participant ever saw these)
+- On conversation deletion: hard delete all blockedMessages in that conversationId
+- On unblock: no migration occurs. Documents remain in blockedMessages permanently — they are never moved into messages, even after the block is lifted
 
 ---
 

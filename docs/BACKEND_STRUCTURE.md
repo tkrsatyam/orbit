@@ -152,6 +152,7 @@ com.orbit.contact/
 **Key rules:**
 - `ContactService.acceptRequest()` calls `ConversationService.createDirectConversation()` — this cross-package call is intentional and documented in the ERD integrity checklist
 - The call is wrapped in a MongoDB multi-document transaction
+- `ContactService` exposes a block-status lookup that `MessageService` and `UserService` call on the message-send and profile-lookup paths respectively — this is the same cross-package pattern as the two calls above, just consumed by two additional packages. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
 
 ---
 
@@ -211,6 +212,7 @@ com.orbit.message/
 ├── MessageController.java
 ├── MessageService.java
 ├── MessageRepository.java
+├── BlockedMessageRepository.java   ← @Document("blockedMessages"), separate from MessageRepository
 ├── dto/
 │   ├── SendMessageRequest.java
 │   ├── EditMessageRequest.java
@@ -218,7 +220,8 @@ com.orbit.message/
 │   ├── MessageResponse.java        ← full message shape returned to clients
 │   └── FileUploadResponse.java
 └── model/
-    └── Message.java                ← @Document("messages"), embeds Reaction, ReadReceipt, QuotedMessage, File
+    ├── Message.java                ← @Document("messages"), embeds Reaction, ReadReceipt, QuotedMessage, File
+    └── BlockedMessage.java         ← @Document("blockedMessages"), same embedded shape as Message minus ReadReceipt
 ```
 
 **Key rules:**
@@ -226,6 +229,9 @@ com.orbit.message/
 - `MessageService.send()` calls: `MessageRepository.insert()` → `ConversationService.updateLastMessage()` → `NotificationService.upsertUnread()` → `KafkaProducerConfig.publish()` — in this exact order
 - Reactions use `$pull` then `$push` via a custom repository method — never a simple `$push` which would allow duplicate reactions per user
 - File upload calls `R2StorageClient.upload()` before inserting the message document — R2 must succeed first
+- `MessageService.sendMessage()` checks block status (via `ContactService`) before persisting. If the sender is blocked by the recipient, the message is written via `BlockedMessageRepository` instead of `MessageRepository`, and the Kafka publish step is skipped entirely. See `docs/discussions/007_blocking_behavior.md`.
+- `MessageService.editMessage()`, `deleteMessage()`, and `addReaction()` look up the target message in both `MessageRepository` and `BlockedMessageRepository` when locating by ID, since a blocked-out message will not be in `MessageRepository`
+- `MessageService.getConversationHistory()` (and, in Phase 3, message search) merge results from both repositories, scoped to `senderId == requester` for `BlockedMessageRepository` — this scoping is the only filter needed to keep the recipient from ever seeing these documents
 
 ---
 

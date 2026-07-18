@@ -35,8 +35,13 @@ Before any network call is made, the React SPA appends the message to the conver
 **1. STOMP SEND frame**  
 The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`. Immediately on arrival, `RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and nothing below is reached.
 
+**1a. Block status check**  
+`MessageService` calls `ContactService` to check whether the sender is currently blocked by the conversation's other participant. This check does not affect group messages — it applies only to 1:1 conversations. If blocked, the flow branches: the message is persisted to `blockedMessages` (see Step 2 variant below) instead of `messages`, and steps 4 and 5 (notification upsert, Kafka publish) are skipped entirely. The sender still receives a normal-looking receipt in step 7, with no indication the message was blocked. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
+
 **2. Persist to MongoDB** ← critical step  
 `MessageService` inserts the message document via `MessageRepository`. The document includes `conversationId`, `senderId`, `senderName` (snapshot), `type`, `content`, `deleted: false`, `edited: false`, and `createdAt`. MongoDB assigns the `_id`. This step happens before any Kafka publish — see the Error Paths section for the reason.
+
+**2 (blocked-sender variant).** If step 1a found the sender blocked, this insert goes to `BlockedMessageRepository` (`blockedMessages` collection) instead — identical document shape, minus `readBy`. Steps 3 (lastMessage snapshot), 4 (notification upsert), and 5 (Kafka publish) are all skipped for this path; the flow proceeds directly to step 7 (receipt to sender).
 
 **3. Update lastMessage snapshot**  
 `ConversationRepository` updates the `lastMessage` embedded document on the conversation with a content snapshot, `senderId`, `senderName`, and `sentAt`. This denormalised field powers the conversation list display without requiring a message query.
@@ -72,7 +77,7 @@ File and image messages follow a different entry path — they use the REST endp
 `MessageService` validates the MIME type and size before doing anything else. Images must be `image/jpeg`, `image/png`, `image/webp`, or `image/gif` and under 10MB. Other file types are accepted up to 25MB. Validation failure returns a 400 immediately — nothing is uploaded.
 
 **2. Upload to Cloudflare R2**
-`R2StorageClient` streams the file to Cloudflare R2 via the AWS S3 SDK. If the R2 upload fails, `MessageService` returns a 500 to the client and does not create a message document. This ensures the database never contains a message with a broken file reference.
+`R2StorageClient` streams the file to Cloudflare R2 via the AWS S3 SDK. If the R2 upload fails, `MessageService` returns a 500 to the client and does not create a message document. This ensures the database never contains a message with a broken file reference. This gate applies identically regardless of block status — a blocked sender's file still must upload successfully before either `messages` or `blockedMessages` receives a document, since the sender still needs to see their own file render correctly in their own history.
 
 **3. Persist message with file metadata**
 On successful R2 upload, `MessageService` inserts the message document with `type: IMAGE` or `FILE` and an embedded `file` subdocument containing `fileId` (R2 object key), `fileName`, `mimeType`, and the presigned URL (1-hour expiry).

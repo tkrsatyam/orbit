@@ -72,6 +72,8 @@ Triggered client-side when the user starts typing in a conversation input field.
 
 **Why 2-second interval for typing: true events:** The interval is a balance between responsiveness and Kafka throughput. Sending on every keystroke would produce hundreds of events per minute per active user. Two seconds means at most 30 events per minute per user — manageable at scale while still feeling real-time.
 
+**Blocked-sender suppression:** If the typing user is blocked by the other participant in a 1:1 conversation, `PresenceService.handleTyping()` skips the Kafka publish in step 4 entirely — the typing event never reaches the blocked-by participant, consistent with all other one-directional signals suppressed by a block (presence, profile visibility). This does not apply to group typing indicators. See `docs/discussions/007_blocking_behavior.md`.
+
 ---
 
 ## Flow C — Clean Disconnect (Logout or Tab Close)
@@ -132,6 +134,7 @@ This prevents contacts from seeing a user flicker between online and offline whe
 | "Last seen 10 mins ago" | `users.lastSeen` field on the user document |
 | "Satyam is typing…" | Live `/topic/conversations/{id}/typing` event — no DB field |
 | Typing indicator disappears | `{ typing: false }` event or 5-second auto-clear |
+| Nothing (if blocked by the contact) | `PresenceService` suppresses both presence and typing events one-directionally toward a user who has been blocked — see `discussions/007_blocking_behavior.md`. Suppression applies even inside a shared group's member list for presence specifically; typing suppression is 1:1-only. |
 
 Contacts who are offline when a presence event fires miss it entirely. When they reconnect, their React SPA calls `GET /api/v1/contacts` which returns each contact's current `online` status and `lastSeen` from the `users` collection — providing an accurate snapshot without needing replayed events.
 

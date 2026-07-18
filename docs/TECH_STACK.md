@@ -153,3 +153,4 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 | E2EE vs AI features          | [`discussions/004_e2ee_vs_ai_features.md`](./discussions/004_e2ee_vs_ai_features.md)             |
 | Database strategy            | [`discussions/005_database_strategy.md`](./discussions/005_database_strategy.md)                 |
 | Contact removal strategy     | [`discussions/006_contact_removal_strategy.md`](./discussions/006_contact_removal_strategy.md)   |
+| Blocking behavior            | [`discussions/007_blocking_behavior.md`](./discussions/007_blocking_behavior.md)                 |

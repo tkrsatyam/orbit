@@ -1,0 +1,117 @@
+# Requirements
+
+This is the canonical, numbered register of every requirement in Orbit, organised by phase.
+
+It exists so Jira Epics and Stories can reference a stable ID instead of restating requirements in prose — e.g. an Epic description can say *"This epic covers `P1-09`–`P1-12` of the Phase 1 requirements documented in `docs/REQUIREMENTS.md`."*
+
+**This document is the source of truth for requirement IDs.** IDs are phase-scoped and should be treated as stable once assigned — do not renumber existing IDs, even if a requirement is later reworded. If a requirement is removed, leave a gap rather than reusing its ID for something else.
+
+Each ID also appears inline next to its bullet in `FEATURES.md`, for full context and rationale.
+
+---
+
+## Phase 1 — Core
+
+| ID    | Category        | Requirement                                                |
+|-------|-----------------|------------------------------------------------------------|
+| P1-01 | Authentication  | User registration with email and password                  |
+| P1-02 | Authentication  | User login with email and password                         |
+| P1-03 | Authentication  | JWT-based auth — access token 15 min, refresh token 7 days |
+| P1-04 | Authentication  | Protected routes on the frontend                           |
+| P1-05 | Authentication  | Logout with token invalidation                             |
+| P1-06 | User Profile    | Display name                                               |
+| P1-07 | User Profile    | Bio (short text)                                           |
+| P1-08 | User Profile    | Profile visible to other users                             |
+| P1-09 | Contacts        | Send a connection request                                  |
+| P1-10 | Contacts        | Accept or decline an incoming connection request           |
+| P1-11 | Contacts        | View contact list                                          |
+| P1-12 | Contacts        | Block a user                                               |
+| P1-13 | Direct Messages | Real-time message delivery via WebSocket                   |
+| P1-14 | Direct Messages | Message history on open — last 50, paginated on scroll     |
+| P1-15 | Direct Messages | Edit your own message                                      |
+| P1-16 | Direct Messages | Delete your own message                                    |
+| P1-17 | Direct Messages | Typing indicator                                           |
+| P1-18 | Direct Messages | Read receipts (delivered / seen)                           |
+| P1-19 | Direct Messages | Online/offline presence per contact                        |
+| P1-20 | Direct Messages | Server-side unread count (no live push yet)                |
+| P1-21 | Groups          | Create a group with name, description, topic tag           |
+| P1-22 | Groups          | Public groups — discoverable and joinable                  |
+| P1-23 | Groups          | Private groups — invite only                               |
+| P1-24 | Groups          | Group member list with roles (Admin, Member)               |
+| P1-25 | Groups          | Leave a group                                              |
+| P1-26 | Groups          | Admin can remove a member                                  |
+| P1-27 | Groups          | Admin can delete the group                                 |
+| P1-28 | Group Messaging | Real-time message delivery via WebSocket                   |
+| P1-29 | Group Messaging | Message history on open — last 50, paginated               |
+| P1-30 | Group Messaging | Edit your own message                                      |
+| P1-31 | Group Messaging | Delete your own message                                    |
+| P1-32 | Group Messaging | Typing indicator ("3 people are typing...")                |
+| P1-33 | Group Messaging | Online/offline presence per group member                   |
+| P1-34 | Group Discovery | Browse public groups                                       |
+| P1-35 | Group Discovery | Filter groups by topic tag                                 |
+| P1-36 | Group Discovery | Join a public group directly from discovery                |
+
+---
+
+## Phase 2 — Enhancement
+
+| ID    | Category                 | Requirement                                        |
+|-------|--------------------------|----------------------------------------------------|
+| P2-01 | Message Interactions     | Emoji reactions on any message                     |
+| P2-02 | Message Interactions     | Quoted reply with original shown inline            |
+| P2-03 | Notifications            | Live unread badge per conversation (Kafka → queue) |
+| P2-04 | Notifications            | Browser desktop notifications when tab unfocused   |
+| P2-05 | User Profile Updates     | Upload and update profile avatar (R2)              |
+| P2-06 | User Profile Updates     | Update display name and bio                        |
+| P2-07 | Group Management Updates | Upload group avatar and cover image (R2)           |
+| P2-08 | Group Management Updates | Pin an important message in a group                |
+| P2-09 | Group Management Updates | Mute a conversation (DM or group)                  |
+
+---
+
+## Phase 3 — Search & Files
+
+| ID    | Category             | Requirement                               |
+|-------|----------------------|-------------------------------------------|
+| P3-01 | Search               | Search users by display name              |
+| P3-02 | Search               | Search public groups by name or topic tag |
+| P3-03 | Search               | Search messages within a conversation     |
+| P3-04 | File & Image Sharing | Send images inline in a message           |
+| P3-05 | File & Image Sharing | Inline image preview in the conversation  |
+| P3-06 | File & Image Sharing | Send non-image files as attachments       |
+| P3-07 | File & Image Sharing | Download link for file attachments        |
+| P3-08 | File & Image Sharing | Files and images stored in Cloudflare R2  |
+
+---
+
+## Phase 4 — AI Features
+
+| ID    | Category                | Requirement                                                  |
+|-------|-------------------------|--------------------------------------------------------------|
+| P4-01 | AI Summary Bot          | `/summary` command in any group or DM                        |
+| P4-02 | AI Summary Bot          | Returns a concise summary as a bot message                   |
+| P4-03 | AI Assistant Bot        | `@ask` mention followed by a question in a group             |
+| P4-04 | AI Assistant Bot        | Bot responds inline, visible to all group members            |
+| P4-05 | Smart Reply Suggestions | 2-3 contextual quick replies after receiving a message       |
+| P4-06 | Smart Reply Suggestions | One click to send as-is or edit before sending               |
+| P4-07 | Smart Reply Suggestions | Suggestions generated from conversation context, not generic |
+| P4-08 | Message Translation     | Per-message "Translate to English" option                    |
+| P4-09 | Message Translation     | Translated text appears inline below original                |
+| P4-10 | Message Translation     | Original message remains visible                             |
+| P4-11 | Tone Checker            | Optional toggle in message input settings                    |
+| P4-12 | Tone Checker            | Analyses message before sending                              |
+| P4-13 | Tone Checker            | Flags aggressive, unclear, or likely-misread messages        |
+| P4-14 | Tone Checker            | Suggests a softer or clearer alternative                     |
+| P4-15 | Tone Checker            | User can proceed with original or use the suggestion         |
+
+---
+
+## Summary
+
+| Phase     | Requirement count | ID range      |
+|-----------|-------------------|---------------|
+| Phase 1   | 36                | P1-01 – P1-36 |
+| Phase 2   | 9                 | P2-01 – P2-09 |
+| Phase 3   | 8                 | P3-01 – P3-08 |
+| Phase 4   | 15                | P4-01 – P4-15 |
+| **Total** | **68**            |               |
