@@ -28,18 +28,18 @@ Authorization header:
 
 ### HTTP Status Codes
 
-| Code | Meaning |
-|------|---------|
-| 200  | Success with response body |
-| 201  | Resource created successfully |
-| 204  | Success with no response body |
+| Code | Meaning                                               |
+|------|-------------------------------------------------------|
+| 200  | Success with response body                            |
+| 201  | Resource created successfully                         |
+| 204  | Success with no response body                         |
 | 400  | Validation error — malformed request or invalid field |
-| 401  | Missing or invalid access token |
-| 403  | Valid token but insufficient permission |
-| 404  | Resource not found |
-| 409  | Conflict — duplicate resource |
-| 429  | Rate limit exceeded |
-| 500  | Internal server error |
+| 401  | Missing or invalid access token                       |
+| 403  | Valid token but insufficient permission               |
+| 404  | Resource not found                                    |
+| 409  | Conflict — duplicate resource                         |
+| 429  | Rate limit exceeded                                   |
+| 500  | Internal server error                                 |
 
 ### Error Response Format
 
@@ -408,13 +408,23 @@ Request:
 - action is one of: ACCEPT, DECLINE
 - On ACCEPT: contact relationship created, DM conversation
   document created automatically
+- On DECLINE: the underlying request record is deleted entirely.
+  The requester is not notified, and is free to send a new
+  request to the same user at any time. See
+  `discussions/008_connection_request_decline_strategy.md`.
 
-Response 200:
+Response 200 (ACCEPT):
 
     {
       "status": "ACCEPTED",
       "conversationId": "64f1a2b3c4d5e6f7a8b9c0d9"
     }
+
+Response 204 (DECLINE): no body — consistent with every other
+endpoint in this document where the action deletes/removes state
+with nothing new to report back (e.g. `DELETE /api/v1/contacts/{contactId}`,
+the mechanically identical unfriend operation this now shares its
+delete mechanism with).
 
 ---
 

@@ -97,11 +97,13 @@ Notes:
 - A CONNECTED status means both users are contacts
 - To query "are user A and user B contacts", query where (requesterId=A AND receiverId=B) OR (requesterId=B AND receiverId=A)
 - On ACCEPT: status updated to CONNECTED, conversationId populated, DM conversation document created simultaneously in a transaction
+- On DECLINE: the contacts document is deleted entirely — same mechanism as REMOVE below, no DECLINED status is stored. The requester is not notified, and a new request between the same two users is unrestricted. See [`discussions/008_connection_request_decline_strategy.md`](../discussions/008_connection_request_decline_strategy.md) for the reasoning.
 - On BLOCK: status updated to BLOCKED, blockedBy set to the blocking user. Existing CONNECTED relationship is overwritten. Full behavioral spec (profile visibility, presence, messaging, groups) is documented in [`discussions/007_blocking_behavior.md`](../discussions/007_blocking_behavior.md) — this collection only tracks the relationship status, not the enforcement logic
 - On REMOVE (unfriend): the contacts document is deleted entirely — no NONE status is stored, since NONE is just the absence of a document. See [`discussions/006_contact_removal_strategy.md`](../discussions/006_contact_removal_strategy.md) for the reasoning.
 
 Integrity rules:
 - On conversation deletion: set conversationId to null
+- On decline: hard delete the contacts document
 - On unfriend/remove: hard delete the contacts document
 
 ---
@@ -428,6 +430,10 @@ Operations that span multiple collections require careful ordering in the servic
     2. Insert conversations document (type: DIRECT)
     3. Update contacts.conversationId with new conversation _id
     4. Insert notification seed document for both users
+
+### Contact Decline
+    1. Delete the contacts document
+       (no transaction needed — single-document operation)
 
 ### Send Message
     1. Insert messages document

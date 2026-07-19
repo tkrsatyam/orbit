@@ -152,6 +152,7 @@ com.orbit.contact/
 **Key rules:**
 - `ContactService.acceptRequest()` calls `ConversationService.createDirectConversation()` — this cross-package call is intentional and documented in the ERD integrity checklist
 - The call is wrapped in a MongoDB multi-document transaction
+- `ContactService.declineRequest()` hard-deletes the `Contact` document — no cross-package call, no transaction needed, same mechanism as unfriend/remove. See `docs/discussions/008_connection_request_decline_strategy.md`.
 - `ContactService` exposes a block-status lookup that `MessageService` and `UserService` call on the message-send and profile-lookup paths respectively — this is the same cross-package pattern as the two calls above, just consumed by two additional packages. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
 
 ---

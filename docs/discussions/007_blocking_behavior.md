@@ -1,8 +1,8 @@
 # 007 — Blocking Behavior: Visibility, Messaging, and Presence
 
-> **Format:** Architecture Decision Record (ADR)
-> **Reference:** https://adr.github.io
-> **Date:** 2026-07-18
+> **Format:** Architecture Decision Record (ADR)  
+> **Reference:** https://adr.github.io  
+> **Date:** 2026-07-18  
 > **Status:** Accepted
 
 ---
