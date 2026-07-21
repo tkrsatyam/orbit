@@ -155,3 +155,5 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 | Contact removal strategy            | [`discussions/006_contact_removal_strategy.md`](./discussions/006_contact_removal_strategy.md)                       |
 | Blocking behavior                   | [`discussions/007_blocking_behavior.md`](./discussions/007_blocking_behavior.md)                                     |
 | Connection request decline strategy | [`discussions/008_connection_request_decline_strategy.md`](./discussions/008_connection_request_decline_strategy.md) |
+| Pin limit overflow behavior         | [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)                                   |
+| Mute and notification interaction   | [`discussions/010_mute_notification_interaction.md`](./discussions/010_mute_notification_interaction.md)             |

@@ -159,6 +159,7 @@ Indexes:
 Notes:
 - memberCount is denormalised for efficient display in group discovery lists without running a count aggregation on every request
 - pinnedMessages stores a content snapshot — if the original message is deleted, the pin still shows the content at pin time
+- Pinning is rejected once a group already has 10 pinned messages — an admin must unpin something before pinning a new message. There is no auto-eviction of the oldest pin. See [`discussions/009_pin_limit_overflow.md`](../discussions/009_pin_limit_overflow.md)
 - members array is embedded because member list is always loaded with group context and group membership is bounded in size
 
 Integrity rules:
@@ -204,6 +205,7 @@ Notes:
 - lastMessage is denormalised for efficient conversation list rendering without loading full message documents
 - lastMessage.content is a snapshot — set to null if the last message is deleted, does not update to the previous message
 - mutedBy stores only the IDs of users who muted — not all participants. Absence from this array means the conversation is not muted for that user
+- mutedBy only gates the client-side desktop notification for a conversation. It has no effect on the unread count in `notifications` or on the live badge push — those continue exactly as documented below, muted or not. See [`discussions/010_mute_notification_interaction.md`](../discussions/010_mute_notification_interaction.md)
 - For GROUP conversations, participantIds is kept in sync with group.members by the service layer on every join/leave
 
 Integrity rules:
@@ -370,6 +372,7 @@ Notes:
 - One notification document per user per conversation for UNREAD_MESSAGE type — count is incremented on each new message rather than creating a new document per message
 - On conversation open: set read: true, count: 0 for that userId + conversationId pair
 - Notification documents are also the source of truth for the unreadCount field returned in GET /api/v1/conversations
+- This collection's counting behavior is unconditional and does not check `conversations.mutedBy` — a muted conversation's unread count still increments and still pushes live to the badge. Mute only suppresses the client-side desktop notification. See [`discussions/010_mute_notification_interaction.md`](../discussions/010_mute_notification_interaction.md)
 
 Integrity rules:
 - On user deletion: hard delete all notification documents for that userId

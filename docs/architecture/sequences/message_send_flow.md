@@ -49,6 +49,8 @@ The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/s
 **4. Upsert unread notification**  
 `NotificationRepository` increments the `unreadCount` for every participant in the conversation except the sender, using an upsert on `{ userId, conversationId }`. This ensures offline recipients have an accurate unread count when they reconnect.
 
+This step runs the same way regardless of whether the recipient has muted the conversation (Phase 2). Muting only suppresses the client-side desktop notification, not this count or its live push — see `docs/discussions/010_mute_notification_interaction.md`.
+
 **5. Publish to Kafka**  
 `KafkaProducerConfig` publishes an event to the `chat.messages` topic containing the `messageId`, `conversationId`, `recipientIds[]`, and the full message payload.
 

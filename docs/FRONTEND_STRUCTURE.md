@@ -142,7 +142,9 @@ src/hooks/
 ├── useTypingIndicator.js           ← sends typing events, debounces stop event,
 │                                      receives typing events from other users
 ├── useNotifications.js             ← subscribes to /user/queue/notifications,
-│                                      manages unread counts
+│                                      manages unread counts, fires browser desktop
+│                                      notifications (skipped if the conversation's
+│                                      muted flag is true — see ADR 010)
 ├── useInfiniteMessages.js          ← cursor-based pagination for message history
 │                                      (loads older messages on scroll to top)
 ├── useFileUpload.js                ← handles file selection, validation, upload
@@ -302,7 +304,8 @@ usePresence.js
 
 useNotifications.js
     ├── calls subscribe('/user/queue/notifications', onNotification)
-    └── updates NotificationContext unread counts
+    ├── updates NotificationContext unread counts (unconditional, ignores mute)
+    └── fires browser desktop notification if tab unfocused, unless conversation is muted
 ```
 
 **Rules:**

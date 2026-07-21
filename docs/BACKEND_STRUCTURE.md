@@ -179,6 +179,7 @@ com.orbit.group/
 **Key rules:**
 - `GroupService.createGroup()` calls `ConversationService.createGroupConversation()` — same cross-package pattern as contact accept
 - Admin promotion logic (promote longest-standing member when last admin leaves) lives in `GroupService` — not in a listener
+- `GroupService.pinMessage()` rejects the call once `pinnedMessages` already holds 10 entries — no auto-eviction of the oldest pin. See `docs/discussions/009_pin_limit_overflow.md`
 
 ---
 
@@ -199,6 +200,7 @@ com.orbit.conversation/
 ```
 
 **Key rules:**
+- `ConversationService.setMuted()` only toggles `mutedBy` on the conversation document — it never touches `NotificationRepository`. Unread-count upserts in `MessageService` are unconditional and are not aware of mute state. See `docs/discussions/010_mute_notification_interaction.md`
 - `ConversationService` is called by `ContactService` and `GroupService` to create conversations atomically — it is the only place a conversation document is created
 - `ConversationService.updateLastMessage()` is called by `MessageService` on every send — keeps the denormalised snapshot in sync
 

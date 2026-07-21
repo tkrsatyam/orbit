@@ -563,6 +563,9 @@ Request:
 
 Response: 204
 
+Notes:
+- Muting only suppresses the client-side desktop notification for this conversation. It does not affect the unread count or the live badge push, which continue unconditionally. See [`discussions/010_mute_notification_interaction.md`](./discussions/010_mute_notification_interaction.md)
+
 ---
 
 ### POST /api/v1/conversations/{conversationId}/messages/{messageId}/read
@@ -1008,6 +1011,8 @@ Pin a message in a group.
 Auth: Required — Admin only
 
 Response: 204
+
+Response 409: group already has 10 pinned messages — unpin one before pinning another. No auto-eviction of the oldest pin. See [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)
 
 ---
 
