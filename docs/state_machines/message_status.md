@@ -89,7 +89,7 @@ On retry, the message transitions back to `SENDING` and the full send flow resta
 
 ### DELETED
 **Persisted:** Yes — soft delete
-**MongoDB fields:** `deleted: true`, `content: null`
+**MongoDB fields:** `deleted: true`, `content: null` (also `file: null` for `IMAGE`/`FILE` type messages)
 **Terminal:** Yes — hard stop, no further transitions
 
 `DELETED` is the terminal hard stop state. No further transitions are possible from `DELETED`. The message document is preserved in MongoDB for two reasons: conversation continuity (show "This message was deleted" in the UI) and read receipt integrity (the `readBy[]` array must remain queryable).
@@ -99,6 +99,7 @@ Constraints:
 - Group admins can delete any member's message
 - A `DELETED` message that was previously `EDITED` retains `edited: true` and `editedAt` — these fields are not cleared on soft delete
 - Deleting a message updates `conversations.lastMessage.content` to `null` if it was the last message
+- For `IMAGE`/`FILE` type messages, `file` is set to `null` and the corresponding object is permanently deleted from Cloudflare R2 at the same time — unlike `content`, this cannot be undone. See [`discussions/011_message_attachment_cleanup_on_delete.md`](../discussions/011_message_attachment_cleanup_on_delete.md)
 
 The delete transition is broadcast to all participants via WebSocket on `/topic/conversations/{id}/messages/deleted` so their UIs update immediately without a page refresh.
 
@@ -148,6 +149,7 @@ Message status is not stored as a single enum field. It is derived from a combin
   deleted:   Boolean    — true = DELETED state
   edited:    Boolean    — true = EDITED flag active
   editedAt:  ISODate    — null until first edit
+  file:      Object     — set to null on delete for IMAGE/FILE type messages
   readBy: [
     { userId: ObjectId, readAt: ISODate }
   ]                     — empty = not READ, populated = READ

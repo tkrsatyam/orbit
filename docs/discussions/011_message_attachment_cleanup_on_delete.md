@@ -42,7 +42,7 @@ When a message of type `IMAGE` or `FILE` is soft-deleted, the message document i
 - Closest match to Slack's shape, which is the one reference app of the three that is also server-authoritative rather than local-first: Slack ties a deleted message to removal of its attached files from the channel, and treats the file object as independently deletable, which is structurally the same shape as Orbit's `file` field.
 
 **Cons:**
-- The message document's `file` field becomes `null` after delete, which is a small schema-level addition to the existing "content becomes null on delete" rule — anything that reads `file` off a message must already be checking `deleted` first, the same as it already must for `content`.
+- The message document's `file` field becomes `null` after delete, which is a small schema-level addition to the existing "content becomes null on delete" rule — anything that reads `file` off a message must already be checking `deleted` first, the same as it already must be for `content`.
 - If the R2 delete call fails after the MongoDB update succeeds, the object is orphaned in storage with no document pointing at it. This is treated as an acceptable, low-frequency failure mode (see Decision below) rather than something requiring a retry queue.
 
 ### Option C — Deferred purge on a retention window (Slack's actual model)
@@ -93,6 +93,7 @@ If Orbit ever needs recoverable deletion (e.g. an "undo delete" affordance withi
 - `docs/architecture/erd.md` — `messages` collection schema and soft-delete integrity rule, to be extended with the `file: null` behavior
 - `docs/API_CONTRACTS.md` — `DELETE /api/v1/conversations/{conversationId}/messages/{messageId}`
 - `docs/BACKEND_STRUCTURE.md` — `MessageService`, `R2StorageClient`; existing avatar-replacement R2 delete precedent
+- `docs/state_machines/message_status.md` — `DELETED` state's MongoDB field list and the MongoDB Document Representation summary, both extended with `file: null`; `docs/architecture/diagrams/message_status.svg` updated to match
 - WhatsApp Help Center / researcher disclosure — inconsistent leftover-media behavior across platforms, cited as a side effect of local-first storage rather than a deliberate design
 - Signal Support — local-first storage model; deleting a message or chat does not affect the other party's device
 - Slack Help Center / API docs — message deletion removes attached files from the channel; files are independently deletable; retention settings decouple "hidden" from "purged"

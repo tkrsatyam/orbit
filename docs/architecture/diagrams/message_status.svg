@@ -5,31 +5,11 @@
    role="img"
    version="1.1"
    id="svg100"
-   sodipodi:docname="message_status.svg"
-   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview100"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="2.6705066"
-     inkscape:cx="617.2986"
-     inkscape:cy="503.08806"
-     inkscape:window-width="2560"
-     inkscape:window-height="1351"
-     inkscape:window-x="-9"
-     inkscape:window-y="-9"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg100" />
-  <title
+    <title
      id="title1">Orbit — Message Status State Machine</title>
   <defs
      id="defs4">
@@ -779,7 +759,7 @@
      y="570"
      text-anchor="middle"
      fill="#7F1D1D"
-     id="text52">document preserved</text>
+     id="text52">file: null (IMAGE/FILE)</text>
   <!-- terminal double border -->
   <rect
      x="814"
@@ -912,7 +892,7 @@
      class="tb"
      marker-end="url(#ab)"
      id="path57"
-     sodipodi:nodetypes="cccc" />
+  />
   <text
      class="elbl"
      x="275.5675"
@@ -956,7 +936,7 @@
      class="tr"
      marker-end="url(#ar)"
      id="path60"
-     sodipodi:nodetypes="cccc" />
+  />
   <text
      class="elbl"
      x="460"
@@ -1000,7 +980,7 @@
      class="tr"
      marker-end="url(#ar)"
      id="path63"
-     sodipodi:nodetypes="cccc" />
+  />
   <text
      class="elbl"
      x="477.88174"
@@ -1097,7 +1077,7 @@
      class="note"
      x="464"
      y="900"
-     id="text77">DELETED   deleted: true, content: null</text>
+     id="text77">DELETED   deleted/content null, file null (img/file)</text>
   <text
      class="note"
      x="464"
