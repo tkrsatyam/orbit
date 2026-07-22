@@ -234,6 +234,7 @@ com.orbit.message/
 - File upload calls `R2StorageClient.upload()` before inserting the message document — R2 must succeed first
 - `MessageService.sendMessage()` checks block status (via `ContactService`) before persisting. If the sender is blocked by the recipient, the message is written via `BlockedMessageRepository` instead of `MessageRepository`, and the Kafka publish step is skipped entirely. See `docs/discussions/007_blocking_behavior.md`.
 - `MessageService.editMessage()`, `deleteMessage()`, and `addReaction()` look up the target message in both `MessageRepository` and `BlockedMessageRepository` when locating by ID, since a blocked-out message will not be in `MessageRepository`
+- `MessageService.deleteMessage()`, for IMAGE/FILE type messages, updates the message document (deleted: true, content: null, file: null) before calling `R2StorageClient.delete()` — the repository update always happens first, so a failed R2 call only ever leaves an orphaned object in storage, never a document pointing at a file that no longer exists.
 - `MessageService.getConversationHistory()` (and, in Phase 3, message search) merge results from both repositories, scoped to `senderId == requester` for `BlockedMessageRepository` — this scoping is the only filter needed to keep the recipient from ever seeing these documents
 
 ---

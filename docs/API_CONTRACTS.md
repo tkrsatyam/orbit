@@ -643,6 +643,7 @@ Response: 204
 Notes:
 - Soft delete — deleted: true, content set to null
 - Document preserved for conversation continuity
+- For IMAGE and FILE type messages, file is also set to null and the underlying object is permanently deleted from Cloudflare R2 — this cannot be undone, unlike the message document itself. See [`discussions/011_message_attachment_cleanup_on_delete.md`](./discussions/011_message_attachment_cleanup_on_delete.md)
 - WebSocket event broadcast to all participants (no-op for blockedMessages documents, since there are no other participants with visibility into them)
 - `MessageService` looks up the message by ID in both `messages` and `blockedMessages`
 

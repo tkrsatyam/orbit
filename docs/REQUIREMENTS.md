@@ -73,16 +73,16 @@ Each ID also appears inline next to its bullet in `FEATURES.md`, for full contex
 
 ## Phase 3 — Search & Files
 
-| ID    | Category             | Requirement                               |
-|-------|----------------------|-------------------------------------------|
-| P3-01 | Search               | Search users by display name              |
-| P3-02 | Search               | Search public groups by name or topic tag |
-| P3-03 | Search               | Search messages within a conversation     |
-| P3-04 | File & Image Sharing | Send images inline in a message           |
-| P3-05 | File & Image Sharing | Inline image preview in the conversation  |
-| P3-06 | File & Image Sharing | Send non-image files as attachments       |
-| P3-07 | File & Image Sharing | Download link for file attachments        |
-| P3-08 | File & Image Sharing | Files and images stored in Cloudflare R2  |
+| ID    | Category             | Requirement                               | Description |
+|-------|----------------------|--------------------------------------------|-------------|
+| P3-01 | Search               | Search users by display name              | A user can search for other users by typing part of their display name, with a short minimum length required before results appear. Each result shows the matched user's basic profile info along with the searcher's current connection status with them (not connected, request sent, request received, connected, or blocked). Anyone the searcher has blocked, or been blocked by, is left out of the results entirely. |
+| P3-02 | Search               | Search public groups by name or topic tag | A user can browse or search public groups by typing part of the group's name or description, and can further narrow results down to a specific topic tag — the two can be used together or on their own. Browsing and searching public groups works even without being signed in; joining a group or viewing its full details still requires an account. Private groups never appear here, consistent with them being invite-only and undiscoverable. |
+| P3-03 | Search               | Search messages within a conversation     | A user can search for matching text inside a single conversation they're already part of, using a short minimum-length query, and see the matching message's content, sender, and time sent. This search is scoped to one conversation at a time — it does not search across every conversation the user is in. If the user was previously blocked by the other participant and kept sending messages during that time, their own messages from that period still turn up when they search their own history — the blocking participant still never sees them, consistent with how blocking already works elsewhere. Full reasoning: discussions/007_blocking_behavior.md. |
+| P3-04 | File & Image Sharing | Send images inline in a message           | A user can attach an image from their device to send as a message instead of typing text. Common image formats are accepted, up to a set size limit. Once sent, the image behaves like any other message for deleting, reacting, and replying — the one difference is that, unlike text messages, an image can't be edited afterward. |
+| P3-05 | File & Image Sharing | Inline image preview in the conversation  | An image sent in a conversation is shown directly inside the chat as a visual preview, rather than requiring the recipient to download it or open a separate viewer. Since the underlying image link is temporary for security, the app quietly fetches a fresh one behind the scenes whenever needed, so the preview keeps working without the user ever noticing a link expired. If the message is later deleted, the image is permanently removed rather than just hidden, so the preview cannot be brought back afterward. |
+| P3-06 | File & Image Sharing | Send non-image files as attachments       | A user can attach any other kind of file — documents, PDFs, and similar — that isn't an image, up to a larger size limit than images since these aren't shown as a visual preview. The attachment appears in the conversation as a distinct file card rather than inline artwork. |
+| P3-07 | File & Image Sharing | Download link for file attachments        | Every file attachment includes a link the recipient can use to download it. Because the underlying storage link is temporary, a fresh one is generated automatically the moment it's needed, so the download keeps working even long after the message was originally sent — unless the message itself has since been deleted, in which case the file is gone for good. |
+| P3-08 | File & Image Sharing | Files and images stored in Cloudflare R2  | Uploaded images and files are kept in the same external file storage already used for avatars and group images elsewhere in the app, rather than in the database itself. The upload to storage must succeed before the message is created at all — if the upload fails, no message is created, so a user never ends up with a message that looks sent but has nothing behind it. Deleting the message later permanently removes the stored file too, not just the message content. Full reasoning: discussions/011_message_attachment_cleanup_on_delete.md. |
 
 ---
 

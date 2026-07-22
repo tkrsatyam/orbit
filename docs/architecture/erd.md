@@ -247,6 +247,7 @@ The primary and highest-volume collection in Orbit. Stores all messages across a
         mimeType:       String,       -- e.g. image/jpeg, application/pdf
         url:            String        -- presigned R2 URL (refreshed on access)
       },                              -- null for TEXT type
+                                      -- also null when deleted: true (R2 object is purged, not just hidden)
       reactions: [
         {
           userId:       ObjectId,     -- ref: users._id
@@ -275,14 +276,15 @@ Indexes:
 Notes:
 - senderName is denormalised as a snapshot so message history is preserved accurately even if the user later changes their display name
 - quotedMessage is a full embedded snapshot, not a live reference. This is intentional — if the original message is deleted, the quoted content in the reply remains intact. The messageId inside quotedMessage is retained only for potential UI deep-linking, never for content retrieval.
-- reactions enforces one entry per userId at the service layer — MongoDB has no unique constraint on array subdocuments. Service uses findOneAndUpdate with $pull then $push to replace.
+- reactions enforces one entry per userId at the service layer — MongoDB has no unique constraint on array subdocuments. Service uses findOneAndUpdate with $pull$ then $push$ to replace.
 - readBy grows as participants read — for large groups this array can be long. Acceptable at portfolio scale. At production scale, consider a separate readReceipts collection beyond a threshold.
 - Soft delete sets deleted: true and content: null. Document is preserved for two reasons: conversation continuity (show "This message was deleted") and read receipt integrity.
+- For IMAGE and FILE type messages, soft delete also sets file: null and permanently deletes the corresponding object from Cloudflare R2. Unlike content, there is no recovery path for this — see [`discussions/011_message_attachment_cleanup_on_delete.md`](../discussions/011_message_attachment_cleanup_on_delete.md)
 - file.url is a presigned Cloudflare R2 URL. It is not a permanent URL — it expires after 1 hour. The frontend fetches a fresh URL via GET /api/v1/files/{fileId}/url when needed.
 
 Integrity rules:
-- On user deletion: set deleted: true, content: null for all messages by that user — do not hard delete
-- On conversation deletion: hard delete all messages in that conversationId in batches to avoid memory pressure on large conversations
+- On user deletion: set deleted: true, content: null for all messages by that user — do not hard delete. For IMAGE/FILE messages, this also purges the R2 object per the rule above.
+- On conversation deletion: hard delete all messages in that conversationId in batches to avoid memory pressure on large conversations. Each batch also deletes the R2 object for any IMAGE/FILE message it contains.
 - If the sender is blocked by the recipient at send time, the message is diverted to the `blockedMessages` collection below instead of being inserted here — see [`discussions/007_blocking_behavior.md`](../discussions/007_blocking_behavior.md)
 
 ---

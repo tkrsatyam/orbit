@@ -145,15 +145,16 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 
 ## Decisions Documented as ADRs
 
-| Decision                            | File                                                                                                                 |
-|-------------------------------------|----------------------------------------------------------------------------------------------------------------------|
-| Monolith vs microservices           | [`discussions/001_monolith_vs_microservices.md`](./discussions/001_monolith_vs_microservices.md)                     |
-| WebSocket scaling with Kafka        | [`discussions/002_websocket_scaling.md`](./discussions/002_websocket_scaling.md)                                     |
-| Frontend framework selection        | [`discussions/003_frontend_framework.md`](./discussions/003_frontend_framework.md)                                   |
-| E2EE vs AI features                 | [`discussions/004_e2ee_vs_ai_features.md`](./discussions/004_e2ee_vs_ai_features.md)                                 |
-| Database strategy                   | [`discussions/005_database_strategy.md`](./discussions/005_database_strategy.md)                                     |
-| Contact removal strategy            | [`discussions/006_contact_removal_strategy.md`](./discussions/006_contact_removal_strategy.md)                       |
-| Blocking behavior                   | [`discussions/007_blocking_behavior.md`](./discussions/007_blocking_behavior.md)                                     |
-| Connection request decline strategy | [`discussions/008_connection_request_decline_strategy.md`](./discussions/008_connection_request_decline_strategy.md) |
-| Pin limit overflow behavior         | [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)                                   |
-| Mute and notification interaction   | [`discussions/010_mute_notification_interaction.md`](./discussions/010_mute_notification_interaction.md)             |
+| Decision                             | File                                                                                                                   |
+|--------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| Monolith vs microservices            | [`discussions/001_monolith_vs_microservices.md`](./discussions/001_monolith_vs_microservices.md)                       |
+| WebSocket scaling with Kafka         | [`discussions/002_websocket_scaling.md`](./discussions/002_websocket_scaling.md)                                       |
+| Frontend framework selection         | [`discussions/003_frontend_framework.md`](./discussions/003_frontend_framework.md)                                     |
+| E2EE vs AI features                  | [`discussions/004_e2ee_vs_ai_features.md`](./discussions/004_e2ee_vs_ai_features.md)                                   |
+| Database strategy                    | [`discussions/005_database_strategy.md`](./discussions/005_database_strategy.md)                                       |
+| Contact removal strategy             | [`discussions/006_contact_removal_strategy.md`](./discussions/006_contact_removal_strategy.md)                         |
+| Blocking behavior                    | [`discussions/007_blocking_behavior.md`](./discussions/007_blocking_behavior.md)                                       |
+| Connection request decline strategy  | [`discussions/008_connection_request_decline_strategy.md`](./discussions/008_connection_request_decline_strategy.md)   |
+| Pin limit overflow behavior          | [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)                                     |
+| Mute and notification interaction    | [`discussions/010_mute_notification_interaction.md`](./discussions/010_mute_notification_interaction.md)               |
+| Message Attachment Cleanup on Delete | [`discussions/011_message_attachment_cleanup_on_delete.md`](./discussions/011_message_attachment_cleanup_on_delete.md) |
