@@ -113,7 +113,7 @@ AI features are intentionally deferred to Phase 4.
 They are only built on top of a fully working, deployed application.
 
 All AI features use the Claude API (Anthropic).  
-Server-side processing of message content is required for all features in this phase. End-to-end encryption is therefore not implemented — this tradeoff is documented in[`discussions/004_e2ee_vs_ai_features.md`](./discussions/004_e2ee_vs_ai_features.md).
+Server-side processing of message content is required for all features in this phase. End-to-end encryption is therefore not implemented — this tradeoff is documented in [`discussions/004_e2ee_vs_ai_features.md`](./discussions/004_e2ee_vs_ai_features.md).
 
 ### AI Summary Bot (`/summary`)
 - Type `/summary` in any group or DM conversation
@@ -122,6 +122,7 @@ Server-side processing of message content is required for all features in this p
 
 ### AI Assistant Bot (`@ask`)
 - Mention `@ask` followed by any question in a group
+- Unlike `/summary`, the message containing `@ask` is sent as a normal group message rather than being replaced by the response — the bot's answer follows as a separate message. Enforced group-only server-side, not just hidden client-side in DMs. Full reasoning: [`discussions/012_ask_mention_behavior.md`](./discussions/012_ask_mention_behavior.md)
 - Bot responds inline, visible to all group members
 - Collaborative knowledge — everyone sees the answer
 - Example: `@ask what is the difference between WebSockets and SSE?`
@@ -151,22 +152,22 @@ Server-side processing of message content is required for all features in this p
 These features were explicitly considered and excluded.
 They will not be added in any phase.
 
-| Feature | Reason |
-|---|---|
-| Video / audio calls | WebRTC is a separate domain entirely |
-| Mobile application | React Native is a separate project |
-| End-to-end encryption | Incompatible with Phase 4 AI features — see ADR 004 |
-| Bot / webhook integrations | Scope creep, no clear use case |
-| AI content moderation | Overkill for portfolio scale |
-| Workspace / channel model | Replaced by people-first group model |
+| Feature                    | Reason                                              |
+|----------------------------|-----------------------------------------------------|
+| Video / audio calls        | WebRTC is a separate domain entirely                |
+| Mobile application         | React Native is a separate project                  |
+| End-to-end encryption      | Incompatible with Phase 4 AI features — see ADR 004 |
+| Bot / webhook integrations | Scope creep, no clear use case                      |
+| AI content moderation      | Overkill for portfolio scale                        |
+| Workspace / channel model  | Replaced by people-first group model                |
 
 ---
 
 ## Phase Summary
 
-| Phase | Focus | Status |
-|---|---|---|
-| Phase 1 | Auth, contacts, DMs, groups, presence, discovery | 🔲 In Progress |
-| Phase 2 | Reactions, replies, notifications, avatars, pins | 🔲 Planned |
-| Phase 3 | Search, file and image uploads | 🔲 Planned |
-| Phase 4 | AI summary, @ask, smart replies, translation, tone check | 🔲 Planned |
+| Phase   | Focus                                                    | Status         |
+|---------|----------------------------------------------------------|----------------|
+| Phase 1 | Auth, contacts, DMs, groups, presence, discovery         | 🔲 In Progress |
+| Phase 2 | Reactions, replies, notifications, avatars, pins         | 🔲 Planned     |
+| Phase 3 | Search, file and image uploads                           | 🔲 Planned     |
+| Phase 4 | AI summary, @ask, smart replies, translation, tone check | 🔲 Planned     |

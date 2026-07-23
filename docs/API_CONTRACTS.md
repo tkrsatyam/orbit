@@ -1095,7 +1095,7 @@ Notes:
 
 Ask the AI assistant a question in the context of a conversation.
 
-Auth: Required — must be a participant
+Auth: Required — must be a participant, and the target conversation must be a group. Calling this against a direct conversation returns an error and no bot message is created. See [`discussions/012_ask_mention_behavior.md`](./discussions/012_ask_mention_behavior.md).
 
 Request:
 
@@ -1111,6 +1111,7 @@ Response 200:
     }
 
 Notes:
+- This endpoint only generates and broadcasts the assistant's answer. The member's question itself is sent through the normal message send endpoint, not this one — the question is a normal group message like any other, and this endpoint's response is a separate, subsequent bot message.
 - Answer also broadcast as a bot message via WebSocket
 
 ---

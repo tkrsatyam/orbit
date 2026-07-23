@@ -57,16 +57,16 @@ For WebSocket connections, a separate handshake interceptor performs the same JW
 
 Each controller maps to one resource group from `API_CONTRACTS.md` and contains no business logic — its only responsibilities are request validation (via `@Valid` and Bean Validation annotations), delegating to the matching service, and shaping the HTTP response.
 
-| Controller | Endpoints | Calls |
-|---|---|---|
-| `AuthController` | `/api/v1/auth/**` | `AuthService` |
-| `UserController` | `/api/v1/users/**` | `UserService` |
-| `ContactController` | `/api/v1/contacts/**` | `ContactService` |
-| `GroupController` | `/api/v1/groups/**` | `GroupService` |
-| `ConversationController` | `/api/v1/conversations/**` | `ConversationService` |
-| `MessageController` | `/api/v1/conversations/{id}/messages/**` | `MessageService` |
-| `SearchController` | `/api/v1/search/**` | `SearchService` |
-| `AiController` | `/api/v1/ai/**` (Phase 4 only) | `AiService` |
+| Controller               | Endpoints                                | Calls                 |
+|--------------------------|------------------------------------------|-----------------------|
+| `AuthController`         | `/api/v1/auth/**`                        | `AuthService`         |
+| `UserController`         | `/api/v1/users/**`                       | `UserService`         |
+| `ContactController`      | `/api/v1/contacts/**`                    | `ContactService`      |
+| `GroupController`        | `/api/v1/groups/**`                      | `GroupService`        |
+| `ConversationController` | `/api/v1/conversations/**`               | `ConversationService` |
+| `MessageController`      | `/api/v1/conversations/{id}/messages/**` | `MessageService`      |
+| `SearchController`       | `/api/v1/search/**`                      | `SearchService`       |
+| `AiController`           | `/api/v1/ai/**` (Phase 4 only)           | `AiService`           |
 
 ---
 
@@ -96,7 +96,7 @@ The busiest service in the system. Handles message send, edit, soft delete, reac
 Handles user search by display name, public group search and discovery filtering, and in-conversation message search using MongoDB text indexes as defined in `erd.md`.
 
 ### AiService
-Isolated entirely to Phase 4. Constructs prompts from conversation context retrieved via `MessageRepository`, calls `ClaudeApiClient`, and parses responses for each of the five AI features. Because this service and its controller are cleanly isolated, the entire AI layer can be excluded from the build in Phases 1 through 3 without affecting any other component.
+Isolated entirely to Phase 4. Constructs prompts from conversation context retrieved via `MessageRepository`, calls `ClaudeApiClient`, and parses responses for each of the five AI features. `ask()` additionally checks that the target conversation is a group before generating a response — a direct conversation is rejected outright, since `@ask` is a group-only feature (see [`discussions/012_ask_mention_behavior.md`](../discussions/012_ask_mention_behavior.md)). Because this service and its controller are cleanly isolated, the entire AI layer can be excluded from the build in Phases 1 through 3 without affecting any other component.
 
 ---
 
@@ -104,14 +104,14 @@ Isolated entirely to Phase 4. Constructs prompts from conversation context retri
 
 Thin Spring Data MongoDB repository interfaces, each corresponding to one collection defined in `erd.md`. Custom query methods and aggregation pipelines live here, but no business logic.
 
-| Repository | Collection | Notable Queries |
-|---|---|---|
-| `UserRepository` | `users` | `findByEmail`, text search on `displayName` |
-| `ContactRepository` | `contacts` | Compound query for bidirectional contact lookup |
-| `GroupRepository` | `groups` | Discovery query filtering by `visibility` + `topicTag` |
-| `ConversationRepository` | `conversations` | `findByParticipantIdsContaining`, DM lookup by participant pair |
-| `MessageRepository` | `messages` | Cursor-based pagination using `conversationId` + `_id`, text search scoped to `conversationId` |
-| `NotificationRepository` | `notifications` | `findByUserIdAndReadFalse`, upsert by `userId` + `conversationId` |
+| Repository               | Collection      | Notable Queries                                                                                |
+|--------------------------|-----------------|------------------------------------------------------------------------------------------------|
+| `UserRepository`         | `users`         | `findByEmail`, text search on `displayName`                                                    |
+| `ContactRepository`      | `contacts`      | Compound query for bidirectional contact lookup                                                |
+| `GroupRepository`        | `groups`        | Discovery query filtering by `visibility` + `topicTag`                                         |
+| `ConversationRepository` | `conversations` | `findByParticipantIdsContaining`, DM lookup by participant pair                                |
+| `MessageRepository`      | `messages`      | Cursor-based pagination using `conversationId` + `_id`, text search scoped to `conversationId` |
+| `NotificationRepository` | `notifications` | `findByUserIdAndReadFalse`, upsert by `userId` + `conversationId`                              |
 
 ---
 
@@ -153,12 +153,12 @@ Wraps HTTPS calls to the Anthropic Messages API. Used exclusively by `AiService`
 
 ## External Systems Referenced
 
-| External System | Accessed By |
-|---|---|
-| MongoDB Atlas | All repository classes |
-| Upstash Kafka | `KafkaProducerConfig`, `KafkaConsumerConfig` |
-| Cloudflare R2 | `R2StorageClient` |
-| Claude API | `ClaudeApiClient` |
+| External System | Accessed By                                  |
+|-----------------|----------------------------------------------|
+| MongoDB Atlas   | All repository classes                       |
+| Upstash Kafka   | `KafkaProducerConfig`, `KafkaConsumerConfig` |
+| Cloudflare R2   | `R2StorageClient`                            |
+| Claude API      | `ClaudeApiClient`                            |
 
 ---
 

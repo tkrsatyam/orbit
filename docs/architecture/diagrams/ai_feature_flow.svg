@@ -1,35 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
    width="100%"
-   viewBox="0 0 1600 3425"
+   viewBox="0 0 1600 3505"
    role="img"
    version="1.1"
    id="svg164"
-   sodipodi:docname="ai_feature_flow.svg"
-   inkscape:version="1.4.3 (0d15f75, 2025-12-25)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
-   xmlns="http://www.w3.org/2000/svg"
-   xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview164"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:zoom="1.1926316"
-     inkscape:cx="791.94616"
-     inkscape:cy="348.38923"
-     inkscape:window-width="2560"
-     inkscape:window-height="1351"
-     inkscape:window-x="-9"
-     inkscape:window-y="-9"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="svg164" />
-  <title
+   xmlns="http://www.w3.org/2000/svg">
+    <title
      id="title1">Orbit — AI Feature Flow</title>
   <defs
      id="defs5">
@@ -169,7 +146,7 @@
      x="19.972673"
      y="19.97142"
      width="1560.0546"
-     height="3375.1904"
+     height="3455.1904"
      rx="14.00049"
      fill="none"
      stroke="#d8d6cf"
@@ -612,49 +589,49 @@
      x1="88.814209"
      y1="407.30057"
      x2="88.814209"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line36" />
   <line
      x1="268.81421"
      y1="407.30057"
      x2="268.81421"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line37" />
   <line
      x1="448.81421"
      y1="407.30057"
      x2="448.81421"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line38" />
   <line
      x1="628.81421"
      y1="407.30057"
      x2="628.81421"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line39" />
   <line
      x1="818.81421"
      y1="407.30057"
      x2="818.81421"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line40" />
   <line
      x1="1008.8142"
      y1="407.30057"
      x2="1008.8142"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line41" />
   <line
      x1="1248.8142"
      y1="407.30057"
      x2="1248.8142"
-     y2="3117.719"
+     y2="3197.719"
      class="ll"
      id="line42" />
   <rect
@@ -956,13 +933,13 @@
      x="43.665314"
      y="1135.5604"
      width="1511.9747"
-     height="514.2829"
+     height="594.2829"
      rx="9.9998331"
      class="band-p"
      id="rect64" />
   <rect
      x="1002.7742"
-     y="1541.7548"
+     y="1621.7548"
      width="14.241376"
      height="45.260498"
      rx="2.0344822"
@@ -971,7 +948,7 @@
      style="fill:#fcefd9;stroke:#b45309;stroke-width:0.758624" />
   <rect
      x="623.21539"
-     y="1474.4027"
+     y="1554.4027"
      width="14.246193"
      height="44.672417"
      rx="2.0351706"
@@ -988,29 +965,29 @@
      x="82.662521"
      y="1185.5575"
      width="13.980329"
-     height="437.30072"
+     height="517.30072"
      rx="1.9971899"
      class="a1"
      id="rect65" />
   <rect
      x="262.65164"
-     y="1233.2855"
+     y="1273.2855"
      width="14.002108"
-     height="382.32513"
+     height="422.32513"
      rx="2.0003011"
      class="a2"
      id="rect66" />
   <rect
      x="442.55447"
-     y="1270.0266"
+     y="1310.0266"
      width="14.196449"
-     height="183.38622"
+     height="223.38622"
      rx="2.0280643"
      class="a3"
      id="rect67" />
   <rect
      x="622.52588"
-     y="1302.6097"
+     y="1382.6097"
      width="14.253571"
      height="43.77961"
      rx="2.0362246"
@@ -1018,7 +995,7 @@
      id="rect68" />
   <rect
      x="812.48566"
-     y="1405.3665"
+     y="1485.3665"
      width="14.334035"
      height="43.317265"
      rx="2.0477195"
@@ -1038,62 +1015,90 @@
      y="1204.5477"
      text-anchor="middle"
      id="text71">RateLimitFilter: 20 AI req/min per userId</text>
+  <rect
+     x="67.652687"
+     y="1220"
+     width="950"
+     height="26"
+     rx="6"
+     fill="#fef3c7"
+     stroke="none"
+     id="rect71-note-ask" />
+  <text
+     class="note"
+     x="87.652687"
+     y="1237"
+     id="text71-note-ask">The @ask message itself is sent via the normal message flow — visible to the group immediately, independent of this pipeline (discussions/012).</text>
   <line
      x1="96.652687"
-     y1="1237.5476"
+     y1="1277.5476"
      x2="262.65268"
-     y2="1237.5476"
+     y2="1277.5476"
      class="cg"
      marker-end="url(#ag)"
      id="line71" />
   <text
      class="lbl"
      x="103.65269"
-     y="1229.5476"
+     y="1269.5476"
      id="text72">1. POST /api/v1/ai/ask { conversationId, question: &quot;What is the difference between WebSockets and SSE?&quot; }</text>
   <line
      x1="276.65268"
-     y1="1273.5476"
+     y1="1313.5476"
      x2="442.65268"
-     y2="1273.5476"
+     y2="1313.5476"
      class="cg"
      marker-end="url(#ag)"
      id="line72" />
   <text
      class="lbl"
      x="283.65268"
-     y="1265.5476"
+     y="1305.5476"
      id="text73">2. AiService.ask(conversationId, question)</text>
+  <rect
+     x="298.8"
+     y="1327.5476"
+     width="300"
+     height="26"
+     rx="4"
+     class="ibox"
+     id="rect73-groupcheck" />
+  <text
+     class="note"
+     x="448.8"
+     y="1344.5476"
+     text-anchor="middle"
+     id="text73-groupcheck">verify conversation.type == GROUP (else reject)</text>
   <line
      x1="456.65268"
-     y1="1307.5476"
+     y1="1387.5476"
      x2="622.65271"
-     y2="1307.5476"
+     y2="1387.5476"
      class="cg"
      marker-end="url(#ag)"
      id="line73" />
   <text
      class="lbl"
      x="463.65268"
-     y="1299.5476"
+     y="1379.5476"
      id="text74">3. fetch last 20 messages (conversation context for Claude)</text>
   <line
      x1="622.65271"
-     y1="1341.5476"
+     y1="1421.5476"
      x2="456.65268"
-     y2="1341.5476"
+     y2="1421.5476"
      class="cb"
      marker-end="url(#ab)"
      id="line74" />
   <text
      class="lbl"
      x="475.65268"
-     y="1334.5476"
+     y="1414.5476"
      fill="#1D6FA8"
      id="text75">recent message list for context</text>
   <rect
      x="407.65268"
-     y="1363.5476"
+     y="1443.5476"
      width="320"
      height="26"
      rx="4"
@@ -1102,120 +1107,120 @@
   <text
      class="note"
      x="567.65271"
-     y="1380.5476"
+     y="1460.5476"
      text-anchor="middle"
      id="text76">build prompt: system role + conversation context + user question</text>
   <line
      x1="456.65268"
-     y1="1409.5476"
+     y1="1489.5476"
      x2="812.65271"
-     y2="1409.5476"
+     y2="1489.5476"
      class="cp"
      marker-end="url(#ap)"
      id="line76" />
   <text
      class="lbl"
      x="463.65268"
-     y="1401.5476"
+     y="1481.5476"
      id="text77">4. POST /v1/messages { model, system prompt + context + question, max_tokens: 1000 }</text>
   <line
      x1="812.65271"
-     y1="1443.5476"
+     y1="1523.5476"
      x2="456.65268"
-     y2="1443.5476"
+     y2="1523.5476"
      class="cpd"
      marker-end="url(#ap)"
      id="line77" />
   <text
      class="lbl"
      x="489.65268"
-     y="1436.5476"
+     y="1516.5476"
      fill="#534AB7"
      id="text78">answer text in content[0].text</text>
   <line
      x1="276.65268"
-     y1="1479.5476"
+     y1="1559.5476"
      x2="622.65271"
-     y2="1479.5476"
+     y2="1559.5476"
      class="cg"
      marker-end="url(#ag)"
      id="line78" />
   <text
      class="lbl"
      x="283.65268"
-     y="1471.5476"
+     y="1551.5476"
      id="text79">5. MessageService.insertBotMessage { senderName: &quot;Orbit AI&quot;, content: answer }</text>
   <line
      x1="622.65271"
-     y1="1513.5476"
+     y1="1593.5476"
      x2="276.65268"
-     y2="1513.5476"
+     y2="1593.5476"
      class="cb"
      marker-end="url(#ab)"
      id="line79" />
   <text
      class="lbl"
      x="329.65268"
-     y="1506.5476"
+     y="1586.5476"
      fill="#1D6FA8"
      id="text80">savedBotMessage with _id</text>
   <line
      x1="276.65268"
-     y1="1549.5476"
+     y1="1629.5476"
      x2="1002.6527"
-     y2="1549.5476"
+     y2="1629.5476"
      class="co"
      marker-end="url(#ao)"
      id="line80" />
   <text
      class="lbl"
      x="283.65268"
-     y="1541.5476"
+     y="1621.5476"
      id="text81">6. publish → chat.messages (ALL participants)</text>
   <line
      x1="1002.6527"
-     y1="1583.5476"
+     y1="1663.5476"
      x2="276.65268"
-     y2="1583.5476"
+     y2="1663.5476"
      class="cb"
      marker-end="url(#ab)"
      id="line81" />
   <text
      class="lbl"
      x="439.65268"
-     y="1576.5476"
+     y="1656.5476"
      fill="#1D6FA8"
      id="text82">ack</text>
   <line
      x1="276.65268"
-     y1="1607.5476"
+     y1="1687.5476"
      x2="96.652687"
-     y2="1607.5476"
+     y2="1687.5476"
      class="cb"
      marker-end="url(#ab)"
      id="line82" />
   <text
      class="lbl"
      x="103.65269"
-     y="1600.5476"
+     y="1680.5476"
      fill="#1D6FA8"
      id="text83">7. 200 { answer text }</text>
   <line
      x1="1008.8142"
-     y1="1623.1284"
+     y1="1703.1284"
      x2="1257.1771"
-     y2="1623.1284"
+     y2="1703.1284"
      class="co"
      marker-end="url(#ao)"
      id="line83" />
   <text
      class="lbl"
      x="1019.7489"
-     y="1616.9668"
+     y="1696.9668"
      id="text84">8. KafkaConsumer delivers bot message to ALL participants</text>
   <rect
      x="43.675545"
-     y="1699.9484"
+     y="1779.9484"
      width="1511.9543"
      height="349.0051"
      rx="9.9996986"
@@ -1224,12 +1229,12 @@
   <text
      class="plbl"
      x="67.652687"
-     y="1729.9254"
+     y="1809.9254"
      fill="#B45309"
      id="text85">FLOW C — SMART REPLY SUGGESTIONS (requester only — no broadcast, no persistence)</text>
   <rect
      x="82.681473"
-     y="1749.9542"
+     y="1829.9542"
      width="13.942421"
      height="280.77304"
      rx="1.9917744"
@@ -1237,7 +1242,7 @@
      id="rect85" />
   <rect
      x="262.67163"
-     y="1798.3953"
+     y="1878.3953"
      width="13.962096"
      height="231.1561"
      rx="1.9945853"
@@ -1245,7 +1250,7 @@
      id="rect86" />
   <rect
      x="442.70154"
-     y="1833.2393"
+     y="1913.2393"
      width="13.902296"
      height="174.73288"
      rx="1.9860424"
@@ -1253,7 +1258,7 @@
      id="rect87" />
   <rect
      x="622.52228"
-     y="1868.1748"
+     y="1948.1748"
      width="14.260847"
      height="42.908382"
      rx="2.0372636"
@@ -1261,7 +1266,7 @@
      id="rect88" />
   <rect
      x="813.1225"
-     y="1964.7914"
+     y="2044.7914"
      width="14.246194"
      height="44.672417"
      rx="2.0351706"
@@ -1269,7 +1274,7 @@
      id="rect89" />
   <rect
      x="67.652687"
-     y="1751.9254"
+     y="1831.9254"
      width="700"
      height="26"
      rx="6"
@@ -1279,64 +1284,64 @@
   <text
      class="note"
      x="87.652687"
-     y="1768.9254"
+     y="1848.9254"
      id="text90">Triggered automatically by React SPA after receiving a new inbound message. Background call — does not block the UI.</text>
   <line
      x1="96.652687"
-     y1="1801.9254"
+     y1="1881.9254"
      x2="262.65268"
-     y2="1801.9254"
+     y2="1881.9254"
      class="cg"
      marker-end="url(#ag)"
      id="line90" />
   <text
      class="lbl"
      x="103.65269"
-     y="1793.9254"
+     y="1873.9254"
      id="text91">1. POST /api/v1/ai/suggest-replies { conversationId, messageId } (the message to reply to)</text>
   <line
      x1="276.65268"
-     y1="1837.9254"
+     y1="1917.9254"
      x2="442.65268"
-     y2="1837.9254"
+     y2="1917.9254"
      class="cg"
      marker-end="url(#ag)"
      id="line91" />
   <text
      class="lbl"
      x="283.65268"
-     y="1829.9254"
+     y="1909.9254"
      id="text92">2. AiService.suggestReplies(conversationId, messageId)</text>
   <line
      x1="456.65268"
-     y1="1871.9254"
+     y1="1951.9254"
      x2="622.65271"
-     y2="1871.9254"
+     y2="1951.9254"
      class="cg"
      marker-end="url(#ag)"
      id="line92" />
   <text
      class="lbl"
      x="463.65268"
-     y="1863.9254"
+     y="1943.9254"
      id="text93">3. fetch target message + last 10 messages as context</text>
   <line
      x1="622.65271"
-     y1="1905.9254"
+     y1="1985.9254"
      x2="456.65268"
-     y2="1905.9254"
+     y2="1985.9254"
      class="cb"
      marker-end="url(#ab)"
      id="line93" />
   <text
      class="lbl"
      x="475.65268"
-     y="1898.9254"
+     y="1978.9254"
      fill="#1D6FA8"
      id="text94">target message + recent context</text>
   <rect
      x="405.2811"
-     y="1920.9609"
+     y="2000.9609"
      width="360"
      height="26"
      rx="4"
@@ -1345,53 +1350,53 @@
   <text
      class="note"
      x="585.28113"
-     y="1938.5538"
+     y="2018.5538"
      text-anchor="middle"
      id="text95">build prompt: generate 3 short contextual reply suggestions as JSON array</text>
   <line
      x1="456.65268"
-     y1="1969.9254"
+     y1="2049.9254"
      x2="812.65271"
-     y2="1969.9254"
+     y2="2049.9254"
      class="cp"
      marker-end="url(#ap)"
      id="line95" />
   <text
      class="lbl"
      x="463.65268"
-     y="1961.9254"
+     y="2041.9254"
      id="text96">4. POST /v1/messages { model, prompt requesting JSON array of 3 suggestions, max_tokens: 200 }</text>
   <line
      x1="812.65271"
-     y1="2003.9254"
+     y1="2083.9254"
      x2="456.65268"
-     y2="2003.9254"
+     y2="2083.9254"
      class="cpd"
      marker-end="url(#ap)"
      id="line96" />
   <text
      class="lbl"
      x="489.65268"
-     y="1996.9254"
+     y="2076.9254"
      fill="#534AB7"
      id="text97">[ &quot;Sounds good!&quot;, &quot;Can you share more?&quot;, &quot;I'll look into it.&quot; ]</text>
   <line
      x1="276.65268"
-     y1="2021.9254"
+     y1="2101.9254"
      x2="96.652687"
-     y2="2021.9254"
+     y2="2101.9254"
      class="cb"
      marker-end="url(#ab)"
      id="line97" />
   <text
      class="lbl"
      x="103.65269"
-     y="2014.9254"
+     y="2094.9254"
      fill="#1D6FA8"
      id="text98">5. 200 { suggestions: [ &quot;…&quot;, &quot;…&quot;, &quot;…&quot; ] } → requester ONLY (no Kafka, no bot message, no broadcast)</text>
   <rect
      x="43.69112"
-     y="2094.3423"
+     y="2174.3423"
      width="1511.9231"
      height="346.44449"
      rx="9.9994917"
@@ -1400,12 +1405,12 @@
   <text
      class="plbl"
      x="67.652687"
-     y="2124.3032"
+     y="2204.3032"
      fill="#1D6FA8"
      id="text99">FLOW D — MESSAGE TRANSLATION (requester only — no broadcast, no persistence)</text>
   <rect
      x="82.702202"
-     y="2144.3525"
+     y="2224.3525"
      width="13.900966"
      height="279.79062"
      rx="1.9858522"
@@ -1413,7 +1418,7 @@
      id="rect99" />
   <rect
      x="262.69302"
-     y="2191.6631"
+     y="2271.6631"
      width="13.919325"
      height="227.87784"
      rx="1.988475"
@@ -1421,7 +1426,7 @@
      id="rect100" />
   <rect
      x="442.73743"
-     y="2228.1267"
+     y="2308.1267"
      width="13.830498"
      height="171.67783"
      rx="1.9757854"
@@ -1429,7 +1434,7 @@
      id="rect101" />
   <rect
      x="622.51099"
-     y="2262.8376"
+     y="2342.8376"
      width="14.283427"
      height="40.262932"
      rx="2.0404899"
@@ -1437,7 +1442,7 @@
      id="rect102" />
   <rect
      x="812.94086"
-     y="2358.2715"
+     y="2438.2715"
      width="14.262259"
      height="42.740196"
      rx="2.0374658"
@@ -1445,7 +1450,7 @@
      id="rect103" />
   <rect
      x="67.652687"
-     y="2146.3032"
+     y="2226.3032"
      width="640"
      height="26"
      rx="6"
@@ -1455,64 +1460,64 @@
   <text
      class="note"
      x="87.652687"
-     y="2163.3032"
+     y="2243.3032"
      id="text104">On-demand: user clicks &quot;Translate&quot; on a specific message. Available on any message in any conversation.</text>
   <line
      x1="96.652687"
-     y1="2196.3032"
+     y1="2276.3032"
      x2="262.65268"
-     y2="2196.3032"
+     y2="2276.3032"
      class="cg"
      marker-end="url(#ag)"
      id="line104" />
   <text
      class="lbl"
      x="103.65269"
-     y="2188.3032"
+     y="2268.3032"
      id="text105">1. POST /api/v1/ai/translate { messageId, targetLanguage: &quot;English&quot; }</text>
   <line
      x1="276.65268"
-     y1="2232.3032"
+     y1="2312.3032"
      x2="442.65268"
-     y2="2232.3032"
+     y2="2312.3032"
      class="cg"
      marker-end="url(#ag)"
      id="line105" />
   <text
      class="lbl"
      x="283.65268"
-     y="2224.3032"
+     y="2304.3032"
      id="text106">2. AiService.translate(messageId, targetLanguage)</text>
   <line
      x1="456.65268"
-     y1="2266.3032"
+     y1="2346.3032"
      x2="622.65271"
-     y2="2266.3032"
+     y2="2346.3032"
      class="cg"
      marker-end="url(#ag)"
      id="line106" />
   <text
      class="lbl"
      x="463.65268"
-     y="2258.3032"
+     y="2338.3032"
      id="text107">3. fetch message document to get content</text>
   <line
      x1="622.65271"
-     y1="2300.3032"
+     y1="2380.3032"
      x2="456.65268"
-     y2="2300.3032"
+     y2="2380.3032"
      class="cb"
      marker-end="url(#ab)"
      id="line107" />
   <text
      class="lbl"
      x="475.65268"
-     y="2293.3032"
+     y="2373.3032"
      fill="#1D6FA8"
      id="text108">message content</text>
   <rect
      x="408.9104"
-     y="2313.6914"
+     y="2393.6914"
      width="380"
      height="26"
      rx="4"
@@ -1521,53 +1526,53 @@
   <text
      class="note"
      x="598.91046"
-     y="2330.6914"
+     y="2410.6914"
      text-anchor="middle"
      id="text109">build prompt: translate content, detect source language, return JSON</text>
   <line
      x1="456.65268"
-     y1="2362.3032"
+     y1="2442.3032"
      x2="812.65271"
-     y2="2362.3032"
+     y2="2442.3032"
      class="cp"
      marker-end="url(#ap)"
      id="line109" />
   <text
      class="lbl"
      x="463.65268"
-     y="2354.3032"
+     y="2434.3032"
      id="text110">4. POST /v1/messages { model, prompt requesting { translatedContent, detectedLanguage }, max_tokens: 500 }</text>
   <line
      x1="812.65271"
-     y1="2396.3032"
+     y1="2476.3032"
      x2="456.65268"
-     y2="2396.3032"
+     y2="2476.3032"
      class="cpd"
      marker-end="url(#ap)"
      id="line110" />
   <text
      class="lbl"
      x="489.65268"
-     y="2389.3032"
+     y="2469.3032"
      fill="#534AB7"
      id="text111">{ translatedContent: &quot;Hello, how are you?&quot;, detectedLanguage: &quot;French&quot; }</text>
   <line
      x1="276.65268"
-     y1="2414.3032"
+     y1="2494.3032"
      x2="96.652687"
-     y2="2414.3032"
+     y2="2494.3032"
      class="cb"
      marker-end="url(#ab)"
      id="line111" />
   <text
      class="lbl"
      x="103.65269"
-     y="2407.3032"
+     y="2487.3032"
      fill="#1D6FA8"
      id="text112">5. 200 { originalContent, translatedContent, detectedLanguage } → requester ONLY</text>
   <rect
      x="43.659763"
-     y="2483.657"
+     y="2563.657"
      width="1511.9858"
      height="308.28604"
      rx="9.9999065"
@@ -1576,12 +1581,12 @@
   <text
      class="plbl"
      x="67.652687"
-     y="2513.6499"
+     y="2593.6499"
      fill="#888780"
      id="text113">FLOW E — TONE CHECKER (pre-send — stateless, no DB read, no persistence, no broadcast)</text>
   <rect
      x="82.66494"
-     y="2533.6621"
+     y="2613.6621"
      width="13.975495"
      height="241.83342"
      rx="1.9964994"
@@ -1589,7 +1594,7 @@
      id="rect113" />
   <rect
      x="262.65192"
-     y="2580.3213"
+     y="2660.3213"
      width="14.001472"
      height="193.40857"
      rx="2.0002105"
@@ -1597,7 +1602,7 @@
      id="rect114" />
   <rect
      x="442.65161"
-     y="2616.9138"
+     y="2696.9138"
      width="14.002131"
      height="133.40924"
      rx="2.0003045"
@@ -1605,7 +1610,7 @@
      id="rect115" />
   <rect
      x="812.52716"
-     y="2708.5217"
+     y="2788.5217"
      width="14.251043"
      height="44.084373"
      rx="2.0358634"
@@ -1613,7 +1618,7 @@
      id="rect116" />
   <rect
      x="67.652687"
-     y="2535.6499"
+     y="2615.6499"
      width="700"
      height="26"
      rx="6"
@@ -1623,37 +1628,37 @@
   <text
      class="note"
      x="87.652687"
-     y="2552.6499"
+     y="2632.6499"
      id="text117">Pre-send: fires when user presses send and tone check is enabled. Fires BEFORE the message is transmitted to the server.</text>
   <line
      x1="96.652687"
-     y1="2585.6499"
+     y1="2665.6499"
      x2="262.65268"
-     y2="2585.6499"
+     y2="2665.6499"
      class="cg"
      marker-end="url(#ag)"
      id="line117" />
   <text
      class="lbl"
      x="103.65269"
-     y="2577.6499"
+     y="2657.6499"
      id="text118">1. POST /api/v1/ai/tone-check { content: &quot;Why haven't you done this yet? It's been three days.&quot; }</text>
   <line
      x1="276.65268"
-     y1="2621.6499"
+     y1="2701.6499"
      x2="442.65268"
-     y2="2621.6499"
+     y2="2701.6499"
      class="cg"
      marker-end="url(#ag)"
      id="line118" />
   <text
      class="lbl"
      x="283.65268"
-     y="2613.6499"
+     y="2693.6499"
      id="text119">2. AiService.checkTone(content)</text>
   <rect
      x="403.51288"
-     y="2628.9172"
+     y="2708.9172"
      width="358.3588"
      height="25.979017"
      rx="4.2159858"
@@ -1662,12 +1667,12 @@
   <text
      class="note"
      x="581.21008"
-     y="2645.9067"
+     y="2725.9067"
      text-anchor="middle"
      id="text120">NO MessageRepository call — tone check is purely stateless on input text</text>
   <rect
      x="402.91379"
-     y="2662.9111"
+     y="2742.9111"
      width="388.29202"
      height="25.991451"
      rx="4.0872841"
@@ -1676,53 +1681,53 @@
   <text
      class="note"
      x="597.05981"
-     y="2679.9067"
+     y="2759.9067"
      text-anchor="middle"
      id="text121">build prompt: analyse tone, flag if aggressive/unclear, suggest softer alternative</text>
   <line
      x1="456.65268"
-     y1="2711.6499"
+     y1="2791.6499"
      x2="812.65271"
-     y2="2711.6499"
+     y2="2791.6499"
      class="cp"
      marker-end="url(#ap)"
      id="line121" />
   <text
      class="lbl"
      x="463.65268"
-     y="2703.6499"
+     y="2783.6499"
      id="text122">3. POST /v1/messages { model, prompt requesting { flagged, reason, suggestion }, max_tokens: 300 }</text>
   <line
      x1="812.65271"
-     y1="2745.6499"
+     y1="2825.6499"
      x2="456.65268"
-     y2="2745.6499"
+     y2="2825.6499"
      class="cpd"
      marker-end="url(#ap)"
      id="line122" />
   <text
      class="lbl"
      x="489.65268"
-     y="2738.6499"
+     y="2818.6499"
      fill="#534AB7"
      id="text123">{ flagged: true, reason: &quot;may read as accusatory&quot;, suggestion: &quot;Could you give me an update…&quot; }</text>
   <line
      x1="276.65268"
-     y1="2767.6499"
+     y1="2847.6499"
      x2="96.652687"
-     y2="2767.6499"
+     y2="2847.6499"
      class="cb"
      marker-end="url(#ab)"
      id="line123" />
   <text
      class="lbl"
      x="103.65269"
-     y="2760.6499"
+     y="2840.6499"
      fill="#1D6FA8"
      id="text124">4. 200 { flagged, reason, suggestion } → requester ONLY (no Kafka, no bot message, no broadcast)</text>
   <rect
      x="42.814209"
-     y="2833.7117"
+     y="2913.7117"
      width="1512"
      height="260"
      rx="10"
@@ -1731,12 +1736,12 @@
   <text
      class="plbl"
      x="66.814209"
-     y="2863.7117"
+     y="2943.7117"
      fill="#B91C1C"
      id="text125">FLOW F — CLAUDE API ERROR HANDLING (shared by all five features)</text>
   <rect
      x="81.814209"
-     y="2883.7117"
+     y="2963.7117"
      width="14"
      height="190"
      rx="2"
@@ -1744,7 +1749,7 @@
      id="rect125" />
   <rect
      x="261.85156"
-     y="2894.8474"
+     y="2974.8474"
      width="13.925283"
      height="178.82692"
      rx="1.9893261"
@@ -1752,7 +1757,7 @@
      id="rect126" />
   <rect
      x="441.86368"
-     y="2930.8594"
+     y="3010.8594"
      width="13.901047"
      height="109.46661"
      rx="1.9858638"
@@ -1760,7 +1765,7 @@
      id="rect127" />
   <rect
      x="811.74792"
-     y="2966.9104"
+     y="3046.9104"
      width="14.13262"
      height="44.717316"
      rx="2.0189457"
@@ -1768,88 +1773,88 @@
      id="rect128" />
   <line
      x1="95.814209"
-     y1="2899.7117"
+     y1="2979.7117"
      x2="261.81421"
-     y2="2899.7117"
+     y2="2979.7117"
      class="cg"
      marker-end="url(#ag)"
      id="line128" />
   <text
      class="lbl"
      x="102.81421"
-     y="2891.7117"
+     y="2971.7117"
      id="text128">1. any AI feature request arrives at AiController</text>
   <line
      x1="275.81421"
-     y1="2935.7117"
+     y1="3015.7117"
      x2="441.81421"
-     y2="2935.7117"
+     y2="3015.7117"
      class="cg"
      marker-end="url(#ag)"
      id="line129" />
   <text
      class="lbl"
      x="282.81421"
-     y="2927.7117"
+     y="3007.7117"
      id="text129">2. AiService constructs prompt and calls ClaudeApiClient</text>
   <line
      x1="455.81421"
-     y1="2971.7117"
+     y1="3051.7117"
      x2="811.81421"
-     y2="2971.7117"
+     y2="3051.7117"
      class="cp"
      marker-end="url(#ap)"
      id="line130" />
   <text
      class="lbl"
      x="462.81421"
-     y="2963.7117"
+     y="3043.7117"
      id="text130">3. POST /v1/messages → Anthropic returns error or times out (30s timeout, 2 retries with backoff)</text>
   <line
      x1="811.81421"
-     y1="3005.7117"
+     y1="3085.7117"
      x2="455.81421"
-     y2="3005.7117"
+     y2="3085.7117"
      class="cr"
      marker-end="url(#ar)"
      id="line131" />
   <text
      class="lbl"
      x="474.81421"
-     y="2998.7117"
+     y="3078.7117"
      fill="#B91C1C"
      id="text131">API error (5xx / rate limit / timeout / overloaded)</text>
   <line
      x1="455.81421"
-     y1="3033.7117"
+     y1="3113.7117"
      x2="275.81421"
-     y2="3033.7117"
+     y2="3113.7117"
      class="cr"
      marker-end="url(#ar)"
      id="line132" />
   <text
      class="lbl"
      x="282.81421"
-     y="3026.7117"
+     y="3106.7117"
      fill="#B91C1C"
      id="text132">4. AiServiceException → GlobalExceptionHandler</text>
   <line
      x1="275.81421"
-     y1="3067.7117"
+     y1="3147.7117"
      x2="95.814209"
-     y2="3067.7117"
+     y2="3147.7117"
      class="cb"
      marker-end="url(#ab)"
      id="line133" />
   <text
      class="lbl"
      x="102.81421"
-     y="3060.7117"
+     y="3140.7117"
      fill="#1D6FA8"
      id="text133">5. 503 { message: &quot;AI feature temporarily unavailable. Please try again.&quot; }</text>
   <rect
      x="42.857834"
-     y="3133.7554"
+     y="3213.7554"
      width="1511.9127"
      height="221.41548"
      rx="9.999423"
@@ -1860,11 +1865,11 @@
   <text
      class="slbl"
      x="66.814209"
-     y="3163.7117"
+     y="3243.7117"
      id="text134">BROADCAST vs REQUESTER-ONLY AT A GLANCE</text>
   <rect
      x="66.814209"
-     y="3177.7117"
+     y="3257.7117"
      width="1454.7979"
      height="28"
      rx="3.9107468"
@@ -1875,156 +1880,156 @@
   <text
      class="lbl"
      x="86.814209"
-     y="3196.7117"
+     y="3276.7117"
      font-weight="600"
      id="text135">Feature</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3196.7117"
+     y="3276.7117"
      font-weight="600"
      id="text136">Delivery</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3196.7117"
+     y="3276.7117"
      font-weight="600"
      id="text137">Bot message persisted</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3196.7117"
+     y="3276.7117"
      font-weight="600"
      id="text138">Kafka publish</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3196.7117"
+     y="3276.7117"
      font-weight="600"
      id="text139">MessageRepository read</text>
   <text
      class="lbl"
      x="86.814209"
-     y="3229.7117"
+     y="3309.7117"
      id="text140">/summary</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3229.7117"
+     y="3309.7117"
      id="text141">All participants via WebSocket</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3229.7117"
+     y="3309.7117"
      id="text142">Yes</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3229.7117"
+     y="3309.7117"
      id="text143">Yes</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3229.7117"
+     y="3309.7117"
      id="text144">Yes (last N messages)</text>
   <text
      class="lbl"
      x="86.814209"
-     y="3255.7117"
+     y="3335.7117"
      id="text145">@ask</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3255.7117"
+     y="3335.7117"
      id="text146">All participants via WebSocket</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3255.7117"
+     y="3335.7117"
      id="text147">Yes</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3255.7117"
+     y="3335.7117"
      id="text148">Yes</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3255.7117"
+     y="3335.7117"
      id="text149">Yes (last 20 for context)</text>
   <text
      class="lbl"
      x="86.814209"
-     y="3281.7117"
+     y="3361.7117"
      id="text150">Smart replies</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3281.7117"
+     y="3361.7117"
      id="text151">Requester only (REST response)</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3281.7117"
+     y="3361.7117"
      id="text152">No</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3281.7117"
+     y="3361.7117"
      id="text153">No</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3281.7117"
+     y="3361.7117"
      id="text154">Yes (target + 10 context)</text>
   <text
      class="lbl"
      x="86.814209"
-     y="3307.7117"
+     y="3387.7117"
      id="text155">Translation</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3307.7117"
+     y="3387.7117"
      id="text156">Requester only (REST response)</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3307.7117"
+     y="3387.7117"
      id="text157">No</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3307.7117"
+     y="3387.7117"
      id="text158">No</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3307.7117"
+     y="3387.7117"
      id="text159">Yes (target message content)</text>
   <text
      class="lbl"
      x="86.814209"
-     y="3333.7117"
+     y="3413.7117"
      id="text160">Tone check</text>
   <text
      class="lbl"
      x="378.81421"
-     y="3333.7117"
+     y="3413.7117"
      id="text161">Requester only (REST response)</text>
   <text
      class="lbl"
      x="698.81421"
-     y="3333.7117"
+     y="3413.7117"
      id="text162">No</text>
   <text
      class="lbl"
      x="998.81421"
-     y="3333.7117"
+     y="3413.7117"
      id="text163">No</text>
   <text
      class="lbl"
      x="1248.8142"
-     y="3333.7117"
+     y="3413.7117"
      id="text164">No (purely stateless)</text>
 </svg>

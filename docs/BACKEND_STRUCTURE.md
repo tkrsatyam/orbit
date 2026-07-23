@@ -317,6 +317,7 @@ com.orbit.ai/
 **Key rules:**
 - `ClaudeApiClient` is the only class that imports Anthropic SDK or makes HTTPS calls to `api.anthropic.com`
 - `AiService` calls `MessageRepository` for context reads — it never writes messages directly, it calls `MessageService.insertBotMessage()` for bot message persistence
+- `AiService.ask()` additionally verifies the target conversation's `type` is `GROUP` before proceeding — a `DIRECT` conversation is rejected with no further processing. See [`discussions/012_ask_mention_behavior.md`](./discussions/012_ask_mention_behavior.md).
 - All five features route through `ClaudeApiClient` — one place to update model, timeout, and API version
 
 ---

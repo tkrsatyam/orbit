@@ -24,19 +24,19 @@ AiController → AiService → ClaudeApiClient → Anthropic API (claude-sonnet-
 
 The most important architectural distinction across the five features is whether the result is broadcast to all participants or returned only to the requester.
 
-| Feature | Result delivery | Bot message persisted | Kafka publish |
-|---|---|---|---|
-| `/summary` | All participants via WebSocket | Yes | Yes |
-| `@ask` | All participants via WebSocket | Yes | Yes |
-| Smart replies | Requester only via REST response | No | No |
-| Translation | Requester only via REST response | No | No |
-| Tone checker | Requester only via REST response | No | No |
+| Feature       | Result delivery                  | Bot message persisted | Kafka publish |
+|---------------|----------------------------------|-----------------------|---------------|
+| `/summary`    | All participants via WebSocket   | Yes                   | Yes           |
+| `@ask`        | All participants via WebSocket   | Yes                   | Yes           |
+| Smart replies | Requester only via REST response | No                    | No            |
+| Translation   | Requester only via REST response | No                    | No            |
+| Tone checker  | Requester only via REST response | No                    | No            |
 
 Summary and `@ask` produce results that are useful to everyone in the conversation — they are treated as bot messages, persisted to MongoDB, and fan-out delivered via the same Kafka → WebSocket path as regular messages. The other three features are personal and ephemeral — they are returned directly in the REST response, never persisted, and never visible to other participants.
 
 ### Bot User
 
-Bot messages from `/summary` and `@ask` are inserted into the `messages` collection with a reserved `senderId` set to a system `BOT_USER_ID` and `senderName` set to `"Orbit AI"`. This user must be seeded into the `users` collection on application startup by a `DataInitializer` component — similar to the `MigrationService` that applies schema validators. The `DataInitializer` runs once on boot and is idempotent: if `BOT_USER_ID` already exists, it skips insertion.. The bot user has no password, no email, and cannot authenticate — it exists solely as a message sender identity for bot-generated content.
+Bot messages from `/summary` and `@ask` are inserted into the `messages` collection with a reserved `senderId` set to a system `BOT_USER_ID` and `senderName` set to `"Orbit AI"`. This user must be seeded into the `users` collection on application startup by a `DataInitializer` component — similar to the `MigrationService` that applies schema validators. The `DataInitializer` runs once on boot and is idempotent: if `BOT_USER_ID` already exists, it skips insertion. The bot user has no password, no email, and cannot authenticate — it exists solely as a message sender identity for bot-generated content.
 
 ---
 
@@ -74,20 +74,22 @@ Before any AI feature call reaches `AiController`, two checks apply:
 
 ## Flow B — @ask Assistant
 
-**Trigger:** User sends a message containing `@ask` followed by a question. The React SPA detects the `@ask` mention and calls the ask endpoint.
+**Trigger:** A group member sends a message containing `@ask` followed by a question. Unlike `/summary`, this does not replace the normal send action — the message is sent through the standard message send flow like any other group message, is persisted and delivered normally, and is what every group member sees as the question. Separately, the React SPA also detects the `@ask` mention and calls the ask endpoint to generate a response. See [`discussions/012_ask_mention_behavior.md`](../../discussions/012_ask_mention_behavior.md) for why `@ask` and `/summary` behave differently here.
 
 **Purpose:** Collaborative AI Q&A inside a group — the answer is visible to everyone, making it a shared knowledge resource.
 
 **Step-by-step:**
 
-1. `POST /api/v1/ai/ask { conversationId, question: "What is the difference between WebSockets and SSE?" }` arrives at `AiController`
-2. `AiService.ask()` fetches the last 20 messages from `MessageRepository` to provide Claude with conversation context — this allows the answer to be aware of the ongoing discussion topic
-3. `AiService` constructs a system prompt establishing Claude as a helpful assistant, a context section containing the recent messages, and a user section containing the question
-4. `ClaudeApiClient` calls the Anthropic API and extracts the answer from `content[0].text`
-5. `MessageService.insertBotMessage()` persists the answer as a bot message
-6. `KafkaProducerConfig` publishes to `chat.messages` for all participants
-7. The REST response returns 200 with the answer text to the requester
-8. `KafkaConsumerConfig` delivers the bot message to all participants — the answer appears in the conversation thread for everyone
+1. The user's message is sent and persisted through the normal group message flow (see `message_send_flow.md`) — this happens independently of the AI pipeline and is what the group sees as the question
+2. `POST /api/v1/ai/ask { conversationId, question: "What is the difference between WebSockets and SSE?" }` arrives at `AiController`
+3. `AiService.ask()` first confirms the target conversation is a group — a direct conversation is rejected here and no further processing happens (see [`discussions/012_ask_mention_behavior.md`](../../discussions/012_ask_mention_behavior.md))
+4. `AiService.ask()` fetches the last 20 messages from `MessageRepository` to provide Claude with conversation context — this allows the answer to be aware of the ongoing discussion topic
+5. `AiService` constructs a system prompt establishing Claude as a helpful assistant, a context section containing the recent messages, and a user section containing the question
+6. `ClaudeApiClient` calls the Anthropic API and extracts the answer from `content[0].text`
+7. `MessageService.insertBotMessage()` persists the answer as a bot message
+8. `KafkaProducerConfig` publishes to `chat.messages` for all participants
+9. The REST response returns 200 with the answer text to the requester
+10. `KafkaConsumerConfig` delivers the bot message to all participants — the answer appears in the conversation thread for everyone, directly after the question
 
 **Context design decision:** 20 messages of context is a deliberate balance. Too little context and Claude cannot tailor the answer to the conversation topic. Too much and the token cost grows with no proportional quality improvement for a Q&A task. The system prompt instructs Claude to use the context to inform relevance but to answer the question directly.
 
@@ -191,14 +193,14 @@ All five prompts follow the same structure to keep `AiService` consistent and ma
 
 ## Implementation Reference
 
-| Component | Role |
-|---|---|
-| `AiController` | Routes the five REST endpoints, applies rate limiting via `RateLimitFilter` |
-| `AiService` | Builds prompts, calls `ClaudeApiClient`, parses responses, calls `MessageService` for bot messages |
-| `ClaudeApiClient` | Single wrapper for all Anthropic API calls — model, timeout, retry config in one place |
-| `MessageService.insertBotMessage()` | Persists bot messages and triggers Kafka fan-out for broadcast features |
-| `MessageRepository` | Read-only access for context fetching in summary, @ask, smart replies, and translation |
-| `GlobalExceptionHandler` | Converts `AiServiceException` to consistent 503 error envelope |
+| Component                           | Role                                                                                               |
+|-------------------------------------|----------------------------------------------------------------------------------------------------|
+| `AiController`                      | Routes the five REST endpoints, applies rate limiting via `RateLimitFilter`                        |
+| `AiService`                         | Builds prompts, calls `ClaudeApiClient`, parses responses, calls `MessageService` for bot messages |
+| `ClaudeApiClient`                   | Single wrapper for all Anthropic API calls — model, timeout, retry config in one place             |
+| `MessageService.insertBotMessage()` | Persists bot messages and triggers Kafka fan-out for broadcast features                            |
+| `MessageRepository`                 | Read-only access for context fetching in summary, @ask, smart replies, and translation             |
+| `GlobalExceptionHandler`            | Converts `AiServiceException` to consistent 503 error envelope                                     |
 
 ---
 
