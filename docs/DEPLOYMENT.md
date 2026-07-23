@@ -298,11 +298,11 @@ The Render free tier spins down inactive services after 15 minutes of inactivity
 2. Create a new Kafka cluster, select the region closest to your Render deployment
 3. Create the following topics manually in the Upstash console:
 
-| Topic                | Partitions | Retention |
-|----------------------|------------|-----------|
-| `chat.messages`      | 1          | 7 days    |
-| `chat.presence`      | 1          | 1 hour    |
-| `chat.notifications` | 1          | 7 days    |
+| Topic                | Partitions | Retention  |
+|----------------------|------------|------------|
+| `chat.messages`      | 1          | 7 days     |
+| `chat.presence`      | 1          | 10 minutes |
+| `chat.notifications` | 1          | 7 days     |
 
 4. Note the bootstrap server URL, SASL username, and SASL password from the cluster details page
 

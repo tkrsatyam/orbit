@@ -61,7 +61,7 @@ Every instance produces to and consumes from Kafka topics. Messages are persiste
 
 **Cons:**
 - Higher operational complexity than Redis Pub/Sub
-- Small latency overhead (typically 10â€“50ms) compared to direct WebSocket delivery or Redis — imperceptible to users in a chat context  
+- Small latency overhead (typically 10—50ms) compared to direct WebSocket delivery or Redis — imperceptible to users in a chat context  
 - Heavier infrastructure locally (requires Docker)
 
 ---
@@ -93,7 +93,7 @@ chat.notifications  ← unread counts and mention alerts (Phase 2)
 
 ### Presence and Typing Events
 
-Typing indicators and presence events are ephemeral — they do not need persistence. The `chat.presence` topic is configured with a short retention period (minutes) to reflect this.  
+Typing indicators and presence events are ephemeral — they do not need persistence. The `chat.presence` topic is configured with a short retention period (10 minutes) to reflect this.  
 
 ### Single Instance Behaviour
 
