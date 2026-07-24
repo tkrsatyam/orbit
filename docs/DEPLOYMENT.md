@@ -22,7 +22,7 @@ Kafka + Zookeeper (Docker :9092)          Upstash Kafka (serverless)
 
 | Tool           | Version              | Purpose                                 |
 |----------------|----------------------|-----------------------------------------|
-| Java           | 21 (LTS)             | Spring Boot runtime                     |
+| Java           | 25 (LTS)             | Spring Boot runtime                     |
 | Node.js        | 20+                  | React dev server and build              |
 | Docker Desktop | Latest stable        | MongoDB + Kafka locally                 |
 | Maven          | Bundled via `./mvnw` | Backend build — no local install needed |
@@ -209,7 +209,7 @@ Full `docker-compose.yml` for reference:
 ```yaml
 services:
   mongo:
-    image: mongo:7
+    image: mongo:8
     container_name: orbit-mongo
     ports:
       - "27017:27017"
@@ -242,9 +242,9 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
-      
+
   kafbat-ui:
-    image: ghcr.io/kafbat/kafka-ui:latest
+    image: ghcr.io/kafbat/kafka-ui:v1.6.4
     container_name: orbit-kafbat-ui
     ports:
       - "8090:8080"
@@ -259,6 +259,8 @@ volumes:
 ```
 
 Kafka topics are auto-created on first publish. In production, Upstash Kafka requires topics to be created manually in the Upstash console before the app starts.
+
+**Note — revisit KRaft mode later:** This setup uses Zookeeper-based Kafka (Confluent Platform 7.6.0). Zookeeper mode is deprecated industry-wide — KRaft mode (no Zookeeper) has been the standard since Kafka 3.3, and Kafka 4.0+ removes Zookeeper support entirely. Kept as Zookeeper-based for now to avoid bundling an architecture change (removing the `zookeeper` service, reconfiguring `kafka` for combined broker+controller KRaft roles) into this version-update pass. Revisit before upgrading past Confluent Platform 7.6.x — `confluentinc/confluent-local` is a zero-configuration KRaft image built specifically for local dev and would replace both the `zookeeper` and `kafka` services with one container.
 
 ---
 
@@ -390,12 +392,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Set up Java 21
-        uses: actions/setup-java@v4
+      - name: Set up Java 25
+        uses: actions/setup-java@v6
         with:
-          java-version: '21'
+          java-version: '25'
           distribution: 'temurin'
           cache: maven
 
@@ -409,10 +411,9 @@ jobs:
 
       - name: Deploy to Render
         run: |
-          curl -X POST "${{ secrets.RENDER_API_KEY }}" \
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_SERVICE_ID }}/deploys" \
             -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
-            -H "Content-Type: application/json" \
-            -d '{"serviceId": "${{ secrets.RENDER_SERVICE_ID }}"}'
+            -H "Content-Type: application/json"
 ```
 
 ### Frontend Pipeline — `.github/workflows/deploy-frontend.yml`
@@ -432,14 +433,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 2
 
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
 
