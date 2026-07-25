@@ -33,7 +33,7 @@ A person who has not yet created an account. Can browse public groups and filter
 ## External Systems
 
 ### MongoDB Atlas
-Managed MongoDB database hosted on Atlas free tier (M0 cluster). Stores all persistent data for Orbit — users, contacts, groups, conversations, messages, and notifications. Orbit's Spring Boot backend connects via the `mongodb+srv://` protocol. Data is encrypted at rest by Atlas by default.
+Managed MongoDB database hosted on Atlas free tier (M0 cluster). Stores all persistent data for Orbit — users, contacts, groups, conversations, messages, blockedMessages, notifications, and refreshTokens. Orbit's Spring Boot backend connects via the `mongodb+srv://` protocol. Data is encrypted at rest by Atlas by default.
 
 ### Upstash Kafka
 Serverless managed Kafka broker. Used for WebSocket fan-out — when a message arrives at one backend instance, it is published to a Kafka topic and consumed by all running instances, each of which delivers the message to any WebSocket sessions it holds. This makes the monolithic backend horizontally scalable without microservices. Three topics are used: `chat.messages`, `chat.presence`, and (Phase 2 only) `chat.notifications` for real-time unread-count push to already-connected clients.

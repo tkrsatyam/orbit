@@ -104,14 +104,16 @@ Isolated entirely to Phase 4. Constructs prompts from conversation context retri
 
 Thin Spring Data MongoDB repository interfaces, each corresponding to one collection defined in `erd.md`. Custom query methods and aggregation pipelines live here, but no business logic.
 
-| Repository               | Collection      | Notable Queries                                                                                |
-|--------------------------|-----------------|------------------------------------------------------------------------------------------------|
-| `UserRepository`         | `users`         | `findByEmail`, text search on `displayName`                                                    |
-| `ContactRepository`      | `contacts`      | Compound query for bidirectional contact lookup                                                |
-| `GroupRepository`        | `groups`        | Discovery query filtering by `visibility` + `topicTag`                                         |
-| `ConversationRepository` | `conversations` | `findByParticipantIdsContaining`, DM lookup by participant pair                                |
-| `MessageRepository`      | `messages`      | Cursor-based pagination using `conversationId` + `_id`, text search scoped to `conversationId` |
-| `NotificationRepository` | `notifications` | `findByUserIdAndReadFalse`, upsert by `userId` + `conversationId`                              |
+| Repository                 | Collection        | Notable Queries                                                                                                                        |
+|----------------------------|-------------------|----------------------------------------------------------------------------------------------------------------------------------------|
+| `UserRepository`           | `users`           | `findByEmail`, text search on `displayName`                                                                                            |
+| `ContactRepository`        | `contacts`        | Compound query for bidirectional contact lookup                                                                                        |
+| `GroupRepository`          | `groups`          | Discovery query filtering by `visibility` + `topicTag`                                                                                 |
+| `ConversationRepository`   | `conversations`   | `findByParticipantIdsContaining`, DM lookup by participant pair                                                                        |
+| `MessageRepository`        | `messages`        | Cursor-based pagination using `conversationId` + `_id`, text search scoped to `conversationId`                                         |
+| `BlockedMessageRepository` | `blockedMessages` | Same shape as `MessageRepository`'s queries, scoped to the blocked-sender write/read path — see `discussions/007_blocking_behavior.md` |
+| `NotificationRepository`   | `notifications`   | `findByUserIdAndReadFalse`, upsert by `userId` + `conversationId`                                                                      |
+| `RefreshTokenRepository`   | `refreshTokens`   | `findByToken` (rotation/logout lookup), `findByUserId`                                                                                 |
 
 ---
 
