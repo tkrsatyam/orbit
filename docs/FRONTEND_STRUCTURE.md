@@ -178,6 +178,7 @@ src/services/
 
 **`api.js` is the most important file in `services/`.** It configures:
 - `baseURL` from `import.meta.env.VITE_API_BASE_URL`
+- `withCredentials: true` — required so the browser attaches the httpOnly refresh cookie on cross-origin requests to the Render API; without this, the cookie is silently never sent
 - Request interceptor: attaches `Authorization: Bearer {accessToken}` from memory
 - Response interceptor: on 401, calls `authService.refresh()`, retries original request once, redirects to login if refresh fails
 

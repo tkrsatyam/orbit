@@ -102,7 +102,6 @@ Response 201:
 
     {
       "accessToken": "eyJhbGc...",
-      "refreshToken": "550e8400-e29b-41d4-a716...",
       "user": {
         "id": "64f1a2b3c4d5e6f7a8b9c0d1",
         "email": "satyam@example.com",
@@ -112,6 +111,9 @@ Response 201:
         "createdAt": "2026-06-27T10:30:00Z"
       }
     }
+
+Notes:
+- The refresh token is never returned in the response body. It's set via a `Set-Cookie` header: `httpOnly`, `Secure`, `SameSite=None`, 7-day expiry — inaccessible to JavaScript, sent automatically by the browser on subsequent requests to the API origin.
 
 ---
 
@@ -132,7 +134,6 @@ Response 200:
 
     {
       "accessToken": "eyJhbGc...",
-      "refreshToken": "550e8400-e29b-41d4-a716...",
       "user": {
         "id": "64f1a2b3c4d5e6f7a8b9c0d1",
         "email": "satyam@example.com",
@@ -143,30 +144,30 @@ Response 200:
       }
     }
 
+Notes:
+- Same as registration — the refresh token is set via `Set-Cookie`, never returned in the body.
+
 ---
 
 ### POST /api/v1/auth/refresh
 
-Issue a new access token using a valid refresh token.
+Issue a new access token using the refresh token cookie.
 
 Auth: None
 
-Request:
-
-    {
-      "refreshToken": "550e8400-e29b-41d4-a716..."
-    }
+Request: no body. The refresh token is read server-side from the httpOnly cookie sent automatically by the browser — the client never handles its value directly.
 
 Response 200:
 
     {
-      "accessToken": "eyJhbGc...",
-      "refreshToken": "550e8400-e29b-41d4-a716..."
+      "accessToken": "eyJhbGc..."
     }
 
 Notes:
-- Refresh token rotation applied — a new refresh token is issued on every call. The old one is immediately invalidated.
+- Refresh token rotation applied — a new refresh token is generated on every call and set via `Set-Cookie` (same attributes as at login), replacing the previous cookie. The old refresh token is immediately invalidated server-side.
 - This is a production security practice that limits the blast radius of a stolen refresh token.
+- 401 if the cookie is missing, expired, or the token isn't found/already rotated — the frontend's response interceptor treats this as "refresh failed" and redirects to login.
+- Optional CSRF hardening (recommend, not yet decided): pair the httpOnly refresh cookie with a second, non-httpOnly `csrfToken` cookie set at login. The frontend reads it and sends it back as an `X-CSRF-Token` header on `/refresh` and `/logout` calls; the backend rejects the request if the header doesn't match the cookie. A malicious cross-site page can trigger the request but can't read the CSRF cookie's value to forge the matching header.
 
 ---
 
@@ -176,18 +177,15 @@ Invalidate the current session's tokens.
 
 Auth: Required
 
-Request:
-
-    {
-      "refreshToken": "550e8400-e29b-41d4-a716..."
-    }
+Request: no body. The refresh token is read server-side from the httpOnly cookie.
 
 Response: 204
 
 Notes:
 - The access token is blacklisted until its natural expiry
-- The refresh token is deleted from the database
-- Client must discard both tokens on receipt of 204
+- The refresh token is deleted from the database, matched by the cookie's value
+- The `Set-Cookie` response header clears the refresh cookie (`Max-Age=0`) so it doesn't linger in the browser until its natural 7-day expiry
+- Client discards the in-memory access token on receipt of 204
 
 ---
 

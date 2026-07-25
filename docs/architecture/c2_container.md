@@ -29,7 +29,7 @@ The React SPA is compiled by Vite into a static bundle of HTML, CSS, and JavaScr
 **Responsibilities:**
 - Client-side routing and protected route enforcement via React Router
 - JWT access token management — stored in memory (not localStorage) to prevent XSS exposure
-- Refresh token management — stored in an httpOnly cookie, sent automatically on refresh calls
+- Refresh token management — stored in an httpOnly, Secure, SameSite=None cookie (frontend and backend are on different origins — Vercel and Render — so SameSite=None + Secure is required for the browser to send it cross-site at all), sent automatically by the browser on every request to the API origin. Axios is configured with `withCredentials: true` so the browser attaches it.
 - REST API calls via Axios with a request interceptor that attaches the Bearer token to every outgoing request and a response interceptor that handles 401 responses by transparently refreshing the token and retrying the original request
 - WebSocket connection management via SockJS + STOMP.js — connects on login, subscribes to conversation and presence topics, reconnects automatically on disconnect
 - Real-time UI updates driven by incoming STOMP frame events — new messages, typing indicators, reactions, read receipts, presence changes
@@ -119,7 +119,8 @@ All persistent data is owned by the Spring Boot monolith and stored in MongoDB A
 ## Security Notes
 
 - JWT access tokens are stored in React memory only — not in localStorage or sessionStorage — to prevent XSS-based token theft
-- Refresh tokens are stored in httpOnly cookies, inaccessible to JavaScript
+- Refresh tokens are stored in httpOnly, Secure, SameSite=None cookies, inaccessible to JavaScript
+- The backend's CORS configuration must echo back the specific Vercel origin and set `Access-Control-Allow-Credentials: true` — a wildcard (`*`) origin is incompatible with credentialed requests and would silently break the cookie flow
 - Cloudflare R2 files are never publicly accessible by permanent URL — all access is via presigned URLs with a 1-hour expiry
 - The Spring Boot backend enforces CORS to allow requests only from the known Vercel frontend origin
 - All external connections (MongoDB, Kafka, R2, Claude API) use TLS

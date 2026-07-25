@@ -98,7 +98,9 @@ com.orbit.auth/
 ├── filter/
 │   └── JwtAuthenticationFilter.java ← Spring Security filter, validates JWT per request
 └── config/
-    └── SecurityConfig.java         ← SecurityFilterChain bean, CORS, permit rules
+    └── SecurityConfig.java         ← SecurityFilterChain bean, CORS (explicit Vercel origin, 
+                                      allowCredentials(true) — required for the cross-origin refresh cookie, 
+                                      never a wildcard origin), permit rules
 ```
 
 **Key rules:**
