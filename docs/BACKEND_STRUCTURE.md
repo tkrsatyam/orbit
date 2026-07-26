@@ -87,12 +87,14 @@ com.orbit.auth/
 ├── AuthService.java
 ├── JwtService.java                 ← JWT generation, parsing, validation
 ├── TokenBlacklistService.java      ← access token blacklist (in-memory or Redis future)
+├── LoginAttemptService.java        ← per-email failed-login tracking, exponential backoff,
+│                                      temporary lockout (decided during backlog planning,
+│                                      not final — see ADR candidate for future review)
 ├── dto/
 │   ├── RegisterRequest.java
 │   ├── LoginRequest.java
-│   ├── RefreshRequest.java
-│   ├── LogoutRequest.java
-│   └── AuthResponse.java           ← returned on register/login/refresh
+│   └── AuthResponse.java           ← returned on register/login (with user) and refresh
+│                                      (user is null on refresh — no user object in that response)
 ├── model/
 │   └── RefreshToken.java           ← @Document, stores refresh token per session
 ├── filter/
@@ -105,7 +107,7 @@ com.orbit.auth/
 
 **Key rules:**
 - `JwtService` is the single class that creates and parses JWTs — no other class imports JWT libraries directly
-- `JwtAuthenticationFilter` validates the token and populates `SecurityContext` — nothing downstream re-validates
+- `JwtAuthenticationFilter` validates the token (signature, expiry, and blacklist status via `TokenBlacklistService`) and populates `SecurityContext` — nothing downstream re-validates. The blacklist check is what makes logout's blacklisting actually effective; without it a blacklisted token would remain valid until its natural expiry.
 - `SecurityConfig` lives in `auth/config/` rather than a top-level `config/` package because it belongs to the auth domain
 
 ---

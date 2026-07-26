@@ -1330,7 +1330,7 @@ Notes:
 
 ## Rate Limiting
 
-Applied at the application layer using a token bucket strategy per authenticated user:
+Applied at the application layer using a token bucket strategy, scoped per authenticated user for every endpoint below except Auth:
 
 | Endpoint Group                    | Limit                  |
 |-----------------------------------|------------------------|
@@ -1339,5 +1339,7 @@ Applied at the application layer using a token bucket strategy per authenticated
 | File upload                       | 10 uploads / minute    |
 | AI endpoints                      | 20 requests / minute   |
 | All other endpoints               | 100 requests / minute  |
+
+Auth endpoints (register, login) are scoped by IP address instead — there's no authenticated user yet at that point. Login additionally applies per-email failed-attempt tracking (exponential backoff, temporary lockout after repeated failures) on top of the IP-based limit above, since IP-only limiting is bypassable by a distributed attack spreading requests across many IPs — see `AuthService`/`LoginAttemptService` in `BACKEND_STRUCTURE.md`. This split was decided during backlog planning and isn't a final answer — revisit if implementation reveals a cleaner design.
 
 Exceeding a limit returns 429 Too Many Requests with a Retry-After header indicating seconds until the limit resets.

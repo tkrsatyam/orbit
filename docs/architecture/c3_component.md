@@ -75,7 +75,7 @@ Each controller maps to one resource group from `API_CONTRACTS.md` and contains 
 The service layer contains all business logic, validation beyond basic field constraints, and orchestration across repositories and cross-cutting infrastructure. This is where the integrity rules documented in `erd.md` are actually implemented.
 
 ### AuthService
-Handles registration, login, JWT issuance, and refresh token rotation. Uses BCrypt with cost factor 12 for password hashing, as specified in `TECH_STACK.md`. Calls `UserRepository` to persist new users and validate credentials on login.
+Handles registration, login, JWT issuance, and refresh token rotation. Uses BCrypt with cost factor 12 for password hashing, as specified in `TECH_STACK.md`. Calls `UserRepository` to persist new users and validate credentials on login. Also owns per-email failed-login tracking via `LoginAttemptService` — since only this service knows precisely when and why a login attempt failed, unlike `RateLimitFilter`, which runs pre-controller and only sees the incoming request (decided during backlog planning, not a final answer — revisit if implementation reveals a cleaner split).
 
 ### UserService
 Manages profile updates and coordinates avatar uploads. Delegates the actual file transfer to `R2StorageClient` and stores the resulting URL on the user document via `UserRepository`.
@@ -131,7 +131,7 @@ Publishes events to the three Kafka topics defined in `TECH_STACK.md` and `DEPLO
 Consumes from all three Kafka topics. For each event, checks the local session registry maintained by `WebSocketConfig` and delivers to any matching sessions held by this instance. This is the component that implements the horizontal scaling solution documented in `discussions/002_websocket_scaling.md`.
 
 ### RateLimitFilter
-Applies the token bucket rate limits defined in `API_CONTRACTS.md`, scoped per authenticated user and per endpoint group. Sits in the filter chain ahead of all controllers.
+Applies the token bucket rate limits defined in `API_CONTRACTS.md`, scoped per endpoint group. Sits in the filter chain ahead of all controllers. Scoping key differs by endpoint: per authenticated user for every endpoint that requires auth, but IP-based for the two unauthenticated Auth endpoints (register, login) specifically, since there's no authenticated user yet at that point — "per authenticated user" cannot be the scoping key there. Login's additional per-email failed-attempt tracking (a stronger control than IP-based alone, per OWASP guidance) is owned separately by `AuthService`/`LoginAttemptService`, not this filter.
 
 ### GlobalExceptionHandler
 A `@RestControllerAdvice` component that catches exceptions thrown anywhere in the controller or service layers and converts them into the standard error envelope defined in `API_CONTRACTS.md`, ensuring consistent error responses across every endpoint without each controller needing its own try-catch handling.
