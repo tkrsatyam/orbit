@@ -123,16 +123,19 @@ com.orbit.user/
 ├── UserRepository.java
 ├── dto/
 │   ├── UpdateProfileRequest.java
-│   ├── UserProfileResponse.java    ← public profile shape (no email)
+│   ├── UserProfileResponse.java    ← public profile shape (no email) — GET /{userId}
 │   └── UserSearchResponse.java     ← search result shape with connectionStatus
 └── model/
     └── User.java                   ← @Document("users")
 ```
 
+**Flagged, not yet resolved:** `GET /users/me`'s response includes `email` (per `API_CONTRACTS.md`), but no DTO in this package or `com.orbit.auth` is documented for that shape — `UserProfileResponse` is explicitly the *no-email* public shape. Needs a decision during implementation: either add a dedicated `SelfProfileResponse.java` here, or confirm/document a deliberate reuse of `AuthResponse`'s user shape across packages. Not resolved during backlog planning — check this before/during building the self-fetch endpoint.
+
 **Key rules:**
 - `UserController` resolves the authenticated user from `@AuthenticationPrincipal` — never from a request body
 - Avatar upload is coordinated here but the actual R2 call goes through `common/storage/R2StorageClient`
 - `UserRepository` is shared by `AuthService` for credential lookups — repositories are shared across packages when they access the same collection
+- `UserController` also exposes `POST`/`DELETE /users/{userId}/block` — matching this package's URL prefix — but `UserService.blockUser()`/`unblockUser()` are thin delegating methods only; all actual `Contact` document manipulation stays owned by `ContactService`, which already owns every other status transition on that model. See `docs/discussions/013_block_endpoint_design.md`.
 
 ---
 
@@ -158,6 +161,8 @@ com.orbit.contact/
 - The call is wrapped in a MongoDB multi-document transaction
 - `ContactService.declineRequest()` hard-deletes the `Contact` document — no cross-package call, no transaction needed, same mechanism as unfriend/remove. See `docs/discussions/008_connection_request_decline_strategy.md`.
 - `ContactService` exposes a block-status lookup that `MessageService` and `UserService` call on the message-send and profile-lookup paths respectively — this is the same cross-package pattern as the two calls above, just consumed by two additional packages. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
+- `ContactService.blockUser()`/`unblockUser()` own the actual `Contact` document upsert (update if a document exists between the two users, create if not) — called from `UserService`, not exposed directly via `ContactController`, since the route lives under `/users/{userId}/block`. See `docs/discussions/013_block_endpoint_design.md`.
+- `ContactService.blockUser()`/`unblockUser()` are exposed via `ContactController` under the `/users/{userId}/block` route (not `/contacts/`) despite living in the contact package — blocking is keyed by target user identity, not by an existing contact record, and upserts the `Contact` document server-side (update if one exists, create if not). See `docs/discussions/013_block_endpoint_design.md`.
 
 ---
 

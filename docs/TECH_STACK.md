@@ -158,3 +158,5 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 | Pin limit overflow behavior          | [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)                                     |
 | Mute and notification interaction    | [`discussions/010_mute_notification_interaction.md`](./discussions/010_mute_notification_interaction.md)               |
 | Message Attachment Cleanup on Delete | [`discussions/011_message_attachment_cleanup_on_delete.md`](./discussions/011_message_attachment_cleanup_on_delete.md) |
+| `@ask` mention behavior              | [`discussions/012_ask_mention_behavior.md`](./discussions/012_ask_mention_behavior.md)                                 |
+| Blocking endpoint design             | [`discussions/013_block_endpoint_design.md`](./discussions/013_block_endpoint_design.md)                              |

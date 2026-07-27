@@ -208,6 +208,8 @@ Response 200:
       "createdAt": "2026-06-27T10:30:00Z"
     }
 
+Note: flagged during backlog planning, not yet resolved — this response includes `email`, but no backend DTO is currently documented for this exact shape (see `com.orbit.user` in `BACKEND_STRUCTURE.md` — `UserProfileResponse` is explicitly the no-email shape used by `GET /{userId}` instead). Decide during implementation whether this needs its own DTO or deliberately reuses another one.
+
 ---
 
 ### PATCH /api/v1/users/me
@@ -436,18 +438,30 @@ Response: 204
 
 ---
 
-### POST /api/v1/contacts/{contactId}/block
+### POST /api/v1/users/{userId}/block
 
-Block a user.
+Block a user — works whether any prior contact relationship exists (see `discussions/013_block_endpoint_design.md`).
 
 Auth: Required
 
 Response: 204
 
 Notes:
-- Blocking removes the existing contact relationship if present
+- Keyed by the target user's `userId`, not a `contactId` — if an existing `contacts` document (PENDING or CONNECTED) exists between the two users, its status is updated to BLOCKED; if none exists, a new one is created directly with status BLOCKED
 - Blocked user cannot send connection requests or messages
 - Blocked user does not appear in search results for the blocker
+
+### DELETE /api/v1/users/{userId}/block
+
+Unblock a user.
+
+Auth: Required
+
+Response: 204
+
+Notes:
+- Hard-deletes the `contacts` document entirely — does not restore whatever status (if any) existed before the block, consistent with unfriend's hard-delete behavior (`discussions/006_contact_removal_strategy.md`)
+- Reconnecting afterward requires a fresh connection request
 
 ---
 
