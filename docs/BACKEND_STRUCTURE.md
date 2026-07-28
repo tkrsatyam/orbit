@@ -162,7 +162,6 @@ com.orbit.contact/
 - `ContactService.declineRequest()` hard-deletes the `Contact` document — no cross-package call, no transaction needed, same mechanism as unfriend/remove. See `docs/discussions/008_connection_request_decline_strategy.md`.
 - `ContactService` exposes a block-status lookup that `MessageService` and `UserService` call on the message-send and profile-lookup paths respectively — this is the same cross-package pattern as the two calls above, just consumed by two additional packages. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
 - `ContactService.blockUser()`/`unblockUser()` own the actual `Contact` document upsert (update if a document exists between the two users, create if not) — called from `UserService`, not exposed directly via `ContactController`, since the route lives under `/users/{userId}/block`. See `docs/discussions/013_block_endpoint_design.md`.
-- `ContactService.blockUser()`/`unblockUser()` are exposed via `ContactController` under the `/users/{userId}/block` route (not `/contacts/`) despite living in the contact package — blocking is keyed by target user identity, not by an existing contact record, and upserts the `Contact` document server-side (update if one exists, create if not). See `docs/discussions/013_block_endpoint_design.md`.
 
 ---
 

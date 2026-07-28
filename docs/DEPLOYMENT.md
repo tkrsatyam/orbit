@@ -184,11 +184,11 @@ Frontend starts on `http://localhost:5173`.
 | `JWT_SECRET`                  | Yes      | HS256 signing secret, minimum 256 bits                         |
 | `JWT_ACCESS_TOKEN_EXPIRY_MS`  | Yes      | Access token TTL in milliseconds (default 900000 = 15 min)     |
 | `JWT_REFRESH_TOKEN_EXPIRY_MS` | Yes      | Refresh token TTL in milliseconds (default 604800000 = 7 days) |
-| `R2_ACCOUNT_ID`               | Phase 3+ | Cloudflare account ID                                          |
-| `R2_ACCESS_KEY_ID`            | Phase 3+ | R2 API access key                                              |
-| `R2_SECRET_ACCESS_KEY`        | Phase 3+ | R2 API secret key                                              |
-| `R2_BUCKET_NAME`              | Phase 3+ | R2 bucket name                                                 |
-| `R2_PUBLIC_URL`               | Phase 3+ | Public base URL for R2 objects                                 |
+| `R2_ACCOUNT_ID`               | Phase 2+ | Cloudflare account ID                                          |
+| `R2_ACCESS_KEY_ID`            | Phase 2+ | R2 API access key                                              |
+| `R2_SECRET_ACCESS_KEY`        | Phase 2+ | R2 API secret key                                              |
+| `R2_BUCKET_NAME`              | Phase 2+ | R2 bucket name                                                 |
+| `R2_PUBLIC_URL`               | Phase 2+ | Public base URL for R2 objects                                 |
 | `ANTHROPIC_API_KEY`           | Phase 4+ | Claude API key for AI features                                 |
 
 ### Frontend — full reference
@@ -308,7 +308,7 @@ The Render free tier spins down inactive services after 15 minutes of inactivity
 
 4. Note the bootstrap server URL, SASL username, and SASL password from the cluster details page
 
-### 3. Cloudflare R2 (Phase 3+)
+### 3. Cloudflare R2 (Phase 2+)
 
 1. Create a Cloudflare account at [cloudflare.com](https://cloudflare.com)
 2. Navigate to R2 in the dashboard
