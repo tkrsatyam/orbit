@@ -686,6 +686,7 @@ Response 200:
 Notes:
 - One reaction per user per message — sending a new emoji replaces the user's existing reaction
 - Sending the same emoji the user already has removes it (toggle)
+- 403 if the reactor is blocked by the message's other participant in a 1:1 conversation — see `discussions/007_blocking_behavior.md`, Decision 10
 
 ---
 

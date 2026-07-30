@@ -69,6 +69,15 @@ This was the central open question, given the project's non-negotiable "persist 
 - **Option A — Leave `blockedMessages` unindexed for text search; accept that B's blocked-out messages are unsearchable.** Would be a silent, undesirable inconsistency — B could see a blocked-out message in scrollback but not find it via search, for no principled reason.
 - **Option B — Add the same compound text index to `blockedMessages` now, so Phase 3's search endpoint can merge both collections the same way `GET .../messages` already does (chosen).** The index is added at schema-definition time in this ADR; the search endpoint itself remains Phase 3 scope (`P3-03`), per the project rule that Phase 2/3 work does not begin until Phase 1 is fully deployed. This avoids a retrofit later.
 
+### 10. Reactions during a block (added Phase 2 backlog planning, P2-01)
+
+A gap found late: `addReaction()`/`removeReaction()` were never checked against blocking at all, unlike `sendMessage()`. Reference-app research (Instagram support docs, current as of this decision) confirmed blocking only ever prevents *new* content from reaching the other person — it never retroactively filters existing content, and edit/delete of already-delivered content stay completely unaffected by a block. A reaction is new content, same bucket as a new message; edit and delete are not, so they need no special handling here at all.
+
+- **Option A — Reject the reaction attempt outright for a blocked relationship, matching Instagram's confirmed behavior (chosen).** Reuses the exact same block-status lookup `sendMessage()` already calls — one guard at the single write entry point (`addReaction()`), reused rather than duplicated.
+- **Option B — Persist normally, filter out blocked-authors' reactions at every read/broadcast path.** Rejected: correctness would depend on every current *and future* place that reads or serves reactions (history fetch today; search, notification digests, exports, anything added later) remembering to apply the same filter — a compounding maintenance risk with no clean single enforcement point, unlike messages' `blockedMessages` split, which only needs a write-time decision and no read-side filtering at all.
+
+Edit and delete require no equivalent decision — both operate on content already delivered, and are unaffected by blocking in every reference app checked.
+
 ---
 
 ## Decision
@@ -80,6 +89,7 @@ Orbit's blocking model is **asymmetric by design**: A (the blocker) retains full
 - **Messaging:** B's messages to A are persisted to a new `blockedMessages` collection — not `messages` — with the identical schema shape (including `file`, `reactions`, `edited`/`deleted`, `quotedMessage`, and a scoped compound text index), minus `readBy`, which has no possible value in a document only its own sender will ever see. The API response to B is indistinguishable from a normal successful send. Nothing is ever published to Kafka for these messages, and nothing ever migrates from `blockedMessages` to `messages`, including after unblock.
 - **Reads:** `GET .../messages` (and, in Phase 3, message search) merge `messages` with `blockedMessages` scoped strictly to `senderId == requester`. This scoping is what keeps A from ever seeing B's echoed messages — no additional flag or block-status check is needed at read time, because the scoping rule itself is the filter.
 - **Edit/delete/react:** These operations on a blocked-out message check both `messages` and `blockedMessages` when locating the message by ID. This is a bounded, fixed addition to three existing methods, not an open-ended cost.
+- **Reactions from a blocked user (Decision 10):** `addReaction()`/`removeReaction()` reject the attempt with `403` if the reactor is blocked by the message's other participant in a 1:1 conversation — same block-status check already used by `sendMessage()`, applied at the single write entry point. Edit and delete are unaffected by blocking (they modify already-delivered content, not new incoming content). See Option A in Decision 10 above for the full reasoning.
 - **Composer UI:** A's message composer is disabled/hidden client-side when viewing a blocked conversation. B's composer behaves identically to normal.
 - **Groups:** Message delivery in shared groups is completely unaffected by a 1:1 block between two members. Presence display is the one exception — A's online status remains hidden from B even inside a shared group's member list.
 - **Typing indicators:** Suppressed from B to A, consistent with all other one-directional signals.
