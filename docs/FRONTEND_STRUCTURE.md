@@ -374,17 +374,18 @@ pages/DiscoverPage.jsx + components/group/GroupDiscoverFeed
 
 ### Phase 2
 ```
-components/message/MessageReactions + QuotedMessage + FileMessage
+components/message/MessageReactions + QuotedMessage
 hooks/useNotifications.js
 context/NotificationContext.jsx
 components/contact/ContactRequestBadge
-hooks/useFileUpload.js
 components/profile/EditProfileForm
 ```
 
 ### Phase 3
 ```
 components/search/
+components/message/FileMessage.jsx  ← image preview or file download card (moved here from Phase 2 — Phase 2 only uses R2 for avatars/group images, not message attachments)
+hooks/useFileUpload.js              ← moved here from Phase 2 — only needed once message file upload exists
 services/searchService.js
 hooks/useInfiniteMessages.js        ← replaces basic pagination
 messageService.js uploadFile

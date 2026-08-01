@@ -67,6 +67,9 @@ Indexes:
 - email (unique)
 - displayName (text index for search)
 
+Reserved system user — BOT_USER_ID:
+One document in this collection is pre-seeded by `DataInitializer` on application startup (Phase 4 dependency, idempotent) as the sender identity for all AI-generated bot messages (`/summary` and `@ask`). This document has no `email`, no `passwordHash`, no `role`, and cannot authenticate — it exists solely as a `senderId` reference for bot messages. Its `_id` is stored as the `BOT_USER_ID` constant and referenced by `MessageService.insertBotMessage()`. Introduced in Phase 4; `DataInitializer` is a no-op in Phases 1–3.
+
 Integrity rules:
 - On user deletion: soft delete preferred — set deletedAt field, preserve document for message history continuity
 - Hard delete requires: remove from all group memberIds arrays, soft delete all messages authored by this user, remove all contact documents where this user is a participant, delete all notification documents for this user

@@ -1028,6 +1028,8 @@ Response: 204
 
 Response 409: group already has 10 pinned messages — unpin one before pinning another. No auto-eviction of the oldest pin. See [`discussions/009_pin_limit_overflow.md`](./discussions/009_pin_limit_overflow.md)
 
+**Flagged during backlog planning:** unlike every other state-change affecting all group participants (message send/edit/delete, reactions, read receipts — all of which have a corresponding `/topic/conversations/{conversationId}/...` broadcast), pin/unpin has no documented WebSocket broadcast destination. This means group members currently only see pin changes on next page reload. Decide during implementation whether to add a `/topic/conversations/{conversationId}/pins` broadcast — if yes, add it to the WebSocket Contracts section below and to `BACKEND_STRUCTURE.md`'s `GroupService` description.
+
 ---
 
 ### DELETE /api/v1/groups/{groupId}/messages/{messageId}/pin
@@ -1038,6 +1040,8 @@ Unpin a message in a group.
 Auth: Required — Admin only
 
 Response: 204
+
+**Flagged during backlog planning:** same missing WebSocket broadcast as the pin endpoint above — see that note for context.
 
 ---
 
