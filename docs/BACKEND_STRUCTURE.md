@@ -6,7 +6,7 @@ This document defines the exact package layout, class naming conventions, and fi
 
 ## Technology Stack Reference
 
-- **Java 21**
+- **Java 25**
 - **Spring Boot 4.x**
 - **Spring Web** — REST endpoints
 - **Spring WebSocket + STOMP** — real-time messaging

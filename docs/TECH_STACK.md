@@ -37,7 +37,7 @@ This document covers every technology decision in Orbit, with justification for 
 - **What:** Java framework for building production-ready backend applications
 - **Why:** Primary backend framework with production experience from the companion portfolio project (JobTrackr). Version 4.x is the current stable generation built on Spring Framework 7, with first-class Java 25 (LTS) support — while retaining Java 17 compatibility — and a modularised codebase.
 - **Version:** Confirm from `pom.xml` after project initialisation
-- **Java Version:** 21 (current LTS)
+- **Java Version:** 25 (current LTS)
 - **No Spring Cloud:** Spring Cloud is explicitly excluded. It solves distributed systems problems (service discovery, gateway routing, centralised config) that do not exist in a monolithic architecture. Its inclusion would add version compatibility risk with no benefit.  
  See [`discussions/001_monolith_vs_microservices.md`](./discussions/001_monolith_vs_microservices.md)
 
