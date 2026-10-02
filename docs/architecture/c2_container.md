@@ -40,7 +40,7 @@ The React SPA is compiled by Vite into a static bundle of HTML, CSS, and JavaScr
 ---
 
 ### Spring Boot Monolith
-**Technology:** Spring Boot 4.x, Java 21, Spring WebSocket + STOMP, Spring Security, Spring Data MongoDB, Spring Kafka
+**Technology:** Spring Boot 4.x, Java 25, Spring WebSocket + STOMP, Spring Security, Spring Data MongoDB, Spring Kafka
 **Deployed on:** Render (free tier web service)
 **Port:** 8080 (local), assigned by Render in production
 

@@ -65,10 +65,11 @@ cd backend
 docker compose up -d
 ```
 
-This starts three containers:
+This starts four containers:
 - `orbit-mongo` — MongoDB on port 27017
 - `orbit-kafka` — Kafka broker on port 9092
 - `orbit-zookeeper` — Zookeeper on port 2181 (required by Kafka)
+- `orbit-kafbat-ui` — Kafbat UI on port 8090 (local only, see below)
 
 Verify containers are running:
 
@@ -88,6 +89,7 @@ What to check in Kafbat during development:
 - Topics tab: confirms chat.messages, chat.presence, and chat.notifications exist
 - Messages tab per topic: shows the exact payload of each published event
 - Consumer Groups tab: shows the orbit-backend consumer group and its offset per partition — if offset is not advancing, the consumer is not picking up events
+- Topics appear only after something first writes to them, because local Kafka auto-creates them on first use
 
 Kafbat is a local development tool only. It is not deployed to Render or any production environment.
 
@@ -136,8 +138,10 @@ openssl rand -hex 32
 ```bash
 ./mvnw spring-boot:run
 ```
+Run this from backend/. Spring reads backend/.env relative to the working directory.
 
-Backend starts on `http://localhost:8080`. On first run, Spring Data MongoDB creates all collections and indexes automatically via `@Document` and `@Indexed` annotations.
+Backend starts on `http://localhost:8080`. On first run, Spring Data MongoDB creates all collections and indexes automatically via `@Document` and `@Indexed` annotations.  
+CORRECTION: Collections, validators and indexes are applied at startup by MigrationService, not by the above annotations.
 
 Health check:
 
@@ -145,7 +149,7 @@ Health check:
 curl http://localhost:8080/actuator/health
 ```
 
-Expected response: `{"status":"UP"}`
+Expected response: `{"groups":["liveness","readiness"],"status":"UP"}`
 
 ### Step 5 — Configure frontend environment
 
@@ -232,6 +236,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: orbit-kafka
+    restart: on-failure
     depends_on:
       - zookeeper
     ports:
@@ -239,12 +244,14 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
 
   kafbat-ui:
-    image: ghcr.io/kafbat/kafka-ui:v1.6.4
+    image: ghcr.io/kafbat/kafka-ui:v1.5.0
     container_name: orbit-kafbat-ui
     ports:
       - "8090:8080"
@@ -252,7 +259,7 @@ services:
       - kafka
     environment:
       KAFKA_CLUSTERS_0_NAME: orbit-local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
 
 volumes:
   orbit-mongo-data:
@@ -569,6 +576,9 @@ Docker containers may not be running. Run `docker compose up -d` from the `backe
 
 **Backend fails to start — Kafka connection refused**
 Same cause — Kafka container not running or still initialising. Kafka takes 10–15 seconds after container start before it accepts connections. Add a retry delay or run `docker compose logs kafka` to confirm it is ready.
+
+**Kafka container exits right after `docker compose up -d` (`NodeExists` in `docker compose logs kafka`)**
+Zookeeper still holds the previous broker registration and expires it after about 18 seconds. The Kafka service restarts automatically, so this usually resolves itself. If not, wait 20 seconds and run `docker compose up -d` again. Running `docker compose down` before shutting down your machine avoids it.
 
 **WebSocket connections failing locally**
 Confirm the backend is running on port 8080 and `VITE_WS_URL` in `frontend/.env` matches exactly: `ws://localhost:8080/ws`. HTTPS/WSS is not required locally.

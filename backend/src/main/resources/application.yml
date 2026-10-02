@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: orbit
+  config:
+    import: "optional:file:.env[.properties]"
+  mongodb:
+    uri: ${MONGODB_URI}
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
+    
+server:
+  port: ${SERVER_PORT:8080}
