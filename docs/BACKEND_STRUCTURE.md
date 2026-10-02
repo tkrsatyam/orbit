@@ -368,10 +368,10 @@ com.orbit.common/
 
 ```yaml
 spring:
-  data:
-    mongodb:
-      uri: ${MONGODB_URI}
-      database: orbit
+  config:
+    import: "optional:file:.env[.properties]"
+  mongodb:
+    uri: ${MONGODB_URI}
 
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}

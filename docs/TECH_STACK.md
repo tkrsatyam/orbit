@@ -10,12 +10,17 @@ This document covers every technology decision in Orbit, with justification for 
 - **What:** UI library for building component-based interfaces
 - **Why:** Most listed frontend requirement in target job descriptions.
   The developer has production Angular experience — React adds demonstrated framework flexibility to the resume. Conceptually close to Angular signals, reducing the learning curve.
-- **Version:** Confirm from `package.json` after Vite scaffold
+- **Version:** 19.3.0 (confirmed at scaffold time)
 - **ADR Reference:** [`discussions/003_frontend_framework.md`](./discussions/003_frontend_framework.md)
 
 ### Vite
 - **What:** Frontend build tool and dev server
 - **Why:** Fastest development experience for React projects. Near-instant hot module replacement. Zero configuration to get started. Industry standard for new React projects in 2025+, replacing Create React App.
+- **Version:** 8.3.x (confirmed at scaffold time)
+
+### ESLint
+- **What:** JavaScript linter generated with the Vite scaffold (`npm run lint`)
+- **Why:** Catches bugs early, including incorrect React hook usage via `eslint-plugin-react-hooks`. Chosen over Oxlint for its reference implementation of the hooks rules and broader ecosystem.
 
 ### React Router
 - **What:** Client-side routing library for React
@@ -36,7 +41,7 @@ This document covers every technology decision in Orbit, with justification for 
 ### Spring Boot 4.x
 - **What:** Java framework for building production-ready backend applications
 - **Why:** Primary backend framework with production experience from the companion portfolio project (JobTrackr). Version 4.x is the current stable generation built on Spring Framework 7, with first-class Java 25 (LTS) support — while retaining Java 17 compatibility — and a modularised codebase.
-- **Version:** Confirm from `pom.xml` after project initialisation
+- **Version:** 4.1.1 (confirmed at scaffold time)
 - **Java Version:** 25 (current LTS)
 - **No Spring Cloud:** Spring Cloud is explicitly excluded. It solves distributed systems problems (service discovery, gateway routing, centralised config) that do not exist in a monolithic architecture. Its inclusion would add version compatibility risk with no benefit.  
  See [`discussions/001_monolith_vs_microservices.md`](./discussions/001_monolith_vs_microservices.md)
@@ -140,6 +145,10 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 ### Maven
 - **What:** Java build tool
 - **Why:** Standard for Spring Boot projects. Spring Initializr generates Maven projects by default. `./mvnw` wrapper committed to the repo so no local Maven installation is required.
+ 
+### Lombok
+- **What:** Annotation processor that generates boilerplate (getters, setters, constructors, builders) at compile time
+- **Why:** Reduces boilerplate in entities and DTOs. Added at scaffold time via Spring Initializr; the version is managed by the Spring Boot BOM (1.18.46 at scaffold time). Java 25 requires Lombok 1.18.40 or later.
 
 ---
 
