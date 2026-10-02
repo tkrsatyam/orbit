@@ -23,6 +23,7 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: orbit-kafka
+    restart: on-failure
     depends_on:
       - zookeeper
     ports:
