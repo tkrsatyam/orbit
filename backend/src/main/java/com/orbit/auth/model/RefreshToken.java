@@ -11,6 +11,10 @@ import org.springframework.data.mongodb.core.mapping.FieldType;
 
 import java.time.Instant;
 
+/**
+ * One document per active session. Created at register/login, updated in place on
+ * each rotation, deleted on logout. See docs/architecture/erd.md (refreshTokens).
+ */
 @Document(collection = "refreshTokens")
 @Getter
 @Setter
