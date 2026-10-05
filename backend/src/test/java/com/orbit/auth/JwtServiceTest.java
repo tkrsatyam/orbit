@@ -4,7 +4,9 @@ import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.InvalidTokenException;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,6 +24,10 @@ class JwtServiceTest {
                 new OrbitProperties.Jwt(secret, accessTokenExpiryMs, 604_800_000L),
                 new OrbitProperties.Cors("http://localhost:5173"));
         return new JwtService(properties);
+    }
+    
+    private static String base64Url(String json) {
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(json.getBytes(StandardCharsets.UTF_8));
     }
     
     @Test
@@ -60,13 +66,22 @@ class JwtServiceTest {
     
     @Test
     void tokenWithSwappedPayloadIsRejected() {
-        String[] victim = jwtService.generateAccessToken("user-1").split("\\.");
-        String[] attacker = jwtService.generateAccessToken("user-2").split("\\.");
+        String[] original = jwtService.generateAccessToken("user-1").split("\\.");
+        String[] other = jwtService.generateAccessToken("user-2").split("\\.");
 
-        // header + payload from one token, signature from another
-        String forged = victim[0] + "." + attacker[1] + "." + victim[2];
+        // header and signature from user-1's token, payload from user-2's token:
+        // the signature no longer matches the payload, so verification must fail
+        String forged = original[0] + "." + other[1] + "." + original[2];
         
         assertThatThrownBy(() -> jwtService.parseAccessToken(forged)).isInstanceOf(InvalidTokenException.class);
+    }
+    
+    @Test
+    void unsignedTokenWithAlgNoneIsRejected() {
+        String unsigned = base64Url("{\"alg\":\"none\"}") + "."
+                + base64Url("{\"sub\":\"user-1\",\"exp\":4102444800}") + ".";
+        
+        assertThatThrownBy(() -> jwtService.parseAccessToken(unsigned)).isInstanceOf(InvalidTokenException.class);
     }
     
     @Test
