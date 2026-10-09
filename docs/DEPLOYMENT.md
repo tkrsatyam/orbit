@@ -288,6 +288,16 @@ Kafka topics are auto-created on first publish. In production, Upstash Kafka req
 
 The Render free tier spins down inactive services after 15 minutes of inactivity. The first request after spin-down takes 30–60 seconds. This is expected behaviour on the free tier. For demo purposes, a simple uptime ping service (such as UptimeRobot's free tier) can ping the health endpoint every 10 minutes to keep the instance warm.
 
+### Important — Cross-Site Refresh Cookie
+
+The refresh token cookie is `httpOnly; Secure; SameSite=None` because the frontend (Vercel) and the API (Render) are different sites. Consequences:
+
+- **HTTPS is mandatory on the API.** A `Secure` cookie is never sent over plain HTTP (except to localhost). Render provides HTTPS automatically; a self-managed host (for example a bare EC2 instance) does not.
+- **It is a third-party cookie from the browser's point of view.** Safari blocks third-party cookies by default, and other browsers' policies keep changing, so `/auth/refresh` may fail in some browsers in production. After the first deploy, test login, a page reload and token refresh in Safari and Firefox as well as Chrome.
+- **Mitigation: put the frontend and API on the same site.** With a custom domain, for example `app.<domain>` and `api.<domain>`, the cookie is no longer third-party. Set `orbit.cookie.same-site` (added in ORDM-27) to `Lax` or `Strict`. This applies to any host (Vercel/Render or AWS), because the site layout matters, not the provider.
+
+The CSRF decision for this cookie is recorded in `API_CONTRACTS.md` (POST /api/v1/auth/refresh).
+
 ---
 
 ## Production Setup — One Time

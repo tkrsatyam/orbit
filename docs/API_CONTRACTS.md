@@ -167,7 +167,7 @@ Notes:
 - Refresh token rotation applied — a new refresh token is generated on every call and set via `Set-Cookie` (same attributes as at login), replacing the previous cookie. The old refresh token is immediately invalidated server-side.
 - This is a production security practice that limits the blast radius of a stolen refresh token.
 - 401 if the cookie is missing, expired, or the token isn't found/already rotated — the frontend's response interceptor treats this as "refresh failed" and redirects to login.
-- Optional CSRF hardening (recommend, not yet decided): pair the httpOnly refresh cookie with a second, non-httpOnly `csrfToken` cookie set at login. The frontend reads it and sends it back as an `X-CSRF-Token` header on `/refresh` and `/logout` calls; the backend rejects the request if the header doesn't match the cookie. A malicious cross-site page can trigger the request but can't read the CSRF cookie's value to forge the matching header.
+- CSRF protection for the refresh cookie (decided): no double-submit cookie. The cookie is `SameSite=None` because the frontend and API are on different sites, but a cross-site page cannot read the `/refresh` response (CORS allows only the configured frontend origin), and `/logout` requires the access token in the `Authorization` header, which a cross-site page cannot attach. As defence in depth, the backend rejects a `/refresh` request with 403 when an `Origin` header is present and does not match `orbit.cors.allowed-origin`. A double-submit `csrfToken` cookie was rejected because a frontend on another domain cannot read a cookie set by the API's domain. Revisit if the frontend and API move to the same site, where `SameSite=Lax/Strict` becomes the primary defence.
 
 ---
 
