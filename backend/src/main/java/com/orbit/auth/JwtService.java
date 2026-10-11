@@ -45,7 +45,7 @@ public class JwtService {
      * 
      * @throws com.orbit.common.exception.InvalidTokenException if the token is malformed, tampered with or expired
      */
-    public AccessTokenClaims parseAccessToken(String token) {
+    public AccessTokenClaims validateToken(String token) {
         try {
             Claims claims = Jwts.parser()
                     .verifyWith(signingKey)

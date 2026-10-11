@@ -53,7 +53,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private void authenticate(String token) {
         try {
-            AccessTokenClaims claims = jwtService.parseAccessToken(token);
+            AccessTokenClaims claims = jwtService.validateToken(token);
             if (tokenBlacklistService.isBlackListed(claims.tokenId())) {
                 return;
             }

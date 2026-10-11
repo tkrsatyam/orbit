@@ -82,7 +82,7 @@ class JwtAuthenticationFilterTest {
     @Test
     void blacklistedTokenStaysUnauthenticated() throws Exception {
         String token = jwtService.generateAccessToken("user-1");
-        AccessTokenClaims claims = jwtService.parseAccessToken(token);
+        AccessTokenClaims claims = jwtService.validateToken(token);
         blacklist.blacklist(claims.tokenId(), claims.expiresAt());
         request.addHeader("Authorization", "Bearer " + token);
 

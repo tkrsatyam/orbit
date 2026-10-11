@@ -21,6 +21,6 @@ public record OrbitProperties(
     }
     
     public record Cors(
-    @NotBlank String allowedOrigin) {
+            @NotBlank String allowedOrigin) {
     }
 }

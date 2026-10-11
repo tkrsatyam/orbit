@@ -34,7 +34,7 @@ class JwtServiceTest {
     void generatedTokenParsesBackToTheSameUser() {
         String token = jwtService.generateAccessToken("user-1");
         
-        AccessTokenClaims claims = jwtService.parseAccessToken(token);
+        AccessTokenClaims claims = jwtService.validateToken(token);
         
         assertThat(claims.userId()).isEqualTo("user-1");
         assertThat(claims.tokenId()).isNotBlank();
@@ -43,8 +43,8 @@ class JwtServiceTest {
     
     @Test
     void eachTokenGetsItsOwnId() {
-        AccessTokenClaims first = jwtService.parseAccessToken(jwtService.generateAccessToken("user-1"));
-        AccessTokenClaims second = jwtService.parseAccessToken(jwtService.generateAccessToken("user-1"));
+        AccessTokenClaims first = jwtService.validateToken(jwtService.generateAccessToken("user-1"));
+        AccessTokenClaims second = jwtService.validateToken(jwtService.generateAccessToken("user-1"));
         
         assertThat(first.tokenId()).isNotEqualTo(second.tokenId());
     }
@@ -54,14 +54,14 @@ class JwtServiceTest {
         JwtService alreadyExpired = serviceWith(SECRET, -1_000L);
         String token = alreadyExpired.generateAccessToken("user-1");
         
-        assertThatThrownBy(() -> jwtService.parseAccessToken(token)).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtService.validateToken(token)).isInstanceOf(InvalidTokenException.class);
     }
     
     @Test
     void tokenSignedWithAnotherSecretIsRejected() {
         String token = serviceWith(OTHER_SECRET, FIFTEEN_MINUTES_MS).generateAccessToken("user-1");
         
-        assertThatThrownBy(() -> jwtService.parseAccessToken(token)).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtService.validateToken(token)).isInstanceOf(InvalidTokenException.class);
     }
     
     @Test
@@ -73,7 +73,7 @@ class JwtServiceTest {
         // the signature no longer matches the payload, so verification must fail
         String forged = original[0] + "." + other[1] + "." + original[2];
         
-        assertThatThrownBy(() -> jwtService.parseAccessToken(forged)).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtService.validateToken(forged)).isInstanceOf(InvalidTokenException.class);
     }
     
     @Test
@@ -81,11 +81,11 @@ class JwtServiceTest {
         String unsigned = base64Url("{\"alg\":\"none\"}") + "."
                 + base64Url("{\"sub\":\"user-1\",\"exp\":4102444800}") + ".";
         
-        assertThatThrownBy(() -> jwtService.parseAccessToken(unsigned)).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtService.validateToken(unsigned)).isInstanceOf(InvalidTokenException.class);
     }
     
     @Test
     void garbageIsRejected() {
-        assertThatThrownBy(() -> jwtService.parseAccessToken("not-a-jwt")).isInstanceOf(InvalidTokenException.class);
+        assertThatThrownBy(() -> jwtService.validateToken("not-a-jwt")).isInstanceOf(InvalidTokenException.class);
     }
 }
