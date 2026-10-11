@@ -10,10 +10,10 @@ spring:
       auto-index-creation: true
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS}
-    
+
 server:
   port: ${SERVER_PORT:8080}
-  
+
 orbit:
   jwt:
     secret: ${JWT_SECRET}
@@ -21,3 +21,6 @@ orbit:
     refresh-token-expiry-ms: ${JWT_REFRESH_TOKEN_EXPIRY_MS:604800000}
   cors:
     allowed-origin: ${CORS_ALLOWED_ORIGIN:http://localhost:5173}
+  cookie:
+    secure: ${COOKIE_SECURE:true}
+    same-site: ${COOKIE_SAME_SITE:None}

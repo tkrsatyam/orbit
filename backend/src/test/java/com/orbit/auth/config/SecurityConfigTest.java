@@ -1,6 +1,7 @@
 package com.orbit.auth.config;
 
 import com.orbit.auth.AccessTokenClaims;
+import com.orbit.auth.AuthController;
 import com.orbit.auth.JwtService;
 import com.orbit.auth.TokenBlacklistService;
 import com.orbit.common.config.OrbitProperties;
@@ -17,8 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -40,6 +40,11 @@ class SecurityConfigTest {
 
     private int statusOf(MockHttpServletRequestBuilder request) throws Exception {
         return mockMvc.perform(request).andReturn().getResponse().getStatus();
+    }
+
+    /** True when the request got past Spring Security and reached Spring MVC (a controller, or a 404 for a missing one). */
+    private boolean reachedMvc(MockHttpServletRequestBuilder request) throws Exception {
+        return mockMvc.perform(request).andReturn().getHandler() != null;
     }
 
     @Test
@@ -75,16 +80,17 @@ class SecurityConfigTest {
     @Test
     void registerLoginAndRefreshArePublic() throws Exception {
         for (String path : List.of("/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh")) {
-            assertThat(statusOf(post(path))).as(path).isNotIn(401, 403);
+            assertThat(reachedMvc(post(path))).as(path).isTrue();
         }
     }
 
     @Test
     void publicEndpointsIgnoreABadAuthorizationHeader() throws Exception {
-        // A client with an expired access token must still be able to call /refresh
-        int status = statusOf(post("/api/v1/auth/refresh").header("Authorization", "Bearer expired-or-garbage"));
-
-        assertThat(status).isNotIn(401, 403);
+        // A client with an expired access token must still be able to call /refresh. Without a
+        // refresh cookie the controller itself answers 401, so we check that the request reached
+        // the controller instead of looking at the status.
+        mockMvc.perform(post("/api/v1/auth/refresh").header("Authorization", "Bearer expired-or-garbage"))
+                .andExpect(handler().handlerType(AuthController.class));
     }
 
     @Test

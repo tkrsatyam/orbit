@@ -22,7 +22,8 @@ class JwtServiceTest {
     private static JwtService serviceWith(String secret, long accessTokenExpiryMs) {
         OrbitProperties properties = new OrbitProperties(
                 new OrbitProperties.Jwt(secret, accessTokenExpiryMs, 604_800_000L),
-                new OrbitProperties.Cors("http://localhost:5173"));
+                new OrbitProperties.Cors("http://localhost:5173"),
+                new OrbitProperties.Cookie(true, "None"));
         return new JwtService(properties);
     }
     

@@ -43,6 +43,7 @@ public class SecurityConfig {
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 // Without a login mechanism Spring Security would answer 403 to anonymous requests.
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(

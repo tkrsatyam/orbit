@@ -5,9 +5,10 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;
 
-public interface RefreshTokenRepository extends MongoRepository<RefreshToken, String> {
-    
+public interface RefreshTokenRepository
+        extends MongoRepository<RefreshToken, String>, RefreshTokenRepositoryCustom {
+
     Optional<RefreshToken> findByToken(String token);
-    
+
     void deleteByToken(String token);
 }

@@ -15,7 +15,10 @@ import org.springframework.test.context.TestPropertySource;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,6 +49,10 @@ class RefreshTokenRepositoryTest {
     
     private List<IndexInfo> indexes() {
         return mongoTemplate.indexOps(RefreshToken.class).getIndexInfo();
+    }
+
+    private static Instant inSevenDays() {
+        return Instant.now().plus(Duration.ofDays(7));
     }
     
     @Test
@@ -96,5 +103,76 @@ class RefreshTokenRepositoryTest {
                 i.getIndexFields().getFirst().getKey().equals("expiresAt") 
                         && i.getExpireAfter().isPresent() 
                         && i.getExpireAfter().get().isZero());
+    }
+
+    @Test
+    void rotateReplacesTheTokenInPlace() {
+        RefreshToken original = repository.save(newToken("old-token"));
+
+        Optional<RefreshToken> rotated = repository.rotate("old-token", "new-token", inSevenDays());
+
+        assertThat(rotated).hasValueSatisfying(session -> {
+            assertThat(session.getId()).isEqualTo(original.getId());   // same document, updated in place
+            assertThat(session.getUserId()).isEqualTo(original.getUserId());
+            assertThat(session.getToken()).isEqualTo("new-token");
+            assertThat(session.getUpdatedAt()).isNotNull();
+        });
+        assertThat(repository.findByToken("old-token")).isEmpty();
+        assertThat(repository.findByToken("new-token")).isPresent();
+        assertThat(repository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void rotateRejectsAnUnknownToken() {
+        repository.save(newToken("tok-1"));
+
+        assertThat(repository.rotate("missing", "new-token", inSevenDays())).isEmpty();
+        assertThat(repository.findByToken("tok-1")).isPresent();   // untouched
+    }
+
+    @Test
+    void rotateRejectsAnExpiredToken() {
+        RefreshToken expired = newToken("expired-token");
+        expired.setExpiresAt(Instant.now().minus(Duration.ofMinutes(1)));
+        repository.save(expired);
+
+        assertThat(repository.rotate("expired-token", "new-token", inSevenDays())).isEmpty();
+    }
+
+    @Test
+    void aRotatedTokenCannotBeRotatedAgain() {
+        repository.save(newToken("old-token"));
+        repository.rotate("old-token", "new-token", inSevenDays());
+
+        assertThat(repository.rotate("old-token", "another-token", inSevenDays())).isEmpty();
+    }
+
+    @Test
+    void concurrentRotationOfTheSameTokenHasExactlyOneWinner() throws Exception {
+        repository.save(newToken("shared-token"));
+        Instant newExpiry = inSevenDays();
+        int attempts = 8;
+        ExecutorService pool = Executors.newFixedThreadPool(attempts);
+        CountDownLatch start = new CountDownLatch(1);
+
+        List<Future<Optional<RefreshToken>>> results = new ArrayList<>();
+        for (int i = 0; i < attempts; i++) {
+            String newValue = "rotated-" + i;
+            results.add(pool.submit(() -> {
+                start.await();   // all threads wait here, then fire at the same moment
+                return repository.rotate("shared-token", newValue, newExpiry);
+            }));
+        }
+        start.countDown();
+
+        int winners = 0;
+        for (Future<Optional<RefreshToken>> result : results) {
+            if (result.get(10, TimeUnit.SECONDS).isPresent()) {
+                winners++;
+            }
+        }
+        pool.shutdown();
+
+        assertThat(winners).isEqualTo(1);
     }
 }
