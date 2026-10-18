@@ -75,6 +75,8 @@ com.orbit.{feature}/
 
 DTOs and models are kept separate. Models map to MongoDB documents and carry `@Document` annotations. DTOs carry validation annotations and shape the API contract — they are never persisted directly.
 
+A feature package may group one cohesive concern into its own subpackage when its root grows large (see `auth/token/`); it is never split by layer (no `service/` or `repository/` subpackages).
+
 ---
 
 ## Package Detail — auth
@@ -83,10 +85,13 @@ Handles registration, login, JWT issuance, refresh token rotation, and logout.
 
 ```
 com.orbit.auth/
-├── AuthController.java
-├── AuthService.java
-├── JwtService.java                 ← JWT generation, parsing, validation
-├── TokenBlacklistService.java      ← access token blacklist (in-memory or Redis future)
+├── AuthController.java             ← /api/v1/auth/*; thin, delegates to AuthService
+├── AuthService.java                ← register, login, refresh (rotation), logout
+├── AuthTokens.java                 ← internal result of issuing/rotating a session (never serialized;
+│                                      toString hides both tokens)
+├── OriginVerifier.java             ← rejects a foreign Origin header on cookie-based endpoints; second
+│                                      line of defence behind the CORS filter — keep it
+├── RefreshCookieFactory.java       ← builds the refresh token cookie from the orbit.cookie.* settings
 ├── LoginAttemptService.java        ← per-email failed-login tracking, exponential backoff,
 │                                      temporary lockout (decided during backlog planning,
 │                                      not final — see ADR candidate for future review)
@@ -96,19 +101,28 @@ com.orbit.auth/
 │   └── AuthResponse.java           ← returned on register/login (with user) and refresh
 │                                      (user is null on refresh — no user object in that response)
 ├── model/
-│   └── RefreshToken.java           ← @Document, stores refresh token per session
+│   └── RefreshToken.java           ← @Document, one per active session, rotated in place
+├── token/                          ← everything that mints, validates, revokes or stores tokens
+│   ├── JwtService.java             ← JWT generation and validation (generateAccessToken, validateToken)
+│   ├── AccessTokenClaims.java      ← verified contents of an access token (userId, tokenId/jti, expiresAt)
+│   ├── TokenBlacklistService.java  ← access token blacklist keyed by jti (in-memory or Redis future)
+│   ├── RefreshTokenRepository.java ← Spring Data repository for refresh token sessions
+│   ├── RefreshTokenRepositoryCustom.java      ← atomic rotate(...) declaration (repository fragment)
+│   └── RefreshTokenRepositoryCustomImpl.java  ← single findAndModify via MongoTemplate
 ├── filter/
 │   └── JwtAuthenticationFilter.java ← Spring Security filter, validates JWT per request
 └── config/
-    └── SecurityConfig.java         ← SecurityFilterChain bean, CORS (explicit Vercel origin, 
-                                      allowCredentials(true) — required for the cross-origin refresh cookie, 
+    └── SecurityConfig.java         ← SecurityFilterChain bean, CORS (explicit Vercel origin,
+                                      allowCredentials(true) — required for the cross-origin refresh cookie,
                                       never a wildcard origin), permit rules
 ```
 
 **Key rules:**
 - `JwtService` is the single class that creates and parses JWTs — no other class imports JWT libraries directly
-- `JwtAuthenticationFilter` validates the token (signature, expiry, and blacklist status via `TokenBlacklistService`) and populates `SecurityContext` — nothing downstream re-validates. The blacklist check is what makes logout's blacklisting actually effective; without it a blacklisted token would remain valid until its natural expiry.
+- `JwtAuthenticationFilter` validates the token (signature, expiry, and blacklist status via `TokenBlacklistService`) and populates `SecurityContext` — nothing downstream re-validates. The blacklist check is what makes logout's blacklisting actually effective; without it a blacklisted token would remain valid until its natural expiry. The filter never rejects a request itself: a missing or invalid token leaves the request unauthenticated and `SecurityConfig` answers 401, so `/refresh` and `/login` keep working when the browser sends an expired access token.
 - `SecurityConfig` lives in `auth/config/` rather than a top-level `config/` package because it belongs to the auth domain
+- Refresh token rotation is one atomic `findAndModify` (match the token and a future `expiresAt`, replace the token and expiry in place), so two concurrent refreshes of the same token have exactly one winner
+- Dependencies inside the package are one-way: `token/` depends on `common/` and `model/`, never on `AuthService` or `AuthController`
 
 ---
 

@@ -1,0 +1,14 @@
+package com.orbit.auth.token;
+
+import com.orbit.auth.model.RefreshToken;
+import org.springframework.data.mongodb.repository.MongoRepository;
+
+import java.util.Optional;
+
+public interface RefreshTokenRepository
+        extends MongoRepository<RefreshToken, String>, RefreshTokenRepositoryCustom {
+
+    Optional<RefreshToken> findByToken(String token);
+
+    void deleteByToken(String token);
+}
