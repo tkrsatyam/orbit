@@ -1,10 +1,8 @@
 package com.orbit.common.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
-
-/** A cookie-based request came from an origin other than the configured frontend. Interim @ResponseStatus until ORDM-30. */
-@ResponseStatus(HttpStatus.FORBIDDEN)
+/**
+ * Thrown when a cookie-based request originates from an origin other than the configured frontend.
+ */
 public class InvalidOriginException extends RuntimeException {
 
     public InvalidOriginException() {
