@@ -1,12 +1,14 @@
 package com.orbit.auth.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.orbit.auth.filter.JwtAuthenticationFilter;
 import com.orbit.auth.token.JwtService;
 import com.orbit.auth.token.TokenBlacklistService;
-import com.orbit.auth.filter.JwtAuthenticationFilter;
 import com.orbit.common.config.OrbitProperties;
+import com.orbit.common.filter.RateLimitFilter;
+import com.orbit.common.ratelimit.TokenBucketRateLimiter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -15,7 +17,6 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -26,11 +27,16 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             JwtService jwtService,
-                                            TokenBlacklistService tokenBlacklistService) {
+                                            TokenBlacklistService tokenBlacklistService,
+                                            OrbitAuthenticationEntryPoint authenticationEntryPoint,
+                                            OrbitAccessDeniedHandler accessDeniedHandler,
+                                            OrbitProperties properties,
+                                            TokenBucketRateLimiter rateLimiter,
+                                            ObjectMapper objectMapper) {
         http
                 // Stateless API with bearer tokens, so Spring's session-oriented CSRF filter is not needed.
                 // The one cookie-based endpoint (/refresh) gets an Origin check instead.
@@ -45,12 +51,14 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
-                // Without a login mechanism Spring Security would answer 403 to anonymous requests.
-                .exceptionHandling(ex -> ex.authenticationEntryPoint(
-                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService, tokenBlacklistService),
-                        UsernamePasswordAuthenticationFilter.class);
-        
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new RateLimitFilter(properties, rateLimiter, objectMapper),
+                        JwtAuthenticationFilter.class);
+
         return http.build();
     }
 

@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.validation.annotation.Validated;
 
 /**
@@ -18,7 +19,18 @@ import org.springframework.validation.annotation.Validated;
 public record OrbitProperties(
         @Valid @NotNull Jwt jwt,
         @Valid @NotNull Cors cors,
-        @Valid @NotNull Cookie cookie) {
+        @Valid @NotNull Cookie cookie,
+        @Valid RateLimit rateLimit) {
+
+    public OrbitProperties {
+        if (rateLimit == null) {
+            rateLimit = new RateLimit(10, 60, 10, 20, 100);
+        }
+    }
+
+    public OrbitProperties(Jwt jwt, Cors cors, Cookie cookie) {
+        this(jwt, cors, cookie, new RateLimit(10, 60, 10, 20, 100));
+    }
 
     public record Jwt(
             // HS256 needs at least 256 bits; a 64-char hex string from `openssl rand -hex 32` passes
@@ -44,5 +56,13 @@ public record OrbitProperties(
                                 + "(browsers reject SameSite=None cookies that are not Secure)");
             }
         }
+    }
+
+    public record RateLimit(
+            @DefaultValue("10") @Positive int authPerMinute,
+            @DefaultValue("60") @Positive int messagesPerMinute,
+            @DefaultValue("10") @Positive int uploadsPerMinute,
+            @DefaultValue("20") @Positive int aiRequestsPerMinute,
+            @DefaultValue("100") @Positive int defaultPerMinute) {
     }
 }

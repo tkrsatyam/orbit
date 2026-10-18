@@ -24,3 +24,9 @@ orbit:
   cookie:
     secure: ${COOKIE_SECURE:true}
     same-site: ${COOKIE_SAME_SITE:None}
+  rate-limit:
+    auth-per-minute: ${RATE_LIMIT_AUTH_PER_MINUTE:10}
+    messages-per-minute: ${RATE_LIMIT_MESSAGES_PER_MINUTE:60}
+    uploads-per-minute: ${RATE_LIMIT_UPLOADS_PER_MINUTE:10}
+    ai-requests-per-minute: ${RATE_LIMIT_AI_PER_MINUTE:20}
+    default-per-minute: ${RATE_LIMIT_DEFAULT_PER_MINUTE:100}

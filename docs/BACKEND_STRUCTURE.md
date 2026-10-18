@@ -111,10 +111,12 @@ com.orbit.auth/
 │   └── RefreshTokenRepositoryCustomImpl.java  ← single findAndModify via MongoTemplate
 ├── filter/
 │   └── JwtAuthenticationFilter.java ← Spring Security filter, validates JWT per request
-└── config/
-    └── SecurityConfig.java         ← SecurityFilterChain bean, CORS (explicit Vercel origin,
-                                      allowCredentials(true) — required for the cross-origin refresh cookie,
-                                      never a wildcard origin), permit rules
+├── config/
+│   ├── SecurityConfig.java         ← SecurityFilterChain bean, CORS (explicit Vercel origin,
+│   │                                 allowCredentials(true) — required for the cross-origin refresh cookie,
+│   │                                 never a wildcard origin), permit rules
+│   ├── OrbitAuthenticationEntryPoint.java ← emits standard ErrorResponse envelope on 401
+│   └── OrbitAccessDeniedHandler.java      ← emits standard ErrorResponse envelope on 403
 ```
 
 **Key rules:**
@@ -350,6 +352,8 @@ Cross-cutting utilities and infrastructure beans shared across feature packages.
 
 ```
 com.orbit.common/
+├── dto/
+│   └── ErrorResponse.java          ← standard error envelope record
 ├── exception/
 │   ├── GlobalExceptionHandler.java ← @RestControllerAdvice, consistent error envelope
 │   ├── AiServiceException.java
@@ -357,7 +361,11 @@ com.orbit.common/
 │   ├── ConflictException.java
 │   └── RateLimitException.java
 ├── filter/
-│   └── RateLimitFilter.java        ← token bucket per userId per endpoint group
+│   └── RateLimitFilter.java        ← token bucket per userId/IP per endpoint group
+├── ratelimit/
+│   ├── TokenBucket.java            ← thread-safe token bucket implementation
+│   ├── TokenBucketRateLimiter.java ← in-memory registry of TokenBuckets with eviction
+│   └── ConsumptionResult.java      ← allowed / rejected result with retryAfterSeconds
 ├── kafka/
 │   └── KafkaProducerConfig.java    ← producer bean, publishes to all three topics
 ├── storage/
