@@ -32,3 +32,8 @@ Thumbs.db
 
 # Misc
 /ORBIT_PROJECT_INSTRUCTIONS.md
+
+# Agent Rules & Customizations (Local only)
+GEMINI.md
+AGENTS.md
+.agents/

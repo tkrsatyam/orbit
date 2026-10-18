@@ -1,7 +1,7 @@
 package com.orbit.auth.config;
 
-import com.orbit.auth.JwtService;
-import com.orbit.auth.TokenBlacklistService;
+import com.orbit.auth.token.JwtService;
+import com.orbit.auth.token.TokenBlacklistService;
 import com.orbit.auth.filter.JwtAuthenticationFilter;
 import com.orbit.common.config.OrbitProperties;
 import org.springframework.context.annotation.Bean;

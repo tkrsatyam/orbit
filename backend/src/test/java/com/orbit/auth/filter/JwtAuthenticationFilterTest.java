@@ -1,8 +1,8 @@
 package com.orbit.auth.filter;
 
-import com.orbit.auth.AccessTokenClaims;
-import com.orbit.auth.JwtService;
-import com.orbit.auth.TokenBlacklistService;
+import com.orbit.auth.token.AccessTokenClaims;
+import com.orbit.auth.token.JwtService;
+import com.orbit.auth.token.TokenBlacklistService;
 import com.orbit.common.config.OrbitProperties;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;

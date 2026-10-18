@@ -1,4 +1,4 @@
-package com.orbit.auth;
+package com.orbit.auth.token;
 
 import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.InvalidTokenException;
