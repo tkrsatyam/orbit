@@ -1,16 +1,24 @@
 package com.orbit.auth;
 
+import com.orbit.auth.dto.LoginRequest;
+import com.orbit.auth.dto.RegisterRequest;
 import com.orbit.auth.model.RefreshToken;
 import com.orbit.auth.token.JwtService;
 import com.orbit.auth.token.RefreshTokenRepository;
 import com.orbit.common.config.OrbitProperties;
+import com.orbit.common.exception.ConflictException;
+import com.orbit.common.exception.InvalidCredentialsException;
 import com.orbit.common.exception.InvalidRefreshTokenException;
+import com.orbit.user.UserRepository;
+import com.orbit.user.model.User;
+import com.orbit.user.model.UserRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -21,9 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
@@ -32,7 +38,13 @@ class AuthServiceTest {
             "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
     @Mock
+    private UserRepository userRepository;
+
+    @Mock
     private RefreshTokenRepository refreshTokenRepository;
+
+    @Mock
+    private PasswordEncoder passwordEncoder;
 
     private final OrbitProperties properties = new OrbitProperties(
             new OrbitProperties.Jwt(SECRET, 900_000L, 604_800_000L),
@@ -44,10 +56,9 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(refreshTokenRepository, jwtService, properties);
+        authService = new AuthService(userRepository, refreshTokenRepository, jwtService, passwordEncoder, properties);
     }
 
-    /** Makes the fake repository behave like a successful rotation of a session owned by user-1. */
     private void stubSuccessfulRotation() {
         when(refreshTokenRepository.rotate(anyString(), anyString(), any(Instant.class)))
                 .thenAnswer(invocation -> Optional.of(RefreshToken.builder()
@@ -55,6 +66,122 @@ class AuthServiceTest {
                         .token(invocation.getArgument(1))
                         .expiresAt(invocation.getArgument(2))
                         .build()));
+    }
+
+    @Test
+    void registerCreatesUserHashesPasswordAndReturnsTokensWithUser() {
+        when(userRepository.existsByEmail("satyam@example.com")).thenReturn(false);
+        when(passwordEncoder.encode("StrongP@ss1")).thenReturn("hashed-pwd");
+
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId("generated-user-id");
+            return u;
+        });
+
+        RegisterRequest request = new RegisterRequest("satyam@example.com", "StrongP@ss1", "Satyam");
+        AuthTokens tokens = authService.register(request);
+
+        assertThat(tokens.accessToken()).isNotBlank();
+        assertThat(tokens.refreshToken()).hasSize(43);
+        assertThat(tokens.user()).isNotNull();
+        assertThat(tokens.user().getId()).isEqualTo("generated-user-id");
+        assertThat(tokens.user().getEmail()).isEqualTo("satyam@example.com");
+        assertThat(tokens.user().getDisplayName()).isEqualTo("Satyam");
+        assertThat(tokens.user().getRole()).isEqualTo(UserRole.USER);
+
+        ArgumentCaptor<RefreshToken> sessionCaptor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(sessionCaptor.capture());
+        assertThat(sessionCaptor.getValue().getUserId()).isEqualTo("generated-user-id");
+        assertThat(sessionCaptor.getValue().getToken()).isEqualTo(tokens.refreshToken());
+    }
+
+    @Test
+    void registerRejectsDuplicateEmailWithConflictException() {
+        when(userRepository.existsByEmail("duplicate@example.com")).thenReturn(true);
+
+        RegisterRequest request = new RegisterRequest("duplicate@example.com", "StrongP@ss1", "Satyam");
+
+        assertThatThrownBy(() -> authService.register(request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Email is already registered");
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void registerNormalizesEmailToLowercase() {
+        when(userRepository.existsByEmail("test@example.com")).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed-pwd");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> {
+            User u = invocation.getArgument(0);
+            u.setId("user-id-123");
+            return u;
+        });
+
+        RegisterRequest request = new RegisterRequest("  TEST@Example.COM  ", "StrongP@ss1", "Tester");
+        AuthTokens tokens = authService.register(request);
+
+        assertThat(tokens.user().getEmail()).isEqualTo("test@example.com");
+    }
+
+    @Test
+    void loginWithValidCredentialsReturnsTokensWithUser() {
+        User user = User.builder()
+                .id("user-42")
+                .email("satyam@example.com")
+                .passwordHash("hashed-secret")
+                .displayName("Satyam")
+                .build();
+
+        when(userRepository.findByEmail("satyam@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("StrongP@ss1", "hashed-secret")).thenReturn(true);
+
+        LoginRequest request = new LoginRequest("satyam@example.com", "StrongP@ss1");
+        AuthTokens tokens = authService.login(request);
+
+        assertThat(tokens.accessToken()).isNotBlank();
+        assertThat(tokens.refreshToken()).hasSize(43);
+        assertThat(tokens.user()).isNotNull();
+        assertThat(tokens.user().getId()).isEqualTo("user-42");
+
+        ArgumentCaptor<RefreshToken> sessionCaptor = ArgumentCaptor.forClass(RefreshToken.class);
+        verify(refreshTokenRepository).save(sessionCaptor.capture());
+        assertThat(sessionCaptor.getValue().getUserId()).isEqualTo("user-42");
+    }
+
+    @Test
+    void loginWithUnknownEmailThrowsInvalidCredentialsException() {
+        when(userRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        LoginRequest request = new LoginRequest("unknown@example.com", "Password123!");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password");
+
+        verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void loginWithWrongPasswordThrowsInvalidCredentialsException() {
+        User user = User.builder()
+                .id("user-42")
+                .email("satyam@example.com")
+                .passwordHash("correct-hash")
+                .build();
+
+        when(userRepository.findByEmail("satyam@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("WrongPassword", "correct-hash")).thenReturn(false);
+
+        LoginRequest request = new LoginRequest("satyam@example.com", "WrongPassword");
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password");
+
+        verifyNoInteractions(refreshTokenRepository);
     }
 
     @Test

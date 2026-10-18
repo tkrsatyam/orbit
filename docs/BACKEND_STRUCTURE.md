@@ -98,8 +98,9 @@ com.orbit.auth/
 ├── dto/
 │   ├── RegisterRequest.java
 │   ├── LoginRequest.java
+│   ├── UserSummaryResponse.java    ← user profile summary returned inside AuthResponse
 │   └── AuthResponse.java           ← returned on register/login (with user) and refresh
-│                                      (user is null on refresh — no user object in that response)
+│                                      (user is omitted on refresh)
 ├── model/
 │   └── RefreshToken.java           ← @Document, one per active session, rotated in place
 ├── token/                          ← everything that mints, validates, revokes or stores tokens
@@ -142,7 +143,8 @@ com.orbit.user/
 │   ├── UserProfileResponse.java    ← public profile shape (no email) — GET /{userId}
 │   └── UserSearchResponse.java     ← search result shape with connectionStatus
 └── model/
-    └── User.java                   ← @Document("users")
+    ├── User.java                   ← @Document("users")
+    └── UserRole.java               ← enum: USER, ADMIN
 ```
 
 **Flagged, not yet resolved:** `GET /users/me`'s response includes `email` (per `API_CONTRACTS.md`), but no DTO in this package or `com.orbit.auth` is documented for that shape — `UserProfileResponse` is explicitly the *no-email* public shape. Needs a decision during implementation: either add a dedicated `SelfProfileResponse.java` here, or confirm/document a deliberate reuse of `AuthResponse`'s user shape across packages. Not resolved during backlog planning — check this before/during building the self-fetch endpoint.
@@ -359,6 +361,7 @@ com.orbit.common/
 │   ├── AiServiceException.java
 │   ├── ResourceNotFoundException.java
 │   ├── ConflictException.java
+│   ├── InvalidCredentialsException.java
 │   └── RateLimitException.java
 ├── filter/
 │   └── RateLimitFilter.java        ← token bucket per userId/IP per endpoint group

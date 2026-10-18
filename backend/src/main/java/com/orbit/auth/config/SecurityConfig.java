@@ -93,4 +93,9 @@ public class SecurityConfig {
             throw new UsernameNotFoundException("Username/password login is not used");
         };
     }
+
+    @Bean
+    public org.springframework.security.crypto.password.PasswordEncoder passwordEncoder() {
+        return new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(12);
+    }
 }
