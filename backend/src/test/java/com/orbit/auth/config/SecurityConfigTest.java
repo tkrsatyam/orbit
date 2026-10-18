@@ -89,6 +89,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void logoutWithoutTokenReturns401() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/logout"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void publicEndpointsIgnoreABadAuthorizationHeader() throws Exception {
         // A client with an expired access token must still be able to call /refresh. Without a
         // refresh cookie the controller itself answers 401, so we check that the request reached

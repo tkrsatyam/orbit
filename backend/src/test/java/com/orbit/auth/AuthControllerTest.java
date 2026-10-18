@@ -9,6 +9,7 @@ import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.GlobalExceptionHandler;
 import com.orbit.common.exception.InvalidCredentialsException;
+import com.orbit.auth.token.AccessTokenClaims;
 import com.orbit.user.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,12 +18,15 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
+import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -32,6 +36,7 @@ class AuthControllerTest {
 
     private static final String REGISTER_PATH = "/api/v1/auth/register";
     private static final String LOGIN_PATH = "/api/v1/auth/login";
+    private static final String LOGOUT_PATH = "/api/v1/auth/logout";
 
     @Mock
     private AuthService authService;
@@ -184,5 +189,37 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void logoutWithValidAuthAndCookieReturns204AndClearsCookie() throws Exception {
+        AccessTokenClaims claims = new AccessTokenClaims("user-101", "jti-123", Instant.now().plusSeconds(900));
+        UsernamePasswordAuthenticationToken auth =
+                UsernamePasswordAuthenticationToken.authenticated("user-101", null, List.of());
+        auth.setDetails(claims);
+
+        mockMvc.perform(post(LOGOUT_PATH)
+                        .principal(auth)
+                        .cookie(new jakarta.servlet.http.Cookie("refreshToken", "refresh-token-xyz")))
+                .andExpect(status().isNoContent())
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        verify(authService).logout(eq("user-101"), eq("jti-123"), any(Instant.class), eq("refresh-token-xyz"));
+    }
+
+    @Test
+    void logoutWithoutCookieStillReturns204AndClearsCookie() throws Exception {
+        AccessTokenClaims claims = new AccessTokenClaims("user-101", "jti-123", Instant.now().plusSeconds(900));
+        UsernamePasswordAuthenticationToken auth =
+                UsernamePasswordAuthenticationToken.authenticated("user-101", null, List.of());
+        auth.setDetails(claims);
+
+        mockMvc.perform(post(LOGOUT_PATH).principal(auth))
+                .andExpect(status().isNoContent())
+                .andExpect(header().exists(HttpHeaders.SET_COOKIE))
+                .andExpect(header().string(HttpHeaders.SET_COOKIE, org.hamcrest.Matchers.containsString("Max-Age=0")));
+
+        verify(authService).logout(eq("user-101"), eq("jti-123"), any(Instant.class), isNull());
     }
 }
