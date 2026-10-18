@@ -6,7 +6,15 @@ import { useAuth } from '../hooks/useAuth'
  * Accessible to both unauthenticated guests and signed-in members.
  */
 export default function DiscoverPage() {
-  const { isAuthenticated, currentUser } = useAuth()
+  const { isAuthenticated, currentUser, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+        <p>Loading...</p>
+      </div>
+    )
+  }
 
   return (
     <div style={{ maxWidth: '720px', margin: '48px auto', padding: '24px', textAlign: 'left' }}>

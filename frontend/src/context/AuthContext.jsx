@@ -7,6 +7,8 @@ import {
 import authService from '../services/authService'
 import { parseJwt } from '../utils/tokenUtils'
 
+const USER_STORAGE_KEY = 'orbit_user'
+
 export const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
@@ -22,6 +24,7 @@ export function AuthProvider({ children }) {
   const handleAuthFailure = useCallback(() => {
     applyAccessToken(null)
     setCurrentUser(null)
+    localStorage.removeItem(USER_STORAGE_KEY)
   }, [applyAccessToken])
 
   const handleTokenRefreshed = useCallback(
@@ -29,7 +32,15 @@ export function AuthProvider({ children }) {
       applyAccessToken(newToken)
       if (newToken) {
         const claims = parseJwt(newToken)
-        setCurrentUser((prev) => (prev ? prev : { id: claims?.sub }))
+        setCurrentUser((prev) => {
+          if (prev) return prev
+          try {
+            const raw = localStorage.getItem(USER_STORAGE_KEY)
+            return raw ? JSON.parse(raw) : { id: claims?.sub }
+          } catch {
+            return { id: claims?.sub }
+          }
+        })
       }
     },
     [applyAccessToken],
@@ -47,12 +58,18 @@ export function AuthProvider({ children }) {
         if (isMounted && data?.accessToken) {
           applyAccessToken(data.accessToken)
           const claims = parseJwt(data.accessToken)
-          setCurrentUser({ id: claims?.sub })
+          let storedUser = null
+          try {
+            const raw = localStorage.getItem(USER_STORAGE_KEY)
+            if (raw) storedUser = JSON.parse(raw)
+          } catch {
+            storedUser = null
+          }
+          setCurrentUser(storedUser || { id: claims?.sub })
         }
       } catch {
         if (isMounted) {
-          applyAccessToken(null)
-          setCurrentUser(null)
+          handleAuthFailure()
         }
       } finally {
         if (isMounted) {
@@ -65,8 +82,6 @@ export function AuthProvider({ children }) {
 
     return () => {
       isMounted = false
-      setOnTokenUpdate(null)
-      setOnAuthFailure(null)
     }
   }, [applyAccessToken, handleAuthFailure, handleTokenRefreshed])
 
@@ -75,6 +90,9 @@ export function AuthProvider({ children }) {
       const data = await authService.login(credentials)
       applyAccessToken(data.accessToken)
       setCurrentUser(data.user)
+      if (data.user) {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user))
+      }
       return data
     },
     [applyAccessToken],
@@ -85,6 +103,9 @@ export function AuthProvider({ children }) {
       const data = await authService.register(payload)
       applyAccessToken(data.accessToken)
       setCurrentUser(data.user)
+      if (data.user) {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.user))
+      }
       return data
     },
     [applyAccessToken],

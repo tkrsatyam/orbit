@@ -3,21 +3,9 @@ import axios from 'axios'
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 
 let currentAccessToken = null
-let isRefreshing = false
-let failedQueue = []
+let refreshPromise = null
 let onTokenUpdateCallback = null
 let onAuthFailureCallback = null
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((promise) => {
-    if (error) {
-      promise.reject(error)
-    } else {
-      promise.resolve(token)
-    }
-  })
-  failedQueue = []
-}
 
 export const setAccessToken = (token) => {
   currentAccessToken = token
@@ -31,6 +19,49 @@ export const setOnTokenUpdate = (callback) => {
 
 export const setOnAuthFailure = (callback) => {
   onAuthFailureCallback = callback
+}
+
+/**
+ * Refreshes the access token using the httpOnly cookie.
+ * Deduplicates concurrent calls so only one network request is made.
+ *
+ * @returns {Promise<{accessToken: string}>}
+ */
+export const refreshSession = async () => {
+  if (refreshPromise) {
+    return refreshPromise
+  }
+
+  refreshPromise = axios
+    .post(
+      `${API_BASE_URL}/api/v1/auth/refresh`,
+      {},
+      { withCredentials: true },
+    )
+    .then((response) => {
+      const newAccessToken = response.data.accessToken
+      setAccessToken(newAccessToken)
+
+      if (onTokenUpdateCallback) {
+        onTokenUpdateCallback(newAccessToken)
+      }
+
+      return response.data
+    })
+    .catch((error) => {
+      setAccessToken(null)
+
+      if (onAuthFailureCallback) {
+        onAuthFailureCallback(error)
+      }
+
+      return Promise.reject(error)
+    })
+    .finally(() => {
+      refreshPromise = null
+    })
+
+  return refreshPromise
 }
 
 const api = axios.create({
@@ -70,48 +101,14 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    if (isRefreshing) {
-      return new Promise((resolve, reject) => {
-        failedQueue.push({ resolve, reject })
-      })
-        .then((token) => {
-          originalRequest.headers.Authorization = `Bearer ${token}`
-          return api(originalRequest)
-        })
-        .catch((err) => Promise.reject(err))
-    }
-
     originalRequest._retry = true
-    isRefreshing = true
 
     try {
-      const response = await axios.post(
-        `${API_BASE_URL}/api/v1/auth/refresh`,
-        {},
-        { withCredentials: true },
-      )
-
-      const newAccessToken = response.data.accessToken
-      setAccessToken(newAccessToken)
-
-      if (onTokenUpdateCallback) {
-        onTokenUpdateCallback(newAccessToken)
-      }
-
-      processQueue(null, newAccessToken)
-      originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
+      const data = await refreshSession()
+      originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
       return api(originalRequest)
     } catch (refreshError) {
-      setAccessToken(null)
-      processQueue(refreshError, null)
-
-      if (onAuthFailureCallback) {
-        onAuthFailureCallback(refreshError)
-      }
-
       return Promise.reject(refreshError)
-    } finally {
-      isRefreshing = false
     }
   },
 )

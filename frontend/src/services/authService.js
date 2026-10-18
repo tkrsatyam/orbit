@@ -1,7 +1,4 @@
-import axios from 'axios'
-import api from './api'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
+import api, { refreshSession } from './api'
 
 /**
  * Registers a new user with email, password, and display name.
@@ -39,17 +36,12 @@ export async function login({ email, password }) {
 
 /**
  * Refreshes the session using the httpOnly refresh token cookie.
- * Uses a raw axios instance to bypass request/response interceptors.
+ * Delegates to the deduplicated refreshSession in api.js.
  *
  * @returns {Promise<{accessToken: string}>}
  */
 export async function refresh() {
-  const response = await axios.post(
-    `${API_BASE_URL}/api/v1/auth/refresh`,
-    {},
-    { withCredentials: true },
-  )
-  return response.data
+  return refreshSession()
 }
 
 /**
