@@ -4,6 +4,7 @@ import com.orbit.auth.dto.AuthResponse;
 import com.orbit.auth.dto.LoginRequest;
 import com.orbit.auth.dto.RegisterRequest;
 import com.orbit.auth.dto.UserSummaryResponse;
+import com.orbit.auth.token.AccessTokenClaims;
 import com.orbit.common.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.headers.Header;
@@ -16,7 +17,10 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
 
 @Tag(name = "Auth", description = "Authentication and session management")
 @RestController
@@ -136,5 +140,40 @@ public class AuthController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.create(tokens.refreshToken()).toString())
                 .body(new AuthResponse(tokens.accessToken()));
+    }
+
+    @Operation(summary = "Logout user", description = "Invalidates the access token, removes the refresh token session, updates user presence, and clears the refresh cookie")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Session successfully invalidated; Set-Cookie header clears the refresh token cookie",
+                    headers = @Header(name = HttpHeaders.SET_COOKIE, description = "Cleared HttpOnly refresh cookie", schema = @Schema(type = "string"))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded (10 requests/minute per user)",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            Authentication authentication,
+            @CookieValue(name = RefreshCookieFactory.COOKIE_NAME, required = false) String refreshToken) {
+
+        AccessTokenClaims claims = authentication != null && authentication.getDetails() instanceof AccessTokenClaims c ? c : null;
+        String userId = authentication != null ? authentication.getName() : null;
+        String tokenId = claims != null ? claims.tokenId() : null;
+        Instant expiresAt = claims != null ? claims.expiresAt() : null;
+
+        authService.logout(userId, tokenId, expiresAt, refreshToken);
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, refreshCookieFactory.clear().toString())
+                .build();
     }
 }

@@ -5,6 +5,7 @@ import com.orbit.auth.dto.RegisterRequest;
 import com.orbit.auth.model.RefreshToken;
 import com.orbit.auth.token.JwtService;
 import com.orbit.auth.token.RefreshTokenRepository;
+import com.orbit.auth.token.TokenBlacklistService;
 import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.InvalidCredentialsException;
@@ -28,6 +29,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final TokenBlacklistService tokenBlacklistService;
     private final OrbitProperties properties;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -35,11 +37,13 @@ public class AuthService {
                        RefreshTokenRepository refreshTokenRepository,
                        JwtService jwtService,
                        PasswordEncoder passwordEncoder,
+                       TokenBlacklistService tokenBlacklistService,
                        OrbitProperties properties) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.tokenBlacklistService = tokenBlacklistService;
         this.properties = properties;
     }
 
@@ -105,6 +109,28 @@ public class AuthService {
                 .orElseThrow(InvalidRefreshTokenException::new);
 
         return new AuthTokens(jwtService.generateAccessToken(session.getUserId()), session.getToken());
+    }
+
+    /**
+     * Invalidates the active session: blacklists the current access token, deletes
+     * the refresh token session from the database, and marks the user offline with lastSeen.
+     */
+    public void logout(String userId, String tokenId, Instant expiresAt, String refreshToken) {
+        if (tokenId != null && expiresAt != null) {
+            tokenBlacklistService.blacklist(tokenId, expiresAt);
+        }
+
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            refreshTokenRepository.deleteByToken(refreshToken);
+        }
+
+        if (userId != null && !userId.isBlank()) {
+            userRepository.findById(userId).ifPresent(user -> {
+                user.setOnline(false);
+                user.setLastSeen(Instant.now());
+                userRepository.save(user);
+            });
+        }
     }
 
     private AuthTokens issueSession(User user) {

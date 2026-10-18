@@ -5,6 +5,7 @@ import com.orbit.auth.dto.RegisterRequest;
 import com.orbit.auth.model.RefreshToken;
 import com.orbit.auth.token.JwtService;
 import com.orbit.auth.token.RefreshTokenRepository;
+import com.orbit.auth.token.TokenBlacklistService;
 import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.InvalidCredentialsException;
@@ -46,6 +47,9 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
+
     private final OrbitProperties properties = new OrbitProperties(
             new OrbitProperties.Jwt(SECRET, 900_000L, 604_800_000L),
             new OrbitProperties.Cors("http://localhost:5173"),
@@ -56,7 +60,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, refreshTokenRepository, jwtService, passwordEncoder, properties);
+        authService = new AuthService(userRepository, refreshTokenRepository, jwtService, passwordEncoder, tokenBlacklistService, properties);
     }
 
     private void stubSuccessfulRotation() {
@@ -233,5 +237,58 @@ class AuthServiceTest {
                 .isInstanceOf(InvalidRefreshTokenException.class);
 
         verifyNoInteractions(refreshTokenRepository);
+    }
+
+    @Test
+    void logoutBlacklistsAccessTokenDeletesRefreshTokenAndMarksUserOffline() {
+        User user = User.builder()
+                .id("user-101")
+                .email("satyam@example.com")
+                .online(true)
+                .build();
+
+        when(userRepository.findById("user-101")).thenReturn(Optional.of(user));
+
+        Instant expiresAt = Instant.now().plusSeconds(900);
+        authService.logout("user-101", "jti-123", expiresAt, "refresh-token-xyz");
+
+        verify(tokenBlacklistService).blacklist("jti-123", expiresAt);
+        verify(refreshTokenRepository).deleteByToken("refresh-token-xyz");
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        User savedUser = userCaptor.getValue();
+        assertThat(savedUser.isOnline()).isFalse();
+        assertThat(savedUser.getLastSeen()).isNotNull();
+    }
+
+    @Test
+    void logoutWithoutRefreshTokenStillBlacklistsTokenAndMarksUserOffline() {
+        User user = User.builder()
+                .id("user-101")
+                .online(true)
+                .build();
+
+        when(userRepository.findById("user-101")).thenReturn(Optional.of(user));
+
+        Instant expiresAt = Instant.now().plusSeconds(900);
+        authService.logout("user-101", "jti-123", expiresAt, null);
+
+        verify(tokenBlacklistService).blacklist("jti-123", expiresAt);
+        verify(refreshTokenRepository, never()).deleteByToken(anyString());
+        verify(userRepository).save(user);
+        assertThat(user.isOnline()).isFalse();
+    }
+
+    @Test
+    void logoutWhenUserNotFoundInRepositoryGracefullyCompletes() {
+        when(userRepository.findById("unknown-user")).thenReturn(Optional.empty());
+
+        Instant expiresAt = Instant.now().plusSeconds(900);
+        authService.logout("unknown-user", "jti-999", expiresAt, "refresh-abc");
+
+        verify(tokenBlacklistService).blacklist("jti-999", expiresAt);
+        verify(refreshTokenRepository).deleteByToken("refresh-abc");
+        verify(userRepository, never()).save(any());
     }
 }

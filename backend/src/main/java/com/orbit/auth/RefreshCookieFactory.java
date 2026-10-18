@@ -30,4 +30,14 @@ public class RefreshCookieFactory {
                 .maxAge(maxAge)
                 .build();
     }
+
+    public ResponseCookie clear() {
+        return ResponseCookie.from(COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(settings.secure())
+                .sameSite(settings.sameSite())
+                .path(COOKIE_PATH)
+                .maxAge(Duration.ZERO)
+                .build();
+    }
 }

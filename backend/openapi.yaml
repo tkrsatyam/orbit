@@ -109,6 +109,42 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/logout:
+    post:
+      tags:
+      - Auth
+      summary: Logout user
+      description: "Invalidates the access token, removes the refresh token session,\
+        \ updates user presence, and clears the refresh cookie"
+      operationId: logout
+      parameters:
+      - name: refreshToken
+        in: cookie
+        required: false
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Session successfully invalidated; Set-Cookie header clears
+            the refresh token cookie
+          headers:
+            Set-Cookie:
+              description: Cleared HttpOnly refresh cookie
+              style: simple
+              schema:
+                type: string
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (10 requests/minute per user)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/auth/login:
     post:
       tags:

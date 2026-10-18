@@ -37,4 +37,17 @@ class RefreshCookieFactoryTest {
                 .contains("SameSite=Lax")
                 .doesNotContain("Secure");
     }
+
+    @Test
+    void clearCookieHasMaxAgeZeroAndEmptyValue() {
+        String header = factory(true, "None").clear().toString();
+
+        assertThat(header)
+                .startsWith("refreshToken=;")
+                .contains("HttpOnly")
+                .contains("Secure")
+                .contains("SameSite=None")
+                .contains("Path=/api/v1/auth")
+                .contains("Max-Age=0");
+    }
 }
