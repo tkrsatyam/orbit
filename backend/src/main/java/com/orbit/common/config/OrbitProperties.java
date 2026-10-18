@@ -22,10 +22,12 @@ public record OrbitProperties(
         @Valid @NotNull Cookie cookie,
         @Valid RateLimit rateLimit) {
 
-    public OrbitProperties {
-        if (rateLimit == null) {
-            rateLimit = new RateLimit(10, 60, 10, 20, 100);
-        }
+    @org.springframework.boot.context.properties.bind.ConstructorBinding
+    public OrbitProperties(Jwt jwt, Cors cors, Cookie cookie, RateLimit rateLimit) {
+        this.jwt = jwt;
+        this.cors = cors;
+        this.cookie = cookie;
+        this.rateLimit = rateLimit != null ? rateLimit : new RateLimit(10, 60, 10, 20, 100);
     }
 
     public OrbitProperties(Jwt jwt, Cors cors, Cookie cookie) {

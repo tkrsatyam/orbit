@@ -267,7 +267,8 @@ Architecture documentation lives in `docs/`. When making changes that affect the
 
 | Changed                                    | Update                                                                           |
 |--------------------------------------------|----------------------------------------------------------------------------------|
-| New REST endpoint or WebSocket destination | `docs/API_CONTRACTS.md`                                                          |
+| New or updated REST endpoint               | Add OpenAPI annotations (`@Tag`, `@Operation`, `@ApiResponses`, `@Schema`), regenerate `backend/openapi.yaml`, and update `docs/API_CONTRACTS.md` |
+| New WebSocket destination                  | `docs/API_CONTRACTS.md`                                                          |
 | New MongoDB collection or field            | `docs/architecture/erd.md`                                                       |
 | New backend package or component           | `docs/architecture/c3_component.md`                                              |
 | New external system dependency             | `docs/architecture/c1_system_context.md` and `docs/architecture/c2_container.md` |
@@ -281,6 +282,7 @@ Architecture documentation lives in `docs/`. When making changes that affect the
 
 - Package structure follows the feature-package layout defined in `docs/architecture/c3_component.md` — one package per domain (`auth`, `user`, `contact`, `group`, `conversation`, `message`, `websocket`, `presence`, `search`, `ai`, `common`)
 - Controllers contain no business logic — delegate to service immediately
+- All REST endpoints and DTOs must include OpenAPI annotations (`@Tag`, `@Operation`, `@ApiResponses`, `@Schema`), and `backend/openapi.yaml` must be regenerated and committed in the same PR
 - Services own all transactional boundaries — `@Transactional` only in service layer
 - Repositories never call other repositories — cross-collection operations belong in the service layer
 - Persist to MongoDB before publishing to Kafka — always, without exception (see `docs/architecture/sequences/message_send_flow.md`)

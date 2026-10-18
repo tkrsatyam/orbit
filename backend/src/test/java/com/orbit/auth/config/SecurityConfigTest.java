@@ -22,6 +22,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@org.springframework.test.context.TestPropertySource(properties = {
+        "spring.data.mongodb.auto-index-creation=false",
+        "management.health.mongo.enabled=false"
+})
 class SecurityConfigTest {
 
     private static final String PROTECTED_PATH = "/api/v1/users/me";
@@ -101,6 +105,13 @@ class SecurityConfigTest {
     @Test
     void healthEndpointIsPublic() throws Exception {
         assertThat(statusOf(get("/actuator/health"))).isNotIn(401, 403);
+    }
+
+    @Test
+    void documentationEndpointsArePublic() throws Exception {
+        for (String path : List.of("/v3/api-docs", "/v3/api-docs.yaml", "/swagger-ui.html", "/swagger-ui/index.html")) {
+            assertThat(statusOf(get(path))).isNotIn(401, 403);
+        }
     }
 
     @Test

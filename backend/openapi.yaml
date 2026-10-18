@@ -1,0 +1,107 @@
+openapi: 3.1.0
+info:
+  title: Orbit API
+  description: Real-time chat API for connecting over shared professional goals.
+  version: v1
+servers:
+- url: http://localhost
+  description: Generated server url
+security:
+- bearerAuth: []
+tags:
+- name: Auth
+  description: Authentication and session management
+paths:
+  /api/v1/auth/refresh:
+    post:
+      tags:
+      - Auth
+      summary: Refresh access token
+      description: Rotates the refresh cookie session and issues a new access token
+      operationId: refresh
+      parameters:
+      - name: refreshToken
+        in: cookie
+        required: false
+        schema:
+          type: string
+      - name: Origin
+        in: header
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: New access token issued; Set-Cookie header contains rotated
+            refresh token
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie
+              style: simple
+              schema:
+                type: string
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: "Missing, invalid, expired, or already rotated refresh token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Origin header does not match configured frontend origin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (10 requests/minute per IP)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    AuthResponse:
+      type: object
+      description: Authentication response containing the JWT access token
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token used for Bearer authentication
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+    ErrorResponse:
+      type: object
+      description: Standard API error response envelope
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status reason phrase
+          example: Bad Request
+        message:
+          type: string
+          description: Descriptive error message
+          example: Display name must be between 2 and 50 characters
+        path:
+          type: string
+          description: Request URI path
+          example: /api/v1/users/me
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of the error
+          example: 2026-10-18T17:15:00Z
+  securitySchemes:
+    bearerAuth:
+      type: http
+      description: JWT access token obtained from register or login.
+      name: bearerAuth
+      scheme: bearer
+      bearerFormat: JWT

@@ -375,7 +375,10 @@ com.orbit.common/
 ├── init/
 │   └── DataInitializer.java        ← seeds BOT_USER_ID on startup (Phase 4 dependency)
 └── config/
-    └── MongoConfig.java            ← MongoDB connection, transaction manager bean
+    ├── MongoConfig.java            ← MongoDB connection, transaction manager bean
+    ├── OrbitProperties.java        ← strongly-typed application configuration record (@ConfigurationProperties)
+    ├── JacksonConfig.java          ← ObjectMapper configuration (JavaTimeModule)
+    └── OpenApiConfig.java          ← OpenAPI 3.1 metadata and JWT bearer security scheme configuration
 ```
 
 **Key rules:**
