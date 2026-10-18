@@ -71,7 +71,7 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Malformed JSON request body", request.getRequestURI());
     }
 
-    @ExceptionHandler({InvalidRefreshTokenException.class, InvalidTokenException.class})
+    @ExceptionHandler({InvalidRefreshTokenException.class, InvalidTokenException.class, InvalidCredentialsException.class, org.springframework.security.authentication.BadCredentialsException.class})
     public ResponseEntity<ErrorResponse> handleInvalidToken(
             RuntimeException ex, HttpServletRequest request) {
 

@@ -12,6 +12,53 @@ tags:
 - name: Auth
   description: Authentication and session management
 paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Register user
+      description: "Creates a new user account, sets the refresh token cookie, and\
+        \ returns the access token with user details"
+      operationId: register
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "201":
+          description: Account successfully created; Set-Cookie header contains initial
+            refresh token
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie
+              style: simple
+              schema:
+                type: string
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: "Validation failure (invalid email, weak password, or display\
+            \ name out of range)"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Email is already registered
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (10 requests/minute per IP)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/auth/refresh:
     post:
       tags:
@@ -62,16 +109,127 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Authenticate user
+      description: "Authenticates an existing user, sets the refresh token cookie,\
+        \ and returns the access token with user details"
+      operationId: login
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: Authentication successful; Set-Cookie header contains initial
+            refresh token
+          headers:
+            Set-Cookie:
+              description: HttpOnly refresh cookie
+              style: simple
+              schema:
+                type: string
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Validation failure (blank email or password)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Invalid email or password
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded (10 requests/minute per IP)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    RegisterRequest:
+      type: object
+      description: User registration payload
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: satyam@example.com
+          minLength: 1
+        password:
+          type: string
+          description: "Password (minimum 8 characters, at least one uppercase, one\
+            \ lowercase, one digit, and one special character)"
+          example: StrongP@ssword1
+          minLength: 1
+          pattern: "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[^A-Za-z\\d])\\S{8,}$"
+        displayName:
+          type: string
+          description: User display name (2 to 50 characters)
+          example: Satyam
+          maxLength: 50
+          minLength: 2
+      required:
+      - displayName
+      - email
+      - password
     AuthResponse:
       type: object
-      description: Authentication response containing the JWT access token
+      description: Authentication response containing the JWT access token and optional
+        user profile summary
       properties:
         accessToken:
           type: string
           description: JWT access token used for Bearer authentication
           example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          type: "null"
+          $ref: "#/components/schemas/UserSummaryResponse"
+          description: User profile summary (null on token refresh)
+    UserSummaryResponse:
+      type: object
+      description: User profile summary
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        email:
+          type: string
+          description: User email address
+          example: satyam@example.com
+        displayName:
+          type: string
+          description: User display name
+          example: Satyam
+        avatarUrl:
+          type:
+          - string
+          - "null"
+          description: User avatar image URL
+          example: https://pub-xxx.r2.dev/avatars/user-id.jpg
+        bio:
+          type:
+          - string
+          - "null"
+          description: User profile bio
+          example: Career switcher from finance to tech
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of account creation
+          example: 2026-06-27T10:30:00Z
     ErrorResponse:
       type: object
       description: Standard API error response envelope
@@ -98,6 +256,24 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of the error
           example: 2026-10-18T17:15:00Z
+    LoginRequest:
+      type: object
+      description: User authentication payload
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email address
+          example: satyam@example.com
+          minLength: 1
+        password:
+          type: string
+          description: Account password
+          example: StrongP@ssword1
+          minLength: 1
+      required:
+      - email
+      - password
   securitySchemes:
     bearerAuth:
       type: http
