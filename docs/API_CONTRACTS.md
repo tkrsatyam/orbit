@@ -312,6 +312,7 @@ Response 200 — when a BLOCKED relationship exists between the requester and ta
 Notes:
 - Returned as a normal 200 with a reduced shape, not a 403/404 — this prevents the requester from being able to distinguish "user doesn't exist" from "user blocked me" from response status alone. See `discussions/007_blocking_behavior.md`.
 - Applies only when the requester is the blocked party. The blocking user retains full, normal profile access to the user they blocked.
+- Note: resolved under ORDM-32 — represented by dedicated DTO `UserProfileResponse` in `com.orbit.user.dto`.
 
 ---
 

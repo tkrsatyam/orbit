@@ -142,13 +142,16 @@ com.orbit.user/
 │   ├── SelfProfileResponse.java    ← authenticated self profile shape (with email) — GET /me
 │   ├── UpdateProfileRequest.java
 │   ├── UserProfileResponse.java    ← public profile shape (no email) — GET /{userId}
-│   └── UserSearchResponse.java     ← search result shape with connectionStatus
+│   ├── UserSearchResponse.java     ← search result shape with connectionStatus
+│   └── ConnectionStatus.java       ← enum: NONE, PENDING_SENT, PENDING_RECEIVED, CONNECTED, BLOCKED
 └── model/
     ├── User.java                   ← @Document("users")
     └── UserRole.java               ← enum: USER, ADMIN
 ```
 
 **Resolved Decision (ORDM-31):** `GET /api/v1/users/me` returns `SelfProfileResponse` (in `com.orbit.user.dto`), maintaining strict package isolation and decoupling the user profile domain from `com.orbit.auth.dto.UserSummaryResponse`.
+
+**Resolved Decision (ORDM-32):** `GET /api/v1/users/{userId}` returns `UserProfileResponse` (in `com.orbit.user.dto`) with `@JsonInclude(NON_NULL)`. When the requester is blocked by the target user, the response degrades asymmetrically to `{ id, available: false }` with HTTP 200 OK to prevent leaking block state. When the requester is the blocker, they retain full normal profile access with `connectionStatus: BLOCKED`.
 
 **Key rules:**
 - `UserController` resolves the authenticated user from `@AuthenticationPrincipal` — never from a request body
@@ -172,7 +175,8 @@ com.orbit.contact/
 │   ├── RespondRequestDto.java      ← action: ACCEPT | DECLINE
 │   └── ContactResponse.java
 └── model/
-    └── Contact.java                ← @Document("contacts")
+    ├── Contact.java                ← @Document("contacts")
+    └── ContactStatus.java          ← enum: PENDING, CONNECTED, BLOCKED
 ```
 
 **Key rules:**

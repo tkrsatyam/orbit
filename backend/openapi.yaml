@@ -4,7 +4,7 @@ info:
   description: Real-time chat API for connecting over shared professional goals.
   version: v1
 servers:
-- url: http://localhost
+- url: http://localhost:8080
   description: Generated server url
 security:
 - bearerAuth: []
@@ -193,6 +193,45 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/users/{userId}:
+    get:
+      tags:
+      - User
+      summary: Get user profile by ID
+      description: "Returns public profile of a user, or degraded available=false\
+        \ if blocked"
+      operationId: getUserProfile
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Profile retrieved successfully (normal or degraded)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Target user account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/users/me:
     get:
       tags:
@@ -344,6 +383,51 @@ components:
       required:
       - email
       - password
+    UserProfileResponse:
+      type: object
+      description: Public user profile or masked profile unavailable response
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        displayName:
+          type:
+          - string
+          - "null"
+          description: User display name
+          example: Satyam
+        avatarUrl:
+          type:
+          - string
+          - "null"
+          description: User avatar image URL
+          example: https://pub-xxx.r2.dev/avatars/user-id.jpg
+        bio:
+          type:
+          - string
+          - "null"
+          description: User profile bio
+          example: Career switcher from finance to tech
+        connectionStatus:
+          type:
+          - string
+          - "null"
+          description: Relationship status from the requester's perspective
+          enum:
+          - NONE
+          - PENDING_SENT
+          - PENDING_RECEIVED
+          - CONNECTED
+          - BLOCKED
+          example: CONNECTED
+        available:
+          type:
+          - boolean
+          - "null"
+          description: Availability flag present only when profile is masked due to
+            a block
+          example: false
     SelfProfileResponse:
       type: object
       description: Authenticated user's own profile

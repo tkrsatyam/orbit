@@ -1,7 +1,10 @@
 package com.orbit.user;
 
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.contact.ContactService;
+import com.orbit.user.dto.ConnectionStatus;
 import com.orbit.user.dto.SelfProfileResponse;
+import com.orbit.user.dto.UserProfileResponse;
 import com.orbit.user.model.User;
 import com.orbit.user.model.UserRole;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +18,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -23,11 +27,14 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private ContactService contactService;
+
     private UserService userService;
 
     @BeforeEach
     void setUp() {
-        userService = new UserService(userRepository);
+        userService = new UserService(userRepository, contactService);
     }
 
     @Test
@@ -103,5 +110,94 @@ class UserServiceTest {
         assertThat(profile.bio()).isNull();
         assertThat(profile.avatarUrl()).isNull();
         assertThat(profile.createdAt()).isEqualTo(now);
+    }
+
+    @Test
+    void getUserProfileReturnsPublicProfileWhenNotBlocked() {
+        User targetUser = User.builder()
+                .id("target-1")
+                .displayName("Target User")
+                .bio("Target bio")
+                .avatarUrl("https://example.com/target.jpg")
+                .build();
+
+        when(userRepository.findById("target-1")).thenReturn(Optional.of(targetUser));
+        when(contactService.isBlockedBy("requester-1", "target-1")).thenReturn(false);
+        when(contactService.getConnectionStatus("requester-1", "target-1")).thenReturn(ConnectionStatus.CONNECTED);
+
+        UserProfileResponse response = userService.getUserProfile("target-1", "requester-1");
+
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo("target-1");
+        assertThat(response.displayName()).isEqualTo("Target User");
+        assertThat(response.bio()).isEqualTo("Target bio");
+        assertThat(response.avatarUrl()).isEqualTo("https://example.com/target.jpg");
+        assertThat(response.connectionStatus()).isEqualTo(ConnectionStatus.CONNECTED);
+        assertThat(response.available()).isNull();
+    }
+
+    @Test
+    void getUserProfileReturnsMaskedProfileWhenRequesterIsBlocked() {
+        User targetUser = User.builder()
+                .id("target-1")
+                .displayName("Target User")
+                .bio("Target bio")
+                .avatarUrl("https://example.com/target.jpg")
+                .build();
+
+        when(userRepository.findById("target-1")).thenReturn(Optional.of(targetUser));
+        when(contactService.isBlockedBy("requester-1", "target-1")).thenReturn(true);
+
+        UserProfileResponse response = userService.getUserProfile("target-1", "requester-1");
+
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo("target-1");
+        assertThat(response.available()).isFalse();
+        assertThat(response.displayName()).isNull();
+        assertThat(response.bio()).isNull();
+        assertThat(response.avatarUrl()).isNull();
+        assertThat(response.connectionStatus()).isNull();
+    }
+
+    @Test
+    void getUserProfileReturnsFullProfileWhenRequesterIsTheBlocker() {
+        User targetUser = User.builder()
+                .id("target-1")
+                .displayName("Target User")
+                .bio("Target bio")
+                .avatarUrl("https://example.com/target.jpg")
+                .build();
+
+        when(userRepository.findById("target-1")).thenReturn(Optional.of(targetUser));
+        when(contactService.isBlockedBy("requester-1", "target-1")).thenReturn(false);
+        when(contactService.getConnectionStatus("requester-1", "target-1")).thenReturn(ConnectionStatus.BLOCKED);
+
+        UserProfileResponse response = userService.getUserProfile("target-1", "requester-1");
+
+        assertThat(response).isNotNull();
+        assertThat(response.id()).isEqualTo("target-1");
+        assertThat(response.displayName()).isEqualTo("Target User");
+        assertThat(response.connectionStatus()).isEqualTo(ConnectionStatus.BLOCKED);
+        assertThat(response.available()).isNull();
+    }
+
+    @Test
+    void getUserProfileThrowsNotFoundWhenTargetUserDoesNotExist() {
+        when(userRepository.findById("missing")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getUserProfile("missing", "requester-1"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found: missing");
+
+        verifyNoInteractions(contactService);
+    }
+
+    @Test
+    void getUserProfileThrowsNotFoundWhenTargetUserIdIsNull() {
+        assertThatThrownBy(() -> userService.getUserProfile(null, "requester-1"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found");
+
+        verifyNoInteractions(contactService);
     }
 }
