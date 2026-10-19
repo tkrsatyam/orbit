@@ -1,19 +1,20 @@
 # Frontend Project Structure
 
-This document defines the folder layout, component organisation, naming conventions, and state management patterns for the Orbit React SPA. It is the implementation-level reference for building the frontend across all four phases.
+This document defines the folder layout, standalone component architecture, naming conventions, and reactive state management patterns for the Orbit Angular SPA. It is the implementation-level reference for building the frontend across all four phases.
 
-React has no enforced structure — this document provides the deliberate decisions that prevent structural drift as the project grows across phases.
+Angular 21 enforces structured, enterprise-grade architecture out of the box — this document provides the deliberate decisions that prevent structural drift as the project grows across phases.
 
 ---
 
 ## Technology Stack Reference
 
-- **React 19** — UI library
-- **Vite** — build tool and dev server
-- **React Router** — client-side routing
-- **Axios** — HTTP client with interceptors
-- **SockJS + STOMP.js** — WebSocket client
-- **useState / useReducer / useContext** — state management (no external library)
+- **Angular 21** — UI framework with standalone components and fine-grained Signals
+- **Angular CDK** — component development kit with official virtual scrolling (`CdkVirtualScrollViewport`)
+- **Angular Router** — client-side routing with functional guards (`CanActivateFn`)
+- **Angular HttpClient** — HTTP client with functional interceptors (`HttpInterceptorFn`) and RxJS pipelines
+- **SockJS + STOMP.js** — WebSocket client integrated with RxJS Observables
+- **Angular Signals + RxJS** — hybrid reactive state management (Signals for state/UI, RxJS for event streams)
+- **Playwright** — automated end-to-end browser testing
 
 ---
 
@@ -22,390 +23,173 @@ React has no enforced structure — this document provides the deliberate decisi
 ```
 frontend/
 ├── src/
-│   ├── main.jsx                    ← app entry point, React root mount
-│   ├── App.jsx                     ← router setup, global providers
-│   ├── pages/                      ← route-level components (one per page)
-│   ├── components/                 ← reusable UI components
-│   ├── hooks/                      ← custom React hooks
-│   ├── services/                   ← API calls and WebSocket management
-│   ├── context/                    ← React context providers and consumers
-│   ├── utils/                      ← pure helper functions
-│   └── assets/                     ← static files (icons, images)
-├── public/                         ← files served as-is (favicon, robots.txt)
-├── .env.example
-├── .gitignore
-├── index.html
+│   ├── index.html
+│   ├── main.ts                     ← application bootstrap with appConfig
+│   ├── styles.scss                 ← global styles, CSS variables, and theme tokens
+│   └── app/
+│       ├── app.component.ts        ← root shell with <router-outlet />
+│       ├── app.config.ts           ← provideRouter, provideHttpClient, provideAnimations
+│       ├── app.routes.ts           ← route definitions and functional guards
+│       │
+│       ├── core/                   ← singleton services, interceptors, guards, models
+│       │   ├── guards/
+│       │   │   └── auth.guard.ts   ← functional CanActivateFn redirecting to /login
+│       │   ├── interceptors/
+│       │   │   └── auth.interceptor.ts ← attaches JWT, withCredentials, 401 refresh queue
+│       │   ├── models/
+│       │   │   ├── auth.model.ts   ← User, AuthResponse, LoginPayload, RegisterPayload
+│       │   │   ├── message.model.ts
+│       │   │   └── conversation.model.ts
+│       │   └── services/
+│       │       ├── auth.service.ts ← in-memory signals state, login, register, refresh, logout
+│       │       ├── websocket.service.ts ← SockJS + STOMP singleton with RxJS streams
+│       │       ├── conversation.service.ts
+│       │       └── user.service.ts
+│       │
+│       ├── features/               ← route-level feature pages and feature-specific components
+│       │   ├── auth/
+│       │   │   ├── auth.component.ts
+│       │   │   ├── login-form/
+│       │   │   └── register-form/
+│       │   ├── conversations/
+│       │   │   ├── conversations.component.ts
+│       │   │   ├── conversation-list/
+│       │   │   ├── message-thread/
+│       │   │   └── message-input/
+│       │   ├── discover/
+│       │   │   └── discover.component.ts
+│       │   └── group/
+│       │       └── group.component.ts
+│       │
+│       └── shared/                 ← reusable UI primitives, pipes, and directives
+│           ├── components/
+│           │   ├── button/
+│           │   ├── modal/
+│           │   ├── spinner/
+│           │   └── avatar/
+│           ├── pipes/
+│           │   └── time-ago.pipe.ts
+│           └── utils/
+│               └── token-utils.ts  ← parseJwt, parseJwtExpiry, isTokenExpired
+│
+├── e2e/                            ← Playwright browser end-to-end test suite
+│   └── auth.spec.ts
+├── angular.json                    ← Angular CLI configuration (port 5173)
 ├── package.json
-├── vite.config.js
-└── vercel.json                     ← auto-deploy disabled: { "git": { "deploymentEnabled": false } }
+├── playwright.config.ts
+└── tsconfig.json
 ```
 
 ---
 
-## Folder Responsibilities
+## Core Layer Responsibilities (`src/app/core/`)
 
-### pages/
+The `core/` folder houses application-wide singletons. Modules and components never instantiate services directly — Angular's dependency injection (`inject()`) provides singletons:
 
-Route-level components. Each file maps to one URL. Pages are responsible for layout and data orchestration — they compose smaller components but contain minimal UI themselves. Pages are the only components that directly consume context.
+1. **`auth.service.ts`**:
+   - Manages in-memory JWT authentication state using Angular Signals:
+     - `currentUser = signal<User | null>(null)`
+     - `accessToken = signal<string | null>(null)`
+     - `isLoading = signal<boolean>(true)`
+     - `isAuthenticated = computed(() => !!this.accessToken() && !!this.currentUser())`
+   - Bootstraps user session on startup by executing `refresh()`.
+   - Caches non-sensitive profile metadata in `localStorage` under key `orbit_user` (restored on refresh).
+   - In-flight refresh deduplication using RxJS `shareReplay(1)`.
 
-```
-src/pages/
-├── AuthPage.jsx                    ← /login and /register (tabbed)
-├── DiscoverPage.jsx                ← /discover — public group discovery (guest + user)
-├── ConversationsPage.jsx           ← / — sidebar + active conversation view
-├── GroupPage.jsx                   ← /groups/:groupId — group detail and join
-└── NotFoundPage.jsx                ← 404 fallback
-```
+2. **`auth.interceptor.ts`**:
+   - Functional interceptor (`HttpInterceptorFn`).
+   - Automatically attaches `Authorization: Bearer <accessToken>` from `AuthService` if present.
+   - Enforces `withCredentials: true` on backend requests so the browser includes httpOnly cookies.
+   - Catches HTTP 401 errors, queues concurrent requests behind `authService.refresh()`, and replays failed calls upon successful token issuance.
 
-### components/
+3. **`auth.guard.ts`**:
+   - Functional guard (`CanActivateFn`).
+   - Checks `authService.isLoading()`. If bootstrapping, waits until authentication state settles.
+   - Checks `authService.isAuthenticated()`. If unauthenticated, navigates to `/login` with `queryParams: { returnUrl: state.url }`.
 
-Reusable UI components organised by feature area. Components are "dumb" by default — they receive data via props and emit events via callbacks. They do not call APIs or access context directly (except for global UI concerns like theme).
-
-```
-src/components/
-├── auth/
-│   ├── LoginForm.jsx
-│   └── RegisterForm.jsx
-│
-├── layout/
-│   ├── AppShell.jsx                ← outer shell: sidebar + main area
-│   ├── Sidebar.jsx                 ← conversation list + navigation
-│   └── ProtectedRoute.jsx          ← redirects unauthenticated users to /login
-│
-├── conversation/
-│   ├── ConversationList.jsx        ← scrollable list of DMs and groups
-│   ├── ConversationItem.jsx        ← single row: avatar, name, last message, unread badge
-│   └── ConversationSearch.jsx      ← filter conversations by name
-│
-├── message/
-│   ├── MessageThread.jsx           ← scrollable message history for active conversation
-│   ├── MessageBubble.jsx           ← single message: content, sender, timestamp, status
-│   ├── MessageInput.jsx            ← text input, send button, file attach, emoji
-│   ├── MessageReactions.jsx        ← emoji reaction row below a message
-│   ├── QuotedMessage.jsx           ← inline quoted reply preview
-│   ├── FileMessage.jsx             ← image preview or file download card
-│   ├── BotMessage.jsx              ← "Orbit AI" message variant (Phase 4)
-│   └── TypingIndicator.jsx         ← "Satyam is typing…" display
-│
-├── presence/
-│   ├── OnlineDot.jsx               ← green/grey presence dot
-│   └── LastSeen.jsx                ← "last seen 10 mins ago" text
-│
-├── group/
-│   ├── GroupHeader.jsx             ← group name, member count, actions
-│   ├── GroupMemberList.jsx         ← scrollable member list with roles
-│   ├── GroupDiscoverCard.jsx       ← card shown in discovery feed
-│   └── GroupDiscoverFeed.jsx       ← grid of GroupDiscoverCards
-│
-├── contact/
-│   ├── ContactList.jsx             ← contacts sidebar panel
-│   ├── ContactItem.jsx             ← single contact row with presence dot
-│   └── ContactRequestBadge.jsx     ← pending request count indicator
-│
-├── profile/
-│   ├── UserAvatar.jsx              ← avatar image with fallback initials
-│   ├── ProfileCard.jsx             ← mini profile popup on name click
-│   └── EditProfileForm.jsx         ← display name + bio edit form
-│
-├── search/
-│   ├── GlobalSearch.jsx            ← search users, groups, messages
-│   └── SearchResult.jsx            ← single result row
-│
-├── ai/                             ← Phase 4 only
-│   ├── SmartReplySuggestions.jsx   ← 3-chip suggestion bar above input
-│   ├── ToneCheckAlert.jsx          ← pre-send warning banner
-│   └── AiCommandDetector.jsx       ← detects /summary and @ask in input
-│
-└── ui/                             ← generic, domain-agnostic UI primitives
-    ├── Button.jsx
-    ├── Input.jsx
-    ├── Modal.jsx
-    ├── Spinner.jsx
-    ├── Toast.jsx
-    ├── Avatar.jsx
-    └── Badge.jsx
-```
-
-### hooks/
-
-Custom React hooks. This is where all stateful logic that is not tied to a specific component lives. The rule: if logic is reused across two or more components, or if it involves side effects (API calls, WebSocket subscriptions, timers), it belongs in a hook.
-
-```
-src/hooks/
-├── useAuth.js                      ← reads auth state from AuthContext
-├── useWebSocket.js                 ← manages SockJS connection lifecycle,
-│                                      returns { connected, subscribe, send, disconnect }
-├── useConversation.js              ← loads messages, handles real-time updates
-│                                      for the active conversation
-├── usePresence.js                  ← subscribes to /topic/presence/{contactId}
-│                                      per contact, returns online status map
-├── useTypingIndicator.js           ← sends typing events, debounces stop event,
-│                                      receives typing events from other users
-├── useNotifications.js             ← subscribes to /user/queue/notifications,
-│                                      manages unread counts, fires browser desktop
-│                                      notifications (skipped if the conversation's
-│                                      muted flag is true — see ADR 010)
-├── useInfiniteMessages.js          ← cursor-based pagination for message history
-│                                      (loads older messages on scroll to top)
-├── useFileUpload.js                ← handles file selection, validation, upload
-│                                      to REST endpoint, progress state
-└── useAi.js                        ← calls AI endpoints, manages suggestion state
-                                       (Phase 4 only)
-```
-
-### services/
-
-Modules that communicate with the backend. No React in here — pure JavaScript modules that return Promises or manage connections. Components and hooks import from services, never import Axios or SockJS directly.
-
-```
-src/services/
-├── api.js                          ← Axios instance with base URL, JWT interceptor,
-│                                      refresh-and-retry on 401
-├── authService.js                  ← register, login, logout, refresh
-├── userService.js                  ← getMe, updateProfile, uploadAvatar, searchUsers
-├── contactService.js               ← getContacts, sendRequest, respond, block
-├── groupService.js                 ← createGroup, joinGroup, leaveGroup, getMembers,
-│                                      generateInvite, joinViaInvite
-├── conversationService.js          ← getConversations, getMessages, markRead, mute
-├── messageService.js               ← send (REST fallback), editMessage, deleteMessage,
-│                                      addReaction, removeReaction, uploadFile
-├── searchService.js                ← searchUsers, searchGroups, searchMessages
-├── websocketService.js             ← SockJS + STOMP connection management,
-│                                      singleton — one connection for the app lifetime
-└── aiService.js                    ← summary, ask, suggestReplies, translate,
-                                       toneCheck  (Phase 4 only)
-```
-
-**`api.js` is the most important file in `services/`.** It configures:
-- `baseURL` from `import.meta.env.VITE_API_BASE_URL`
-- `withCredentials: true` — required so the browser attaches the httpOnly refresh cookie on cross-origin requests to the Render API; without this, the cookie is silently never sent
-- Request interceptor: attaches `Authorization: Bearer {accessToken}` from memory
-- Response interceptor: on 401, calls `authService.refresh()`, retries original request once, redirects to login if refresh fails
-
-**`websocketService.js` is a singleton module** — not a class, not a hook, a module-level singleton. It manages one SockJS connection for the entire app lifetime. Hooks call `websocketService.subscribe()` and `websocketService.send()` — they never create their own connections.
-
-### context/
-
-React context providers for global state that needs to be accessible deep in the component tree without prop drilling.
-
-```
-src/context/
-├── AuthContext.jsx                 ← current user, accessToken (in memory),
-│                                      login/logout functions
-├── ConversationContext.jsx         ← active conversation, messages, real-time updates
-├── NotificationContext.jsx         ← unread counts per conversationId
-└── ToastContext.jsx                ← global toast notifications (success, error, info)
-```
-
-**Context is not a state management replacement.** It is used only for state that is genuinely global — auth, notifications, toasts. Conversation state is in `ConversationContext` because it is read by multiple siblings (sidebar unread counts + message thread + input). Local state stays in components or hooks.
-
-### utils/
-
-Pure functions with no side effects and no React imports.
-
-```
-src/utils/
-├── dateUtils.js                    ← formatTimestamp, formatLastSeen,
-│                                      isToday, isYesterday
-├── messageUtils.js                 ← deriveMessageStatus (SENDING/SENT/DELIVERED/READ),
-│                                      isEdited, isDeleted, groupMessagesByDate
-├── fileUtils.js                    ← getFileIcon, formatFileSize, isImageType
-├── tokenUtils.js                   ← parseJwtExpiry, isTokenExpired
-└── constants.js                    ← TYPING_DEBOUNCE_MS = 3000,
-                                       TYPING_SEND_INTERVAL_MS = 2000,
-                                       TYPING_AUTO_CLEAR_MS = 5000,
-                                       MESSAGE_PAGE_SIZE = 50,
-                                       MAX_FILE_SIZE_IMAGE = 10485760,
-                                       MAX_FILE_SIZE_FILE = 26214400
-```
-
-Constants that are referenced in multiple places — typing debounce timings, file size limits, pagination sizes — live in `constants.js`. No magic numbers scattered across the codebase.
+4. **`websocket.service.ts`**:
+   - Singleton managing SockJS + STOMP connection lifetime.
+   - Exposes RxJS `Subject` and `Observable` streams for topics (`/topic/conversations/{id}/messages`, `/topic/presence/{contactId}`).
+   - Handles automatic reconnection and STOMP disconnect on application unload.
 
 ---
 
-## Routing Structure
+## Routing Structure (`src/app/app.routes.ts`)
 
-```jsx
-// App.jsx
-<BrowserRouter>
-  <AuthProvider>
-    <NotificationProvider>
-      <ToastProvider>
-        <Routes>
-          <Route path="/login"    element={<AuthPage />} />
-          <Route path="/discover" element={<DiscoverPage />} />  {/* guest + user */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/"           element={<ConversationsPage />} />
-            <Route path="/groups/:id" element={<GroupPage />} />
-          </Route>
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </ToastProvider>
-    </NotificationProvider>
-  </AuthProvider>
-</BrowserRouter>
+```typescript
+import { Routes } from '@angular/router';
+import { authGuard } from './core/guards/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/auth.component').then(m => m.AuthComponent),
+    data: { mode: 'login' }
+  },
+  {
+    path: 'register',
+    loadComponent: () => import('./features/auth/auth.component').then(m => m.AuthComponent),
+    data: { mode: 'register' }
+  },
+  {
+    path: 'discover',
+    loadComponent: () => import('./features/discover/discover.component').then(m => m.DiscoverComponent)
+  },
+  {
+    path: '',
+    canActivate: [authGuard],
+    children: [
+      {
+        path: '',
+        loadComponent: () => import('./features/conversations/conversations.component').then(m => m.ConversationsComponent)
+      },
+      {
+        path: 'groups/:id',
+        loadComponent: () => import('./features/group/group.component').then(m => m.GroupComponent)
+      }
+    ]
+  },
+  {
+    path: '**',
+    loadComponent: () => import('./features/not-found/not-found.component').then(m => m.NotFoundComponent)
+  }
+];
 ```
-
-`ProtectedRoute` checks `AuthContext` — if no authenticated user, redirects to `/login` with the attempted path stored in location state for redirect-after-login.
-
-`/discover` is accessible without authentication (guest group browsing) but renders differently based on auth state — guests see a "Register to join" CTA, authenticated users see a "Join" button.
 
 ---
 
-## State Management Strategy
+## State Management Strategy (Signals + RxJS)
 
-Orbit uses React's built-in state primitives only — no Redux, no Zustand, no MobX. The decision is deliberate: the app state is not complex enough to justify an external library, and keeping state local prevents over-engineering for a portfolio project.
+Orbit utilizes a deliberate hybrid state pattern:
 
-### State placement rules
-
-| State type | Where it lives |
-|---|---|
-| Auth (user, token) | `AuthContext` |
-| Active conversation messages | `ConversationContext` |
-| Unread counts | `NotificationContext` |
-| Form input values | `useState` in the form component |
-| Loading / error per request | `useState` in the calling hook |
-| Typing indicator state | `useTypingIndicator` hook |
-| Presence (online map) | `usePresence` hook |
-| Optimistic messages | `ConversationContext` |
-
-### Optimistic updates
-
-Message sends use optimistic UI — the message is appended to `ConversationContext` immediately with a temporary ID and `status: SENDING`. On server receipt, the temporary entry is replaced with the confirmed message using the server-assigned `_id`. On error, the temporary entry is marked `status: FAILED` with a retry option.
-
-This pattern is implemented entirely in `ConversationContext` and `useConversation` — `MessageInput` just calls `send()` and the context handles the rest.
-
----
-
-## WebSocket Integration Pattern
-
-The WebSocket connection is managed as a singleton in `websocketService.js`. Hooks subscribe to specific STOMP destinations and receive events via callbacks.
-
-```
-websocketService.js (singleton)
-    └── connect(token)
-    └── subscribe(destination, callback) → returns unsubscribe fn
-    └── send(destination, body)
-    └── disconnect()
-
-useWebSocket.js
-    ├── calls websocketService.connect on mount
-    ├── calls websocketService.disconnect on unmount
-    └── exposes { connected, subscribe, send }
-
-useConversation.js
-    ├── calls subscribe('/topic/conversations/{id}/messages', onMessage)
-    ├── calls subscribe('/topic/conversations/{id}/typing', onTyping)
-    ├── calls subscribe('/topic/conversations/{id}/reactions', onReaction)
-    └── returns messages, typingUsers, sendMessage, editMessage, deleteMessage
-
-usePresence.js
-    ├── calls subscribe('/topic/presence/{contactId}', onPresence) per contact
-    └── returns onlineStatusMap: { [userId]: boolean }
-
-useNotifications.js
-    ├── calls subscribe('/user/queue/notifications', onNotification)
-    ├── updates NotificationContext unread counts (unconditional, ignores mute)
-    └── fires browser desktop notification if tab unfocused, unless conversation is muted
-```
-
-**Rules:**
-- Components never call `websocketService` directly — they go through hooks
-- Every `subscribe()` call returns an unsubscribe function — hooks call it in the `useEffect` cleanup to prevent memory leaks and duplicate subscriptions on re-render
-- Subscriptions are re-established in `useEffect` whenever the active conversation changes
-
----
-
-## JWT Token Storage
-
-Access tokens are stored **in memory only** — in `AuthContext` state, not in `localStorage` or `sessionStorage`. This prevents XSS-based token theft.
-
-```
-AuthContext state:
-  currentUser: { id, email, displayName, avatarUrl }
-  accessToken: string (in memory)
-
-Refresh token: httpOnly cookie (set by server, inaccessible to JavaScript)
-```
-
-`api.js` interceptor reads `accessToken` from `AuthContext` for every request. On 401, it calls `authService.refresh()` (the refresh token is sent automatically via the httpOnly cookie), stores the new access token in `AuthContext`, and retries the original request.
-
-On page refresh, the access token in memory is lost. The app calls `authService.refresh()` on mount — if the httpOnly cookie is still valid, a new access token is issued transparently and the user stays logged in.
-
----
-
-## Naming Conventions
-
-| Type | Convention | Example |
+| State Type | Mechanism | Justification |
 |---|---|---|
-| Page component | PascalCase + `Page` suffix | `ConversationsPage.jsx` |
-| Feature component | PascalCase, descriptive | `MessageBubble.jsx` |
-| UI primitive | PascalCase, generic | `Button.jsx`, `Modal.jsx` |
-| Custom hook | camelCase + `use` prefix | `useConversation.js` |
-| Service module | camelCase + `Service` suffix | `messageService.js` |
-| Context file | PascalCase + `Context` suffix | `AuthContext.jsx` |
-| Util file | camelCase + `Utils` or `Utils` suffix | `dateUtils.js` |
-| Constants file | `constants.js` | — |
-| Env variable | `VITE_` prefix | `VITE_API_BASE_URL` |
-| Constant value | SCREAMING_SNAKE_CASE | `TYPING_DEBOUNCE_MS` |
+| **Auth State** (`currentUser`, `accessToken`) | Signals in `AuthService` | Fine-grained template binding without full component tree re-renders. |
+| **Real-Time WebSocket Streams** | RxJS `Observable` in `WebSocketService` | Operators (`filter`, `debounceTime`, `distinctUntilChanged`) handle async streams. |
+| **Active Conversation Messages** | Signal with Angular CDK Virtual Scroll | Pinpoint DOM updates with high-performance scroll anchoring for large chat logs. |
+| **Form Inputs & Validation** | Reactive Forms (`FormGroup`) | Robust synchronous/asynchronous validation, dirty/touched states. |
+| **Typing Indicators** | RxJS `Subject` with `debounceTime(3000)` | Automatic auto-clear and event emission throttling. |
+| **Presence Map** | Signal derived from RxJS presence topic | Efficient dictionary mapping user IDs to online status. |
 
 ---
 
-## Phase-by-Phase Build Order
+## JWT Token Storage Rules
 
-This sequence avoids building UI before the backend it depends on is ready.
-
-### Phase 1
-```
-services/api.js                     ← first — everything depends on this
-services/websocketService.js        ← second — WebSocket singleton
-context/AuthContext.jsx
-pages/AuthPage.jsx + components/auth/
-hooks/useWebSocket.js
-context/ConversationContext.jsx
-hooks/useConversation.js
-components/layout/AppShell + Sidebar
-components/conversation/
-components/message/MessageThread + MessageBubble + MessageInput
-hooks/usePresence.js + useTypingIndicator.js
-components/presence/
-pages/DiscoverPage.jsx + components/group/GroupDiscoverFeed
-```
-
-### Phase 2
-```
-components/message/MessageReactions + QuotedMessage
-hooks/useNotifications.js
-context/NotificationContext.jsx
-components/contact/ContactRequestBadge
-components/profile/EditProfileForm
-```
-
-### Phase 3
-```
-components/search/
-components/message/FileMessage.jsx  ← image preview or file download card (moved here from Phase 2 — Phase 2 only uses R2 for avatars/group images, not message attachments)
-hooks/useFileUpload.js              ← moved here from Phase 2 — only needed once message file upload exists
-services/searchService.js
-hooks/useInfiniteMessages.js        ← replaces basic pagination
-messageService.js uploadFile
-```
-
-### Phase 4
-```
-services/aiService.js
-hooks/useAi.js
-components/ai/
-components/message/BotMessage
-```
+- **Access tokens are strictly in memory only** inside `AuthService`'s `accessToken` signal. Never store tokens in `localStorage` or `sessionStorage`.
+- **Refresh tokens** reside exclusively in httpOnly, Secure, SameSite cookies set by the backend server.
+- On browser reload, the in-memory access token is cleared. `AuthService` executes `refresh()` on initialization. The browser includes the httpOnly cookie, issuing a new access token transparently.
 
 ---
 
-## Environment Variables
+## Environment & Server Configuration
 
+Development server runs on port `5173` to match existing backend CORS configuration:
+```json
+// angular.json
+"serve": {
+  "options": {
+    "port": 5173
+  }
+}
 ```
-VITE_API_BASE_URL=http://localhost:8080
-VITE_WS_URL=ws://localhost:8080/ws
-```
-
-All environment variables must be prefixed with `VITE_` to be exposed at build time by Vite. Access them in code via `import.meta.env.VITE_API_BASE_URL` — never via `process.env`.
+Proxy configuration or environment files supply `apiBaseUrl: 'http://localhost:8080'` and `wsUrl: 'http://localhost:8080/ws'`.
