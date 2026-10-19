@@ -31,7 +31,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(authorizedReq).pipe(
     catchError((error: unknown) => {
+      const isLogout = req.url.includes('/api/v1/auth/logout');
       if (
+        !isLogout &&
         error instanceof HttpErrorResponse &&
         error.status === 401 &&
         !req.context.get(IS_RETRY)
