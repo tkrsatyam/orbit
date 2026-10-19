@@ -71,4 +71,37 @@ class UserServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("User not found");
     }
+
+    @Test
+    void getSelfProfileThrowsResourceNotFoundWhenUserIdIsBlank() {
+        assertThatThrownBy(() -> userService.getSelfProfile("   "))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found");
+    }
+
+    @Test
+    void getSelfProfileWithNullOptionalFieldsMapsProperly() {
+        Instant now = Instant.now();
+        User user = User.builder()
+                .id("u456")
+                .email("minimal@example.com")
+                .displayName("Minimal")
+                .bio(null)
+                .avatarUrl(null)
+                .role(UserRole.USER)
+                .createdAt(now)
+                .build();
+
+        when(userRepository.findById("u456")).thenReturn(Optional.of(user));
+
+        SelfProfileResponse profile = userService.getSelfProfile("u456");
+
+        assertThat(profile).isNotNull();
+        assertThat(profile.id()).isEqualTo("u456");
+        assertThat(profile.email()).isEqualTo("minimal@example.com");
+        assertThat(profile.displayName()).isEqualTo("Minimal");
+        assertThat(profile.bio()).isNull();
+        assertThat(profile.avatarUrl()).isNull();
+        assertThat(profile.createdAt()).isEqualTo(now);
+    }
 }

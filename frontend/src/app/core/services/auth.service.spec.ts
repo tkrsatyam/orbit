@@ -154,4 +154,41 @@ describe('AuthService', () => {
     expect(req.request.headers.get('Authorization')).toBe('Bearer custom_token');
     req.flush(mockUser);
   });
+
+  it('should handle error and clear session if GET /api/v1/users/me fails on refresh', () => {
+    let errorCaught: unknown = null;
+
+    service.refresh().subscribe({
+      error: (err) => {
+        errorCaught = err;
+      }
+    });
+
+    const refreshReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/auth/refresh`);
+    refreshReq.flush({ accessToken: 'refreshed_token' });
+
+    const meReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    meReq.flush('User not found', { status: 404, statusText: 'Not Found' });
+
+    expect(errorCaught).toBeDefined();
+    expect(service.accessToken()).toBeNull();
+    expect(service.currentUser()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.isLoading()).toBe(false);
+  });
+
+  it('should propagate error when direct getSelfProfile call fails', () => {
+    let errorCaught: unknown = null;
+
+    service.getSelfProfile().subscribe({
+      error: (err) => {
+        errorCaught = err;
+      }
+    });
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+
+    expect(errorCaught).toBeDefined();
+  });
 });
