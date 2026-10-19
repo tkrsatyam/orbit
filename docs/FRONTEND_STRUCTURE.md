@@ -63,6 +63,7 @@ frontend/
 │       │
 │       └── shared/                 ← reusable UI primitives, pipes, and directives
 │           ├── components/
+│           │   ├── self-profile-modal/ ← authenticated user profile dialog (ORDM-89)
 │           │   ├── button/
 │           │   ├── modal/
 │           │   ├── spinner/

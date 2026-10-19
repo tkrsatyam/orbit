@@ -15,7 +15,13 @@ describe('ConversationsComponent', () => {
 
   beforeEach(async () => {
     authServiceMock = {
-      currentUser: vi.fn().mockReturnValue({ displayName: 'Satyam Kumar', email: 'satyam@orbit.local' }),
+      currentUser: vi.fn().mockReturnValue({
+        id: 'u-123',
+        displayName: 'Satyam Kumar',
+        email: 'satyam@orbit.local',
+        bio: 'SWE @ Orbit',
+        createdAt: '2026-06-27T10:30:00Z'
+      }),
       logout: vi.fn().mockReturnValue(of(undefined))
     };
 
@@ -45,5 +51,25 @@ describe('ConversationsComponent', () => {
 
     expect(authServiceMock.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
+  it('should toggle self profile modal when profile button is clicked', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.modal-backdrop')).toBeNull();
+
+    const profileBtn = compiled.querySelector('[data-testid="view-profile-button"]') as HTMLButtonElement;
+    profileBtn.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.modal-backdrop')).not.toBeNull();
+    expect(compiled.querySelector('[data-testid="self-profile-name"]')?.textContent?.trim()).toBe('Satyam Kumar');
+    expect(compiled.querySelector('[data-testid="self-profile-email"]')?.textContent?.trim()).toBe('satyam@orbit.local');
+    expect(compiled.querySelector('[data-testid="self-profile-bio"]')?.textContent?.trim()).toBe('SWE @ Orbit');
+
+    const closeBtn = compiled.querySelector('[data-testid="close-profile-btn"]') as HTMLButtonElement;
+    closeBtn.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.modal-backdrop')).toBeNull();
   });
 });

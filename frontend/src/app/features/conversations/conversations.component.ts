@@ -1,11 +1,12 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
 
 @Component({
   selector: 'app-conversations',
   standalone: true,
-  imports: [RouterLink],
+  imports: [RouterLink, SelfProfileModalComponent],
   template: `
     <div class="conversations-container">
       <header class="conversations-header">
@@ -15,13 +16,26 @@ import { AuthService } from '../../core/services/auth.service';
             Signed in as <strong>{{ currentUserName() }}</strong>
           </p>
         </div>
-        <button
-          type="button"
-          (click)="handleLogout()"
-          class="signout-button"
-        >
-          Sign out
-        </button>
+        <div class="header-actions">
+          <button
+            type="button"
+            class="profile-button"
+            (click)="isProfileOpen.set(true)"
+            data-testid="view-profile-button"
+            title="View My Profile"
+          >
+            <span class="avatar-badge">{{ userInitial() }}</span>
+            <span class="profile-label">Profile</span>
+          </button>
+          <button
+            type="button"
+            (click)="handleLogout()"
+            class="signout-button"
+            data-testid="signout-button"
+          >
+            Sign out
+          </button>
+        </div>
       </header>
 
       <section class="conversations-content">
@@ -37,6 +51,12 @@ import { AuthService } from '../../core/services/auth.service';
           </a>
         </div>
       </section>
+
+      <app-self-profile-modal
+        [isOpen]="isProfileOpen()"
+        [user]="currentUser()"
+        (closeModal)="isProfileOpen.set(false)"
+      />
     </div>
   `,
   styles: [`
@@ -55,6 +75,45 @@ import { AuthService } from '../../core/services/auth.service';
     .user-info {
       color: var(--text);
       margin-top: 4px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .profile-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--text-h);
+      font-weight: 500;
+      transition: all 0.15s;
+
+      &:hover {
+        background: var(--code-bg);
+        border-color: var(--accent-border);
+      }
+    }
+    .avatar-badge {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--accent-bg);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-transform: uppercase;
+    }
+    .profile-label {
+      font-size: 0.9rem;
     }
     .signout-button {
       padding: 8px 16px;
@@ -106,8 +165,16 @@ export class ConversationsComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
+  readonly isProfileOpen = signal<boolean>(false);
+  readonly currentUser = this.authService.currentUser;
+
+  readonly userInitial = computed(() => {
+    const name = this.currentUser()?.displayName;
+    return name && name.trim().length > 0 ? name.trim().charAt(0).toUpperCase() : 'U';
+  });
+
   currentUserName(): string {
-    const user = this.authService.currentUser();
+    const user = this.currentUser();
     return user?.displayName || user?.email || user?.id || '';
   }
 
