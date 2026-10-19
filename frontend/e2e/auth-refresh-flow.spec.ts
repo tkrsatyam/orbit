@@ -14,20 +14,29 @@ test.describe('Token Refresh & Session Lifecycle Flow', () => {
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.locator('header')).toContainText(displayName);
 
-    // Track refresh requests during reload
+    // Track refresh and me requests during reload
     const refreshRequests: string[] = [];
+    const meRequests: string[] = [];
     page.on('request', (req) => {
       if (req.url().includes('/api/v1/auth/refresh')) {
         refreshRequests.push(req.method());
+      }
+      if (req.url().includes('/api/v1/users/me')) {
+        meRequests.push(req.method());
       }
     });
 
     await page.reload();
 
-    // Verify session restored via refresh without dropping to login
+    // Verify session restored via refresh + GET /users/me without dropping to login
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.locator('header')).toContainText(displayName);
     expect(refreshRequests.length).toBe(1);
+    expect(meRequests.length).toBe(1);
+
+    // Verify localStorage fallback bridge is completely retired
+    const cachedUser = await page.evaluate(() => localStorage.getItem('orbit_user'));
+    expect(cachedUser).toBeNull();
   });
 
   test('redirects to login when refresh cookie is expired or rejected by server', async ({ page }) => {

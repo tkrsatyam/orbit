@@ -30,7 +30,7 @@ describe('AuthService', () => {
     expect(service.isAuthenticated()).toBe(false);
   });
 
-  it('should authenticate and persist user on login', () => {
+  it('should authenticate user on login without using localStorage', () => {
     const mockUser = { id: 'u_1', email: 'satyam@test.com', displayName: 'Satyam' };
     const mockResponse = { accessToken: 'jwt_token_123', user: mockUser };
 
@@ -46,10 +46,10 @@ describe('AuthService', () => {
     expect(service.accessToken()).toBe('jwt_token_123');
     expect(service.currentUser()).toEqual(mockUser);
     expect(service.isAuthenticated()).toBe(true);
-    expect(localStorage.getItem('orbit_user')).toContain('satyam@test.com');
+    expect(localStorage.getItem('orbit_user')).toBeNull();
   });
 
-  it('should authenticate and persist user on register', () => {
+  it('should authenticate user on register', () => {
     const mockUser = { id: 'u_2', email: 'new@test.com', displayName: 'New User' };
     const mockResponse = { accessToken: 'jwt_token_456', user: mockUser };
 
@@ -66,27 +66,59 @@ describe('AuthService', () => {
     expect(service.isAuthenticated()).toBe(true);
   });
 
-  it('should deduplicate concurrent refresh calls into a single HTTP request', () => {
-    const mockResponse = { accessToken: 'refreshed_token' };
+  it('should fetch and hydrate user profile via GET /api/v1/users/me on refresh', () => {
+    const mockUser = {
+      id: 'u_1',
+      email: 'satyam@test.com',
+      displayName: 'Satyam',
+      bio: 'Developer',
+      avatarUrl: null
+    };
 
+    service.refresh().subscribe((res) => {
+      expect(res.accessToken).toBe('refreshed_token');
+      expect(res.user).toEqual(mockUser);
+    });
+
+    const refreshReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/auth/refresh`);
+    expect(refreshReq.request.method).toBe('POST');
+    expect(refreshReq.request.withCredentials).toBe(true);
+    refreshReq.flush({ accessToken: 'refreshed_token' });
+
+    const meReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    expect(meReq.request.method).toBe('GET');
+    expect(meReq.request.headers.get('Authorization')).toBe('Bearer refreshed_token');
+    meReq.flush(mockUser);
+
+    expect(service.accessToken()).toBe('refreshed_token');
+    expect(service.currentUser()).toEqual(mockUser);
+    expect(service.isAuthenticated()).toBe(true);
+    expect(localStorage.getItem('orbit_user')).toBeNull();
+  });
+
+  it('should deduplicate concurrent refresh calls into single refresh and me HTTP requests', () => {
+    const mockUser = { id: 'u_1', email: 'satyam@test.com', displayName: 'Satyam' };
     let res1: unknown = null;
     let res2: unknown = null;
 
     service.refresh().subscribe((r) => (res1 = r));
     service.refresh().subscribe((r) => (res2 = r));
 
-    const reqs = httpMock.match(`${environment.apiBaseUrl}/api/v1/auth/refresh`);
-    expect(reqs.length).toBe(1);
-    reqs[0].flush(mockResponse);
+    const refreshReqs = httpMock.match(`${environment.apiBaseUrl}/api/v1/auth/refresh`);
+    expect(refreshReqs.length).toBe(1);
+    refreshReqs[0].flush({ accessToken: 'refreshed_token' });
 
-    expect(res1).toEqual(mockResponse);
-    expect(res2).toEqual(mockResponse);
+    const meReqs = httpMock.match(`${environment.apiBaseUrl}/api/v1/users/me`);
+    expect(meReqs.length).toBe(1);
+    meReqs[0].flush(mockUser);
+
+    expect(res1).toEqual({ accessToken: 'refreshed_token', user: mockUser });
+    expect(res2).toEqual({ accessToken: 'refreshed_token', user: mockUser });
     expect(service.accessToken()).toBe('refreshed_token');
+    expect(service.currentUser()).toEqual(mockUser);
   });
 
-  it('should clear state and localStorage on logout', () => {
-    localStorage.setItem('orbit_user', JSON.stringify({ id: 'u_1' }));
-
+  it('should clear in-memory state on logout', () => {
     service.logout().subscribe();
 
     const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/auth/logout`);
@@ -96,7 +128,6 @@ describe('AuthService', () => {
     expect(service.accessToken()).toBeNull();
     expect(service.currentUser()).toBeNull();
     expect(service.isAuthenticated()).toBe(false);
-    expect(localStorage.getItem('orbit_user')).toBeNull();
   });
 
   it('should resolve false gracefully when init fails on 401', () => {
@@ -109,5 +140,55 @@ describe('AuthService', () => {
 
     expect(service.isLoading()).toBe(false);
     expect(service.isAuthenticated()).toBe(false);
+  });
+
+  it('should fetch self profile directly via getSelfProfile', () => {
+    const mockUser = { id: 'u_1', email: 'satyam@test.com', displayName: 'Satyam' };
+
+    service.getSelfProfile('custom_token').subscribe((user) => {
+      expect(user).toEqual(mockUser);
+    });
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer custom_token');
+    req.flush(mockUser);
+  });
+
+  it('should handle error and clear session if GET /api/v1/users/me fails on refresh', () => {
+    let errorCaught: unknown = null;
+
+    service.refresh().subscribe({
+      error: (err) => {
+        errorCaught = err;
+      }
+    });
+
+    const refreshReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/auth/refresh`);
+    refreshReq.flush({ accessToken: 'refreshed_token' });
+
+    const meReq = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    meReq.flush('User not found', { status: 404, statusText: 'Not Found' });
+
+    expect(errorCaught).toBeDefined();
+    expect(service.accessToken()).toBeNull();
+    expect(service.currentUser()).toBeNull();
+    expect(service.isAuthenticated()).toBe(false);
+    expect(service.isLoading()).toBe(false);
+  });
+
+  it('should propagate error when direct getSelfProfile call fails', () => {
+    let errorCaught: unknown = null;
+
+    service.getSelfProfile().subscribe({
+      error: (err) => {
+        errorCaught = err;
+      }
+    });
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/me`);
+    req.flush('Server Error', { status: 500, statusText: 'Internal Server Error' });
+
+    expect(errorCaught).toBeDefined();
   });
 });

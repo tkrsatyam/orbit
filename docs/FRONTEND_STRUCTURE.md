@@ -93,7 +93,7 @@ The `core/` folder houses application-wide singletons. Modules and components ne
      - `isLoading = signal<boolean>(true)`
      - `isAuthenticated = computed(() => !!this.accessToken() && !!this.currentUser())`
    - Bootstraps user session on startup by executing `refresh()`.
-   - Caches non-sensitive profile metadata in `localStorage` under key `orbit_user` (restored on refresh).
+   - Hydrates user profile on refresh via `GET /api/v1/users/me`, keeping profile data server-authoritative and completely in-memory.
    - In-flight refresh deduplication using RxJS `shareReplay(1)`.
 
 2. **`auth.interceptor.ts`**:

@@ -1,16 +1,13 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
-import { catchError, finalize, map, Observable, of, shareReplay, tap, throwError } from 'rxjs';
+import { catchError, finalize, map, Observable, of, shareReplay, switchMap, tap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { parseJwt } from '../../shared/utils/token-utils';
 import { AuthResponse, LoginPayload, RegisterPayload, User } from '../models/auth.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private static readonly USER_STORAGE_KEY = 'orbit_user';
-
   private readonly http = inject(HttpClient);
 
   private readonly accessTokenSignal = signal<string | null>(null);
@@ -40,7 +37,8 @@ export class AuthService {
   }
 
   /**
-   * Refreshes the access token using the backend httpOnly cookie.
+   * Refreshes the access token using the backend httpOnly cookie,
+   * then hydrates currentUser by calling GET /api/v1/users/me.
    * Deduplicates concurrent calls via shareReplay(1).
    */
   refresh(): Observable<AuthResponse> {
@@ -51,6 +49,15 @@ export class AuthService {
     this.refreshObservable$ = this.http
       .post<AuthResponse>(`${environment.apiBaseUrl}/api/v1/auth/refresh`, {}, { withCredentials: true })
       .pipe(
+        switchMap((authResponse) => {
+          this.accessTokenSignal.set(authResponse.accessToken);
+          return this.getSelfProfile(authResponse.accessToken).pipe(
+            map((user) => ({
+              accessToken: authResponse.accessToken,
+              user
+            }))
+          );
+        }),
         tap((response) => {
           this.handleAuthSuccess(response);
         }),
@@ -66,6 +73,17 @@ export class AuthService {
       );
 
     return this.refreshObservable$;
+  }
+
+  /**
+   * Fetches the authenticated user profile from GET /api/v1/users/me.
+   */
+  getSelfProfile(token?: string): Observable<User> {
+    const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    return this.http.get<User>(`${environment.apiBaseUrl}/api/v1/users/me`, {
+      headers,
+      withCredentials: true
+    });
   }
 
   /**
@@ -113,54 +131,13 @@ export class AuthService {
 
   private handleAuthSuccess(response: AuthResponse): void {
     this.accessTokenSignal.set(response.accessToken);
-
     if (response.user) {
       this.currentUserSignal.set(response.user);
-      this.persistUser(response.user);
-      return;
-    }
-
-    // On token refresh, backend may omit user object. Restore from localStorage or construct from JWT claims.
-    const claims = parseJwt(response.accessToken);
-    const cachedUser = this.getCachedUser();
-
-    if (cachedUser && claims && cachedUser.id === claims.sub) {
-      this.currentUserSignal.set(cachedUser);
-    } else if (claims) {
-      const fallbackUser: User = {
-        id: claims.sub,
-        email: (claims['email'] as string) || cachedUser?.email || '',
-        displayName: (claims['displayName'] as string) || cachedUser?.displayName || 'Orbit User'
-      };
-      this.currentUserSignal.set(fallbackUser);
-      this.persistUser(fallbackUser);
     }
   }
 
   private handleAuthFailure(): void {
     this.accessTokenSignal.set(null);
     this.currentUserSignal.set(null);
-    try {
-      localStorage.removeItem(AuthService.USER_STORAGE_KEY);
-    } catch {
-      // Storage unavailable in restricted sandbox
-    }
-  }
-
-  private persistUser(user: User): void {
-    try {
-      localStorage.setItem(AuthService.USER_STORAGE_KEY, JSON.stringify(user));
-    } catch {
-      // Storage unavailable
-    }
-  }
-
-  private getCachedUser(): User | null {
-    try {
-      const raw = localStorage.getItem(AuthService.USER_STORAGE_KEY);
-      return raw ? (JSON.parse(raw) as User) : null;
-    } catch {
-      return null;
-    }
   }
 }

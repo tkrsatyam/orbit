@@ -208,7 +208,7 @@ Response 200:
       "createdAt": "2026-06-27T10:30:00Z"
     }
 
-Note: flagged during backlog planning, not yet resolved — this response includes `email`, but no backend DTO is currently documented for this exact shape (see `com.orbit.user` in `BACKEND_STRUCTURE.md` — `UserProfileResponse` is explicitly the no-email shape used by `GET /{userId}` instead). Decide during implementation whether this needs its own DTO or deliberately reuses another one.
+Note: resolved under ORDM-31 — represented by dedicated DTO `SelfProfileResponse` in `com.orbit.user.dto`.
 
 ---
 

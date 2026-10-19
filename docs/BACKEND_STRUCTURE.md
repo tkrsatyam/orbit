@@ -139,6 +139,7 @@ com.orbit.user/
 ├── UserService.java
 ├── UserRepository.java
 ├── dto/
+│   ├── SelfProfileResponse.java    ← authenticated self profile shape (with email) — GET /me
 │   ├── UpdateProfileRequest.java
 │   ├── UserProfileResponse.java    ← public profile shape (no email) — GET /{userId}
 │   └── UserSearchResponse.java     ← search result shape with connectionStatus
@@ -147,7 +148,7 @@ com.orbit.user/
     └── UserRole.java               ← enum: USER, ADMIN
 ```
 
-**Flagged, not yet resolved:** `GET /users/me`'s response includes `email` (per `API_CONTRACTS.md`), but no DTO in this package or `com.orbit.auth` is documented for that shape — `UserProfileResponse` is explicitly the *no-email* public shape. Needs a decision during implementation: either add a dedicated `SelfProfileResponse.java` here, or confirm/document a deliberate reuse of `AuthResponse`'s user shape across packages. Not resolved during backlog planning — check this before/during building the self-fetch endpoint.
+**Resolved Decision (ORDM-31):** `GET /api/v1/users/me` returns `SelfProfileResponse` (in `com.orbit.user.dto`), maintaining strict package isolation and decoupling the user profile domain from `com.orbit.auth.dto.UserSummaryResponse`.
 
 **Key rules:**
 - `UserController` resolves the authenticated user from `@AuthenticationPrincipal` — never from a request body
