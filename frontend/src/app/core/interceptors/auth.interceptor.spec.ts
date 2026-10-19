@@ -1,6 +1,7 @@
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { authInterceptor } from './auth.interceptor';
@@ -12,6 +13,10 @@ describe('authInterceptor', () => {
     accessToken: ReturnType<typeof vi.fn>;
     refresh: ReturnType<typeof vi.fn>;
   };
+  let routerMock: {
+    navigate: ReturnType<typeof vi.fn>;
+    url: string;
+  };
 
   beforeEach(() => {
     authServiceMock = {
@@ -19,11 +24,17 @@ describe('authInterceptor', () => {
       refresh: vi.fn()
     };
 
+    routerMock = {
+      navigate: vi.fn(),
+      url: '/conversations'
+    };
+
     TestBed.configureTestingModule({
       providers: [
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
-        { provide: AuthService, useValue: authServiceMock }
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: Router, useValue: routerMock }
       ]
     });
 
@@ -74,5 +85,23 @@ describe('authInterceptor', () => {
     const req2 = httpMock.expectOne('/api/v1/conversations');
     expect(req2.request.headers.get('Authorization')).toBe('Bearer brand_new_token');
     req2.flush(['conv1']);
+  });
+
+  it('should catch 401, call refresh, and navigate to /login when refresh fails', () => {
+    authServiceMock.accessToken.mockReturnValue('expired_token');
+    authServiceMock.refresh.mockReturnValue(throwError(() => new Error('Refresh failed')));
+
+    http.get('/api/v1/conversations').subscribe({
+      error: (err) => {
+        expect(err).toBeDefined();
+      }
+    });
+
+    const req = httpMock.expectOne('/api/v1/conversations');
+    req.flush('Token expired', { status: 401, statusText: 'Unauthorized' });
+
+    expect(routerMock.navigate).toHaveBeenCalledWith(['/login'], {
+      queryParams: { returnUrl: '/conversations' }
+    });
   });
 });

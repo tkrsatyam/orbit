@@ -1,5 +1,6 @@
 import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { catchError, switchMap, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 
@@ -7,6 +8,7 @@ export const IS_RETRY = new HttpContextToken<boolean>(() => false);
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const router = inject(Router);
 
   const isAuthEndpoint =
     req.url.includes('/api/v1/auth/login') ||
@@ -49,7 +51,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             });
             return next(retryReq);
           }),
-          catchError((refreshError) => throwError(() => refreshError))
+          catchError((refreshError) => {
+            const currentUrl = router.url;
+            if (currentUrl && !currentUrl.startsWith('/login') && !currentUrl.startsWith('/register')) {
+              router.navigate(['/login'], { queryParams: { returnUrl: currentUrl } });
+            } else {
+              router.navigate(['/login']);
+            }
+            return throwError(() => refreshError);
+          })
         );
       }
 
