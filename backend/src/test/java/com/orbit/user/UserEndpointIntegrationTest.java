@@ -3,6 +3,9 @@ package com.orbit.user;
 import com.orbit.auth.token.AccessTokenClaims;
 import com.orbit.auth.token.JwtService;
 import com.orbit.auth.token.TokenBlacklistService;
+import com.orbit.contact.ContactRepository;
+import com.orbit.contact.model.Contact;
+import com.orbit.contact.model.ContactStatus;
 import com.orbit.user.model.User;
 import com.orbit.user.model.UserRole;
 import org.bson.types.ObjectId;
@@ -27,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserEndpointIntegrationTest {
 
     private static final String ME_PATH = "/api/v1/users/me";
+    private static final String USERS_PATH = "/api/v1/users/";
 
     @Autowired
     private MockMvc mockMvc;
@@ -35,16 +39,22 @@ class UserEndpointIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private ContactRepository contactRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
     private TokenBlacklistService tokenBlacklistService;
 
     private User seededUser;
+    private User otherUser;
 
     @BeforeEach
     void setUp() {
+        contactRepository.deleteAll();
         userRepository.deleteAll();
+
         seededUser = userRepository.save(User.builder()
                 .email("satyam.profile@example.com")
                 .passwordHash("hashed-pw")
@@ -53,6 +63,16 @@ class UserEndpointIntegrationTest {
                 .avatarUrl("https://example.com/satyam.png")
                 .role(UserRole.USER)
                 .online(true)
+                .build());
+
+        otherUser = userRepository.save(User.builder()
+                .email("other.user@example.com")
+                .passwordHash("hashed-pw-2")
+                .displayName("Other User")
+                .bio("Other bio")
+                .avatarUrl("https://example.com/other.png")
+                .role(UserRole.USER)
+                .online(false)
                 .build());
     }
 
@@ -142,5 +162,155 @@ class UserEndpointIntegrationTest {
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4200"))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"))
                 .andExpect(header().exists(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS));
+    }
+
+    // --- GET /api/v1/users/{userId} Integration Tests ---
+
+    @Test
+    void getUserProfileWithoutTokenReturns401() throws Exception {
+        mockMvc.perform(get(USERS_PATH + otherUser.getId()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.error").value("Unauthorized"));
+    }
+
+    @Test
+    void getUserProfileWithNonExistentTargetReturns404() throws Exception {
+        String token = jwtService.generateAccessToken(seededUser.getId());
+        String nonexistentUserId = new ObjectId().toHexString();
+
+        mockMvc.perform(get(USERS_PATH + nonexistentUserId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"));
+    }
+
+    @Test
+    void getUserProfileWhenNoRelationshipReturns200WithNoneStatus() throws Exception {
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(otherUser.getId()))
+                .andExpect(jsonPath("$.displayName").value("Other User"))
+                .andExpect(jsonPath("$.bio").value("Other bio"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://example.com/other.png"))
+                .andExpect(jsonPath("$.connectionStatus").value("NONE"))
+                .andExpect(jsonPath("$.available").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenPendingSentReturns200WithPendingSent() throws Exception {
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.connectionStatus").value("PENDING_SENT"))
+                .andExpect(jsonPath("$.available").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenPendingReceivedReturns200WithPendingReceived() throws Exception {
+        contactRepository.save(Contact.builder()
+                .requesterId(otherUser.getId())
+                .receiverId(seededUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.connectionStatus").value("PENDING_RECEIVED"))
+                .andExpect(jsonPath("$.available").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenConnectedReturns200WithConnected() throws Exception {
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .conversationId(new ObjectId().toHexString())
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.connectionStatus").value("CONNECTED"))
+                .andExpect(jsonPath("$.available").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenBlockedByTargetReturns200WithMaskedProfile() throws Exception {
+        // otherUser blocked seededUser
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.BLOCKED)
+                .blockedBy(otherUser.getId())
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(otherUser.getId()))
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.displayName").doesNotExist())
+                .andExpect(jsonPath("$.bio").doesNotExist())
+                .andExpect(jsonPath("$.avatarUrl").doesNotExist())
+                .andExpect(jsonPath("$.connectionStatus").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenRequesterIsBlockerReturns200WithBlockedStatus() throws Exception {
+        // seededUser blocked otherUser (asymmetric visibility: blocker sees full profile)
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.BLOCKED)
+                .blockedBy(seededUser.getId())
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(otherUser.getId()))
+                .andExpect(jsonPath("$.displayName").value("Other User"))
+                .andExpect(jsonPath("$.bio").value("Other bio"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://example.com/other.png"))
+                .andExpect(jsonPath("$.connectionStatus").value("BLOCKED"))
+                .andExpect(jsonPath("$.available").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileWhenViewingSelfReturns200WithNoneStatus() throws Exception {
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get(USERS_PATH + seededUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(seededUser.getId()))
+                .andExpect(jsonPath("$.displayName").value("Satyam Kumar"))
+                .andExpect(jsonPath("$.connectionStatus").value("NONE"))
+                .andExpect(jsonPath("$.available").doesNotExist());
     }
 }

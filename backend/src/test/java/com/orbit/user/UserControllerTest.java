@@ -2,7 +2,9 @@ package com.orbit.user;
 
 import com.orbit.common.exception.GlobalExceptionHandler;
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.user.dto.ConnectionStatus;
 import com.orbit.user.dto.SelfProfileResponse;
+import com.orbit.user.dto.UserProfileResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class UserControllerTest {
 
     private static final String ME_PATH = "/api/v1/users/me";
+    private static final String USERS_PATH = "/api/v1/users/";
 
     @Mock
     private UserService userService;
@@ -78,5 +81,66 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("User not found: missing-user"))
                 .andExpect(jsonPath("$.path").value(ME_PATH));
+    }
+
+    @Test
+    void getUserProfileReturns200WithPublicProfileWhenFound() throws Exception {
+        UserProfileResponse response = new UserProfileResponse(
+                "target-456",
+                "Rahul",
+                "https://example.com/rahul.jpg",
+                "Preparing for FAANG",
+                ConnectionStatus.CONNECTED,
+                null
+        );
+
+        when(userService.getUserProfile("target-456", "requester-123")).thenReturn(response);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(get(USERS_PATH + "target-456").principal(principal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("target-456"))
+                .andExpect(jsonPath("$.displayName").value("Rahul"))
+                .andExpect(jsonPath("$.avatarUrl").value("https://example.com/rahul.jpg"))
+                .andExpect(jsonPath("$.bio").value("Preparing for FAANG"))
+                .andExpect(jsonPath("$.connectionStatus").value("CONNECTED"))
+                .andExpect(jsonPath("$.available").doesNotExist())
+                .andExpect(jsonPath("$.email").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileReturns200WithMaskedProfileWhenBlocked() throws Exception {
+        UserProfileResponse masked = UserProfileResponse.unavailable("target-456");
+
+        when(userService.getUserProfile("target-456", "requester-123")).thenReturn(masked);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(get(USERS_PATH + "target-456").principal(principal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("target-456"))
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.displayName").doesNotExist())
+                .andExpect(jsonPath("$.bio").doesNotExist())
+                .andExpect(jsonPath("$.avatarUrl").doesNotExist())
+                .andExpect(jsonPath("$.connectionStatus").doesNotExist());
+    }
+
+    @Test
+    void getUserProfileReturns404WhenTargetUserNotFound() throws Exception {
+        when(userService.getUserProfile("nonexistent", "requester-123"))
+                .thenThrow(new ResourceNotFoundException("User not found: nonexistent"));
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(get(USERS_PATH + "nonexistent").principal(principal))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("User not found: nonexistent"));
     }
 }
