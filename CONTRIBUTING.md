@@ -32,7 +32,7 @@ cd backend && docker compose up -d
 cd frontend && npm install && npm run dev
 ```
 
-Frontend: `http://localhost:5173`
+Frontend: `http://localhost:4200`
 Backend: `http://localhost:8080`
 
 ---

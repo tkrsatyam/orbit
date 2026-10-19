@@ -74,7 +74,7 @@ frontend/
 │
 ├── e2e/                            ← Playwright browser end-to-end test suite
 │   └── auth.spec.ts
-├── angular.json                    ← Angular CLI configuration (port 5173)
+├── angular.json                    ← Angular CLI configuration (port 4200)
 ├── package.json
 ├── playwright.config.ts
 └── tsconfig.json
@@ -183,12 +183,12 @@ Orbit utilizes a deliberate hybrid state pattern:
 
 ## Environment & Server Configuration
 
-Development server runs on port `5173` to match existing backend CORS configuration:
+Development server runs on standard Angular default port `4200`:
 ```json
 // angular.json
 "serve": {
   "options": {
-    "port": 5173
+    "port": 4200
   }
 }
 ```

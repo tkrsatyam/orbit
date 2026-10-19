@@ -52,7 +52,7 @@ class AuthServiceTest {
 
     private final OrbitProperties properties = new OrbitProperties(
             new OrbitProperties.Jwt(SECRET, 900_000L, 604_800_000L),
-            new OrbitProperties.Cors("http://localhost:5173"),
+            new OrbitProperties.Cors("http://localhost:4200"),
             new OrbitProperties.Cookie(true, "None"));
     private final JwtService jwtService = new JwtService(properties);
 
