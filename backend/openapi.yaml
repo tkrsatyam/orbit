@@ -9,6 +9,8 @@ servers:
 security:
 - bearerAuth: []
 tags:
+- name: User
+  description: User profile management
 - name: Auth
   description: Authentication and session management
 paths:
@@ -191,6 +193,38 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/users/me:
+    get:
+      tags:
+      - User
+      summary: Get current user profile
+      description: Returns the authenticated user's own profile including email
+      operationId: getSelfProfile
+      responses:
+        "200":
+          description: Profile retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/SelfProfileResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: User account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     RegisterRequest:
@@ -310,6 +344,39 @@ components:
       required:
       - email
       - password
+    SelfProfileResponse:
+      type: object
+      description: Authenticated user's own profile
+      properties:
+        id:
+          type: string
+          description: Unique user identifier
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        email:
+          type: string
+          description: User email address
+          example: satyam@example.com
+        displayName:
+          type: string
+          description: User display name
+          example: Satyam
+        avatarUrl:
+          type:
+          - string
+          - "null"
+          description: User avatar image URL
+          example: https://pub-xxx.r2.dev/avatars/user-id.jpg
+        bio:
+          type:
+          - string
+          - "null"
+          description: User profile bio
+          example: Career switcher from finance to tech
+        createdAt:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of account creation
+          example: 2026-06-27T10:30:00Z
   securitySchemes:
     bearerAuth:
       type: http
