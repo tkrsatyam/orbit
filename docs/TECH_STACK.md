@@ -6,33 +6,31 @@ This document covers every technology decision in Orbit, with justification for 
 
 ## Frontend
 
-### React
-- **What:** UI library for building component-based interfaces
-- **Why:** Most listed frontend requirement in target job descriptions.
-  The developer has production Angular experience — React adds demonstrated framework flexibility to the resume. Conceptually close to Angular signals, reducing the learning curve.
-- **Version:** 19.3.0 (confirmed at scaffold time)
+### Angular
+- **What:** Modern frontend framework with standalone components and fine-grained Signals reactivity
+- **Why:** Enterprise-grade structure, native RxJS stream handling for real-time WebSocket communication, template-level signal reactivity without virtual DOM overhead, and strict end-to-end TypeScript compilation.
+- **Version:** 21.x (confirmed with local Angular CLI 21.0.2)
 - **ADR Reference:** [`discussions/003_frontend_framework.md`](./discussions/003_frontend_framework.md)
 
-### Vite
-- **What:** Frontend build tool and dev server
-- **Why:** Fastest development experience for React projects. Near-instant hot module replacement. Zero configuration to get started. Industry standard for new React projects in 2025+, replacing Create React App.
-- **Version:** 8.3.x (confirmed at scaffold time)
+### Angular CDK
+- **What:** Component Development Kit from the Angular team
+- **Why:** Official, high-performance virtual scrolling (`CdkVirtualScrollViewport`) for large chat histories (1,000+ messages), accessibility primitives, and layout utilities without opinionated styling.
 
-### ESLint
-- **What:** JavaScript linter generated with the Vite scaffold (`npm run lint`)
-- **Why:** Catches bugs early, including incorrect React hook usage via `eslint-plugin-react-hooks`. Chosen over Oxlint for its reference implementation of the hooks rules and broader ecosystem.
+### Angular Router
+- **What:** Native client-side routing solution
+- **Why:** Standard routing for Angular SPAs. Supports functional guards (`CanActivateFn`), lazy-loaded component routes, and URL redirect state.
 
-### React Router
-- **What:** Client-side routing library for React
-- **Why:** Standard routing solution for React SPAs. Handles protected routes, navigation, and URL-based view rendering.
+### Angular HttpClient
+- **What:** Built-in HTTP client with functional interceptors
+- **Why:** Native integration with RxJS pipelines. Supports functional interceptors (`HttpInterceptorFn`) for in-memory JWT attachment, cross-origin cookie credentials, and seamless 401 token refresh queues via `catchError` and `switchMap`.
 
-### SockJS + STOMP.js
-- **What:** WebSocket client libraries
-- **Why:** SockJS provides WebSocket with automatic fallback to HTTP long-polling if WebSocket is unavailable in the browser or network environment. STOMP is a messaging protocol that runs over WebSocket, providing named destinations (topics and queues) rather than raw socket frames. Spring Boot's WebSocket support is built around STOMP — using it on the client ensures compatibility with the backend out of the box.
+### SockJS + STOMP.js + RxJS
+- **What:** WebSocket and messaging client libraries integrated with reactive streams
+- **Why:** SockJS provides fallback to HTTP long-polling. STOMP provides named topics and queues matching Spring Boot's WebSocket message broker. RxJS Observables expose message arrival, typing events, and presence updates as manageable, cancellable streams.
 
-### Axios
-- **What:** HTTP client for REST API calls
-- **Why:** Cleaner API than the native Fetch API. Supports request and response interceptors — used for attaching JWT access tokens to outgoing requests and handling 401 responses for token refresh automatically.
+### Playwright
+- **What:** End-to-end browser automation framework
+- **Why:** Headless Chromium testing covering complete authentication flows, page reload persistence, route guards, and real-time UI interactions directly against live servers.
 
 ---
 
