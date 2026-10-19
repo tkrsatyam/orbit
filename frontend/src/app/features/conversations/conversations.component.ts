@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
@@ -16,25 +16,49 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
             Signed in as <strong>{{ currentUserName() }}</strong>
           </p>
         </div>
-        <div class="header-actions">
+        <div class="user-menu-container">
           <button
             type="button"
-            class="profile-button"
-            (click)="isProfileOpen.set(true)"
-            data-testid="view-profile-button"
-            title="View My Profile"
+            class="avatar-badge-btn"
+            (click)="toggleMenu($event)"
+            [attr.aria-expanded]="isMenuOpen()"
+            aria-haspopup="true"
+            data-testid="user-avatar-badge"
+            [attr.title]="currentUserName()"
           >
-            <span class="avatar-badge">{{ userInitial() }}</span>
-            <span class="profile-label">Profile</span>
+            {{ userInitial() }}
           </button>
-          <button
-            type="button"
-            (click)="handleLogout()"
-            class="signout-button"
-            data-testid="signout-button"
-          >
-            Sign out
-          </button>
+
+          @if (isMenuOpen()) {
+            <div
+              class="user-dropdown-menu"
+              role="menu"
+              data-testid="user-dropdown-menu"
+              (click)="$event.stopPropagation()"
+            >
+              <button
+                type="button"
+                class="dropdown-menu-item"
+                role="menuitem"
+                (click)="openProfileModal()"
+                data-testid="menu-my-profile-btn"
+              >
+                <span class="menu-icon">👤</span>
+                <span>My profile</span>
+              </button>
+              <div class="dropdown-separator"></div>
+              <button
+                type="button"
+                class="dropdown-menu-item signout-item"
+                role="menuitem"
+                (click)="handleLogout()"
+                data-testid="signout-button"
+              >
+                <span class="menu-icon">🚪</span>
+                <span>Sign out</span>
+              </button>
+            </div>
+          }
         </div>
       </header>
 
@@ -76,57 +100,89 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
       color: var(--text);
       margin-top: 4px;
     }
-    .header-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
+    .user-menu-container {
+      position: relative;
     }
-    .profile-button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--text-h);
-      font-weight: 500;
-      transition: all 0.15s;
-
-      &:hover {
-        background: var(--code-bg);
-        border-color: var(--accent-border);
-      }
-    }
-    .avatar-badge {
-      width: 24px;
-      height: 24px;
+    .avatar-badge-btn {
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: var(--accent-bg);
       color: var(--accent);
-      font-size: 0.8rem;
+      border: 2px solid var(--accent-border);
+      font-size: 1.15rem;
       font-weight: 700;
       display: flex;
       align-items: center;
       justify-content: center;
-      text-transform: uppercase;
-    }
-    .profile-label {
-      font-size: 0.9rem;
-    }
-    .signout-button {
-      padding: 8px 16px;
-      background: none;
-      border: 1px solid var(--border);
-      border-radius: 6px;
       cursor: pointer;
-      color: var(--text-h);
-      font-weight: 500;
-      transition: background 0.2s;
+      text-transform: uppercase;
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        transform: scale(1.05);
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px var(--accent-bg);
+      }
     }
-    .signout-button:hover {
-      background: var(--code-bg);
+    .user-dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: var(--shadow);
+      min-width: 170px;
+      padding: 6px;
+      z-index: 100;
+      animation: dropdownFade 0.12s ease-out;
+    }
+    @keyframes dropdownFade {
+      from {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .dropdown-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 9px 12px;
+      background: none;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      color: var(--text-h);
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.15s;
+
+      &:hover {
+        background: var(--code-bg);
+      }
+    }
+    .menu-icon {
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .dropdown-separator {
+      height: 1px;
+      background: var(--border);
+      margin: 4px 0;
+    }
+    .signout-item {
+      color: #dc2626;
+
+      &:hover {
+        background: rgba(220, 38, 38, 0.08);
+      }
     }
     .conversations-content {
       padding: 24px;
@@ -164,7 +220,9 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
 export class ConversationsComponent {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly elementRef = inject(ElementRef);
 
+  readonly isMenuOpen = signal<boolean>(false);
   readonly isProfileOpen = signal<boolean>(false);
   readonly currentUser = this.authService.currentUser;
 
@@ -178,7 +236,18 @@ export class ConversationsComponent {
     return user?.displayName || user?.email || user?.id || '';
   }
 
+  toggleMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isMenuOpen.update((open) => !open);
+  }
+
+  openProfileModal(): void {
+    this.isMenuOpen.set(false);
+    this.isProfileOpen.set(true);
+  }
+
   handleLogout(): void {
+    this.isMenuOpen.set(false);
     this.authService.logout().subscribe({
       next: () => {
         this.router.navigate(['/login']);
@@ -187,5 +256,17 @@ export class ConversationsComponent {
         this.router.navigate(['/login']);
       }
     });
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.elementRef.nativeElement.contains(event.target)) {
+      this.isMenuOpen.set(false);
+    }
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.isMenuOpen.set(false);
   }
 }

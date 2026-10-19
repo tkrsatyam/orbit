@@ -57,17 +57,6 @@ import { User } from '../../../core/models/auth.model';
               </p>
             </div>
           </div>
-
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="btn-close"
-              (click)="closeModal.emit()"
-              data-testid="profile-close-btn"
-            >
-              Close
-            </button>
-          </footer>
         </div>
       </div>
     }
@@ -139,7 +128,7 @@ import { User } from '../../../core/models/auth.model';
     }
 
     .profile-body {
-      padding: 24px 20px;
+      padding: 24px 20px 28px;
       text-align: center;
     }
 
@@ -214,29 +203,6 @@ import { User } from '../../../core/models/auth.model';
       color: var(--text-h);
       line-height: 1.4;
       word-break: break-word;
-    }
-
-    .modal-footer {
-      display: flex;
-      justify-content: flex-end;
-      padding: 12px 20px;
-      border-top: 1px solid var(--border);
-      background: var(--code-bg);
-    }
-
-    .btn-close {
-      padding: 8px 16px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text-h);
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.15s;
-
-      &:hover {
-        background: var(--border);
-      }
     }
   `]
 })

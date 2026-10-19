@@ -17,10 +17,16 @@ test.describe('Self-Profile Modal Flow', () => {
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.locator('h2')).toHaveText('Conversations');
 
-    // 3. Open self-profile modal
-    const profileBtn = page.locator('[data-testid="view-profile-button"]');
-    await expect(profileBtn).toBeVisible();
-    await profileBtn.click();
+    // 3. Open user menu dropdown and select My profile
+    const avatarBadge = page.locator('[data-testid="user-avatar-badge"]');
+    await expect(avatarBadge).toBeVisible();
+    await avatarBadge.click();
+
+    const dropdownMenu = page.locator('[data-testid="user-dropdown-menu"]');
+    await expect(dropdownMenu).toBeVisible();
+
+    await page.locator('[data-testid="menu-my-profile-btn"]').click();
+    await expect(dropdownMenu).not.toBeVisible();
 
     // 4. Verify modal contents
     const modalBackdrop = page.locator('.modal-backdrop');
@@ -32,14 +38,15 @@ test.describe('Self-Profile Modal Flow', () => {
     );
     await expect(page.locator('[data-testid="self-profile-joined"]')).toContainText('2026');
 
-    // 5. Close modal via close button
+    // 5. Close modal via top-right '✕' button
     await page.locator('[data-testid="close-profile-btn"]').click();
     await expect(modalBackdrop).not.toBeVisible();
 
-    // 6. Re-open and close via Close footer button
-    await profileBtn.click();
+    // 6. Re-open and close via backdrop click
+    await avatarBadge.click();
+    await page.locator('[data-testid="menu-my-profile-btn"]').click();
     await expect(modalBackdrop).toBeVisible();
-    await page.locator('[data-testid="profile-close-btn"]').click();
+    await modalBackdrop.click({ position: { x: 5, y: 5 } });
     await expect(modalBackdrop).not.toBeVisible();
   });
 });

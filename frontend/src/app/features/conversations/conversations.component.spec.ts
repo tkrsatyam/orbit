@@ -41,26 +41,56 @@ describe('ConversationsComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should render user display name in header', () => {
+  it('should render user display name in header and initial in avatar badge', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.user-info')?.textContent).toContain('Satyam Kumar');
+    expect(compiled.querySelector('[data-testid="user-avatar-badge"]')?.textContent?.trim()).toBe('S');
   });
 
-  it('should call logout and navigate to login when sign out is clicked', () => {
-    component.handleLogout();
+  it('should toggle dropdown menu when avatar badge is clicked', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="user-dropdown-menu"]')).toBeNull();
+
+    const avatarBadge = compiled.querySelector('[data-testid="user-avatar-badge"]') as HTMLButtonElement;
+    avatarBadge.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="user-dropdown-menu"]')).not.toBeNull();
+
+    // Toggle closed on another click
+    avatarBadge.click();
+    fixture.detectChanges();
+    expect(compiled.querySelector('[data-testid="user-dropdown-menu"]')).toBeNull();
+  });
+
+  it('should call logout and navigate to login when sign out is clicked from dropdown', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const avatarBadge = compiled.querySelector('[data-testid="user-avatar-badge"]') as HTMLButtonElement;
+    avatarBadge.click();
+    fixture.detectChanges();
+
+    const signoutBtn = compiled.querySelector('[data-testid="signout-button"]') as HTMLButtonElement;
+    signoutBtn.click();
+    fixture.detectChanges();
 
     expect(authServiceMock.logout).toHaveBeenCalled();
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
+    expect(component.isMenuOpen()).toBe(false);
   });
 
-  it('should toggle self profile modal when profile button is clicked', () => {
+  it('should open self profile modal when My profile is clicked in dropdown and close via close button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.modal-backdrop')).toBeNull();
 
-    const profileBtn = compiled.querySelector('[data-testid="view-profile-button"]') as HTMLButtonElement;
-    profileBtn.click();
+    const avatarBadge = compiled.querySelector('[data-testid="user-avatar-badge"]') as HTMLButtonElement;
+    avatarBadge.click();
     fixture.detectChanges();
 
+    const myProfileBtn = compiled.querySelector('[data-testid="menu-my-profile-btn"]') as HTMLButtonElement;
+    myProfileBtn.click();
+    fixture.detectChanges();
+
+    expect(component.isMenuOpen()).toBe(false);
     expect(compiled.querySelector('.modal-backdrop')).not.toBeNull();
     expect(compiled.querySelector('[data-testid="self-profile-name"]')?.textContent?.trim()).toBe('Satyam Kumar');
     expect(compiled.querySelector('[data-testid="self-profile-email"]')?.textContent?.trim()).toBe('satyam@orbit.local');
@@ -71,5 +101,15 @@ describe('ConversationsComponent', () => {
     fixture.detectChanges();
 
     expect(compiled.querySelector('.modal-backdrop')).toBeNull();
+  });
+
+  it('should close dropdown menu on escape key', () => {
+    component.isMenuOpen.set(true);
+    fixture.detectChanges();
+
+    component.onEscapeKey();
+    fixture.detectChanges();
+
+    expect(component.isMenuOpen()).toBe(false);
   });
 });
