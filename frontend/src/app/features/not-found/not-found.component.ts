@@ -6,16 +6,36 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <div class="not-found-page">
+    <div class="not-found-container">
       <h1>404</h1>
-      <p>Page Not Found</p>
-      <a routerLink="/">Go to Home</a>
+      <h2>Page Not Found</h2>
+      <p class="not-found-text">
+        The page you are looking for does not exist or has been moved.
+      </p>
+      <a routerLink="/" class="return-home-link">
+        Return to Home
+      </a>
     </div>
   `,
   styles: [`
-    .not-found-page {
-      padding: 3rem;
+    .not-found-container {
+      max-width: 480px;
+      margin: 64px auto;
+      padding: 24px;
       text-align: center;
+    }
+    .not-found-text {
+      margin: 16px 0 24px;
+      color: var(--text);
+    }
+    .return-home-link {
+      display: inline-block;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
     }
   `]
 })
