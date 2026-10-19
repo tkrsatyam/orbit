@@ -9,7 +9,7 @@ This document covers everything needed to run Orbit locally and deploy it to pro
 ```
 Local Development                         Production
 ─────────────────────────────────         ─────────────────────────────────
-React (Vite dev server :5173)             React SPA → Vercel
+Angular 21 (dev server :4200)             Angular SPA → Vercel
 Spring Boot (:8080)                       Spring Boot → Render
 MongoDB (Docker :27017)                   MongoDB Atlas (M0 free tier)
 Kafka + Zookeeper (Docker :9092)          Upstash Kafka (serverless)
@@ -169,10 +169,10 @@ VITE_WS_URL=ws://localhost:8080/ws
 
 ```bash
 npm install
-npm run dev
+npm start
 ```
 
-Frontend starts on `http://localhost:5173`.
+Frontend starts on `http://localhost:4200`.
 
 ---
 

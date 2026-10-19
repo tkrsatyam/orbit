@@ -33,7 +33,7 @@ class RateLimitFilterTest {
         objectMapper = new ObjectMapper().findAndRegisterModules();
 
         OrbitProperties.Jwt jwt = new OrbitProperties.Jwt("0123456789abcdef0123456789abcdef", 900000, 604800000);
-        OrbitProperties.Cors cors = new OrbitProperties.Cors("http://localhost:5173");
+        OrbitProperties.Cors cors = new OrbitProperties.Cors("http://localhost:4200");
         OrbitProperties.Cookie cookie = new OrbitProperties.Cookie(true, "None");
         OrbitProperties.RateLimit rateLimit = new OrbitProperties.RateLimit(2, 2, 2, 2, 2);
         OrbitProperties properties = new OrbitProperties(jwt, cors, cookie, rateLimit);

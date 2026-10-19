@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class OriginVerifierTest {
 
-    private static final String FRONTEND = "http://localhost:5173";
+    private static final String FRONTEND = "http://localhost:4200";
 
     private static OriginVerifier verifierFor(String allowedOrigin) {
         return new OriginVerifier(new OrbitProperties(

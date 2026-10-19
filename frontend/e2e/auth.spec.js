@@ -26,7 +26,7 @@ test.describe('Authentication & Route Guards Flow', () => {
     await page.click('button:has-text("Create account")')
 
     // Expect redirect to /
-    await expect(page).toHaveURL('http://localhost:5173/')
+    await expect(page).toHaveURL('http://localhost:4200/')
     await expect(page.locator('h2')).toHaveText('Conversations')
     await expect(page.locator('header')).toContainText(displayName)
 
@@ -40,20 +40,20 @@ test.describe('Authentication & Route Guards Flow', () => {
 
     await page.reload()
 
-    await expect(page).toHaveURL('http://localhost:5173/')
+    await expect(page).toHaveURL('http://localhost:4200/')
     await expect(page.locator('h2')).toHaveText('Conversations')
     await expect(page.locator('header')).toContainText(displayName)
     expect(refreshCalls).toBe(1)
 
     // 5. Client-side navigation to /discover as authenticated member
     await page.click('a:has-text("Discover Groups")')
-    await expect(page).toHaveURL('http://localhost:5173/discover')
+    await expect(page).toHaveURL('http://localhost:4200/discover')
     await expect(page.locator('button:has-text("Join Group")')).toBeVisible()
     await expect(page.locator('text=Logged in as Playwright Tester')).toBeVisible()
 
     // Navigate back to /
     await page.click('a:has-text("Back to conversations")')
-    await expect(page).toHaveURL('http://localhost:5173/')
+    await expect(page).toHaveURL('http://localhost:4200/')
 
     // 6. Sign out
     await page.click('button:has-text("Sign out")')

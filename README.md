@@ -128,12 +128,11 @@ docker compose up -d        # starts MongoDB and Kafka locally
 ### Frontend
 ```bash
 cd frontend
-cp .env.example .env        # fill in VITE_ variables
 npm install
-npm run dev
+npm start
 ```
 
-The frontend runs on `http://localhost:5173`
+The frontend runs on `http://localhost:4200`
 The backend runs on `http://localhost:8080`
 Swagger UI is available at `http://localhost:8080/swagger-ui.html`
 

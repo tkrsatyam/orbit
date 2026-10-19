@@ -11,7 +11,7 @@ class RefreshCookieFactoryTest {
         return new RefreshCookieFactory(new OrbitProperties(
                 new OrbitProperties.Jwt(
                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 900_000L, 604_800_000L),
-                new OrbitProperties.Cors("http://localhost:5173"),
+                new OrbitProperties.Cors("http://localhost:4200"),
                 new OrbitProperties.Cookie(secure, sameSite)));
     }
 
