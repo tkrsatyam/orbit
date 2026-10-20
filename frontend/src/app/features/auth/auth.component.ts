@@ -11,76 +11,136 @@ import { RegisterFormComponent } from './register-form/register-form.component';
   standalone: true,
   imports: [LoginFormComponent, RegisterFormComponent],
   template: `
-    <div class="auth-container">
-      <h1>Orbit</h1>
-      <p class="auth-subtitle">
-        {{ mode() === 'login' ? 'Welcome back! Sign in to continue.' : 'Create an account to join Orbit.' }}
-      </p>
+    <div class="auth-page-wrapper">
+      <div class="auth-card">
+        <div class="auth-brand-header">
+          <div class="orbit-badge" aria-hidden="true">
+            <span>⬡</span>
+          </div>
+          <h1 class="auth-title">Orbit</h1>
+        </div>
+        <p class="auth-subtitle">
+          {{ mode() === 'login' ? 'Welcome back! Sign in to continue.' : 'Create an account to join Orbit.' }}
+        </p>
 
-      <div class="tab-header">
-        <button
-          type="button"
-          (click)="setMode('login')"
-          [class.active]="mode() === 'login'"
-          class="tab-button"
-        >
-          Sign in
-        </button>
-        <button
-          type="button"
-          (click)="setMode('register')"
-          [class.active]="mode() === 'register'"
-          class="tab-button"
-        >
-          Register
-        </button>
+        <div class="tab-header" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            (click)="setMode('login')"
+            [class.active]="mode() === 'login'"
+            [attr.aria-selected]="mode() === 'login'"
+            class="tab-button"
+          >
+            Sign in
+          </button>
+          <button
+            type="button"
+            role="tab"
+            (click)="setMode('register')"
+            [class.active]="mode() === 'register'"
+            [attr.aria-selected]="mode() === 'register'"
+            class="tab-button"
+          >
+            Register
+          </button>
+        </div>
+
+        @if (mode() === 'login') {
+          <app-login-form
+            [isLoading]="isSubmitting()"
+            [error]="formError()"
+            (formSubmit)="handleLogin($event)"
+          />
+        } @else {
+          <app-register-form
+            [isLoading]="isSubmitting()"
+            [error]="formError()"
+            (formSubmit)="handleRegister($event)"
+          />
+        }
       </div>
-
-      @if (mode() === 'login') {
-        <app-login-form
-          [isLoading]="isSubmitting()"
-          [error]="formError()"
-          (formSubmit)="handleLogin($event)"
-        />
-      } @else {
-        <app-register-form
-          [isLoading]="isSubmitting()"
-          [error]="formError()"
-          (formSubmit)="handleRegister($event)"
-        />
-      }
     </div>
   `,
   styles: [`
-    .auth-container {
+    .auth-page-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: calc(100vh - 40px);
+      padding: 24px 16px;
+      box-sizing: border-box;
+    }
+    .auth-card {
+      width: 100%;
       max-width: 440px;
-      margin: 48px auto;
-      padding: 32px 24px;
+      background: var(--orbit-surface);
+      border: 1.5px solid var(--orbit-border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: var(--shadow);
+      box-sizing: border-box;
+      text-align: left;
+    }
+    .auth-brand-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .orbit-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: #2a2015;
+      border: 1px solid var(--orbit-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--orbit-accent);
+      font-size: 1.25rem;
+    }
+    .auth-title {
+      font-size: 26px;
+      letter-spacing: -0.02em;
+      margin: 0;
+      color: var(--orbit-text-primary);
     }
     .auth-subtitle {
       margin-bottom: 24px;
-      color: var(--text);
+      color: var(--orbit-text-muted);
+      font-size: 14px;
+      line-height: 1.45;
     }
     .tab-header {
       display: flex;
-      border-bottom: 1px solid var(--border);
+      background: var(--orbit-bg);
+      border: 1px solid var(--orbit-border);
+      border-radius: 8px;
+      padding: 4px;
+      gap: 4px;
       margin-bottom: 24px;
     }
     .tab-button {
       flex: 1;
-      padding: 10px;
-      background: none;
+      padding: 9px 12px;
+      background: transparent;
       border: none;
-      border-bottom: 2px solid transparent;
-      color: var(--text);
+      border-radius: 6px;
+      color: var(--orbit-text-muted);
       font-weight: 600;
-      font-size: 15px;
+      font-size: 14px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: all 0.15s ease-in-out;
+
+      &:hover {
+        color: var(--orbit-text-primary);
+      }
     }
     .tab-button.active {
-      border-bottom: 2px solid var(--accent);
-      color: var(--text-h);
+      background: var(--orbit-elevated);
+      color: var(--orbit-accent);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
     }
   `]
 })

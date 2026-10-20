@@ -31,11 +31,16 @@ import { RouterLink } from '@angular/router';
     .return-home-link {
       display: inline-block;
       padding: 10px 20px;
-      background: var(--accent);
-      color: #fff;
-      border-radius: 6px;
+      background: var(--orbit-accent);
+      color: #121214;
+      border-radius: 8px;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
+      transition: opacity 0.15s;
+
+      &:hover {
+        opacity: 0.9;
+      }
     }
   `]
 })

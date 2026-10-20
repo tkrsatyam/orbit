@@ -95,24 +95,34 @@ import { AuthService } from '../../core/services/auth.service';
       font-size: 15px;
     }
     .join-button {
-      padding: 8px 16px;
-      background: var(--accent);
-      color: #fff;
+      padding: 9px 18px;
+      background: var(--orbit-accent);
+      color: #121214;
       border: none;
-      border-radius: 6px;
+      border-radius: 8px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 14px;
+      transition: opacity 0.15s;
+
+      &:hover {
+        opacity: 0.9;
+      }
     }
     .register-link {
       display: inline-block;
-      padding: 8px 16px;
-      background: var(--accent);
-      color: #fff;
-      border-radius: 6px;
+      padding: 9px 18px;
+      background: var(--orbit-accent);
+      color: #121214;
+      border-radius: 8px;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
       font-size: 14px;
+      transition: opacity 0.15s;
+
+      &:hover {
+        opacity: 0.9;
+      }
     }
     .discover-footer {
       margin-top: 32px;

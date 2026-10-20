@@ -58,16 +58,16 @@ import { LoginPayload } from '../../../core/models/auth.model';
       display: flex;
       flex-direction: column;
       gap: 16px;
-      max-width: 360px;
-      margin: 0 auto;
+      width: 100%;
       text-align: left;
     }
     .form-error {
       padding: 10px 14px;
-      background: #fee2e2;
-      color: #b91c1c;
-      border-radius: 6px;
-      font-size: 14px;
+      background: var(--orbit-danger-subtle);
+      color: var(--orbit-danger);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+      border-radius: 8px;
+      font-size: 13px;
     }
     .form-group {
       display: flex;
@@ -75,41 +75,43 @@ import { LoginPayload } from '../../../core/models/auth.model';
       gap: 6px;
     }
     .form-group label {
-      font-size: 14px;
-      font-weight: 500;
-      color: var(--text-h);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--orbit-text-primary);
     }
     .form-group input {
-      padding: 10px 12px;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 15px;
-      background: var(--bg);
-      color: var(--text-h);
+      padding: 11px 13px;
+      border: 1px solid var(--orbit-border);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--orbit-bg);
+      color: var(--orbit-text-primary);
       box-sizing: border-box;
+      transition: border-color 0.15s, outline 0.15s;
     }
     .form-group input:focus {
-      outline: 2px solid var(--accent);
-      border-color: transparent;
+      outline: 2px solid var(--orbit-accent-subtle);
+      border-color: var(--orbit-accent);
     }
     .field-error {
       font-size: 12px;
-      color: #b91c1c;
+      color: var(--orbit-danger);
     }
     .submit-button {
       padding: 12px;
-      background: var(--accent);
-      color: #fff;
+      background: var(--orbit-accent);
+      color: #121214;
       border: none;
-      border-radius: 6px;
-      font-size: 15px;
+      border-radius: 8px;
+      font-size: 14px;
       font-weight: 600;
       cursor: pointer;
       transition: opacity 0.2s;
+      margin-top: 4px;
     }
     .submit-button:disabled {
       cursor: not-allowed;
-      opacity: 0.7;
+      opacity: 0.55;
     }
   `]
 })

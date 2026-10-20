@@ -10,12 +10,18 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
   template: `
     <div class="conversations-container">
       <header class="conversations-header">
-        <div>
-          <h2>Conversations</h2>
-          <p class="user-info">
-            Signed in as <strong>{{ currentUserName() }}</strong>
-          </p>
+        <div class="header-brand-title">
+          <div class="orbit-badge" aria-hidden="true">
+            <span>⬡</span>
+          </div>
+          <div>
+            <h2>Conversations</h2>
+            <p class="user-info">
+              Signed in as <strong>{{ currentUserName() }}</strong>
+            </p>
+          </div>
         </div>
+
         <div class="user-menu-container">
           <button
             type="button"
@@ -36,17 +42,39 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
               data-testid="user-dropdown-menu"
               (click)="$event.stopPropagation()"
             >
+              <div class="menu-user-header">
+                <span class="menu-user-name">{{ currentUserName() }}</span>
+                @if (currentUser()?.email) {
+                  <span class="menu-user-email">{{ currentUser()?.email }}</span>
+                }
+              </div>
+              <div class="dropdown-separator"></div>
+
               <button
                 type="button"
-                class="dropdown-menu-item"
+                class="dropdown-menu-item profile-item"
                 role="menuitem"
                 (click)="openProfileModal()"
                 data-testid="menu-my-profile-btn"
               >
-                <span class="menu-icon">👤</span>
+                <svg
+                  class="menu-icon profile-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
                 <span>My profile</span>
               </button>
+
               <div class="dropdown-separator"></div>
+
               <button
                 type="button"
                 class="dropdown-menu-item signout-item"
@@ -54,7 +82,20 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
                 (click)="handleLogout()"
                 data-testid="signout-button"
               >
-                <span class="menu-icon">🚪</span>
+                <svg
+                  class="menu-icon signout-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
                 <span>Sign out</span>
               </button>
             </div>
@@ -85,32 +126,58 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
   `,
   styles: [`
     .conversations-container {
-      max-width: 720px;
-      margin: 48px auto;
+      max-width: 820px;
+      margin: 40px auto;
       padding: 24px;
       text-align: left;
+      width: 100%;
+      box-sizing: border-box;
     }
     .conversations-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       margin-bottom: 24px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--orbit-border);
+    }
+    .header-brand-title {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .orbit-badge {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: #2a2015;
+      border: 1px solid var(--orbit-accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--orbit-accent);
+      font-size: 1.25rem;
     }
     .user-info {
-      color: var(--text);
+      color: var(--orbit-text-muted);
       margin-top: 4px;
+      font-size: 0.9rem;
+
+      strong {
+        color: var(--orbit-text-primary);
+      }
     }
     .user-menu-container {
       position: relative;
     }
     .avatar-badge-btn {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       border-radius: 50%;
-      background: var(--accent-bg);
-      color: var(--accent);
-      border: 2px solid var(--accent-border);
-      font-size: 1.15rem;
+      background: var(--orbit-elevated);
+      color: var(--orbit-accent);
+      border: 1.5px solid var(--orbit-accent);
+      font-size: 1rem;
       font-weight: 700;
       display: flex;
       align-items: center;
@@ -121,20 +188,20 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
 
       &:hover {
         transform: scale(1.05);
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-bg);
+        border-color: var(--orbit-accent);
+        box-shadow: 0 0 0 3px var(--orbit-accent-subtle);
       }
     }
     .user-dropdown-menu {
       position: absolute;
       right: 0;
       top: calc(100% + 8px);
-      background: var(--bg);
-      border: 1px solid var(--border);
+      background: var(--orbit-surface);
+      border: 1.5px solid var(--orbit-border);
       border-radius: 10px;
       box-shadow: var(--shadow);
-      min-width: 170px;
-      padding: 6px;
+      min-width: 210px;
+      padding: 8px 6px;
       z-index: 100;
       animation: dropdownFade 0.12s ease-out;
     }
@@ -148,72 +215,116 @@ import { SelfProfileModalComponent } from '../../shared/components/self-profile-
         transform: translateY(0);
       }
     }
+    .menu-user-header {
+      padding: 6px 10px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .menu-user-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--orbit-text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .menu-user-email {
+      font-size: 11px;
+      color: var(--orbit-text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .dropdown-separator {
+      height: 1px;
+      background: var(--orbit-border);
+      margin: 6px 4px;
+    }
     .dropdown-menu-item {
       display: flex;
       align-items: center;
       gap: 10px;
       width: 100%;
-      padding: 9px 12px;
+      padding: 8px 10px;
       background: none;
       border: none;
       border-radius: 6px;
-      font-size: 0.95rem;
+      font-size: 13px;
       font-weight: 500;
-      color: var(--text-h);
+      color: var(--orbit-text-primary);
       text-align: left;
       cursor: pointer;
-      transition: background 0.15s;
+      transition: background 0.15s, color 0.15s;
 
       &:hover {
-        background: var(--code-bg);
+        background: var(--orbit-elevated);
       }
     }
     .menu-icon {
-      font-size: 1rem;
-      line-height: 1;
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
     }
-    .dropdown-separator {
-      height: 1px;
-      background: var(--border);
-      margin: 4px 0;
+    .profile-icon {
+      color: var(--orbit-accent);
     }
     .signout-item {
-      color: #dc2626;
+      color: var(--orbit-danger);
 
       &:hover {
-        background: rgba(220, 38, 38, 0.08);
+        background: var(--orbit-danger-subtle);
+        color: var(--orbit-danger);
       }
+    }
+    .signout-icon {
+      color: var(--orbit-danger);
     }
     .conversations-content {
       padding: 24px;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      background: var(--code-bg);
+      border: 1px solid var(--orbit-border);
+      border-radius: 12px;
+      background: var(--orbit-surface);
     }
     .placeholder-text {
-      margin-bottom: 16px;
-      color: var(--text);
+      margin-bottom: 20px;
+      color: var(--orbit-text-muted);
+      line-height: 1.5;
     }
     .action-links {
       display: flex;
       gap: 12px;
+      flex-wrap: wrap;
     }
     .btn-primary {
-      padding: 8px 16px;
-      background: var(--accent);
-      color: #fff;
-      border-radius: 6px;
+      padding: 9px 18px;
+      background: var(--orbit-accent);
+      color: #121214;
+      border-radius: 8px;
       text-decoration: none;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 14px;
+      transition: opacity 0.15s;
+
+      &:hover {
+        opacity: 0.9;
+      }
     }
     .btn-secondary {
-      padding: 8px 16px;
-      border: 1px solid var(--border);
-      color: var(--text-h);
-      border-radius: 6px;
+      padding: 9px 18px;
+      border: 1px solid var(--orbit-border);
+      color: var(--orbit-text-primary);
+      border-radius: 8px;
       text-decoration: none;
       font-weight: 500;
-      background: var(--bg);
+      font-size: 14px;
+      background: var(--orbit-elevated);
+      transition: background 0.15s, border-color 0.15s;
+
+      &:hover {
+        background: var(--orbit-surface);
+        border-color: var(--orbit-accent);
+      }
     }
   `]
 })
