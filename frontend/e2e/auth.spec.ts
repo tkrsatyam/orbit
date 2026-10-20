@@ -56,7 +56,8 @@ test.describe('Authentication & Route Guards Flow', () => {
     await expect(page).toHaveURL('http://localhost:4200/');
 
     // 6. Sign out
-    await page.click('button:has-text("Sign out")');
+    await page.click('[data-testid="user-avatar-badge"]');
+    await page.click('[data-testid="signout-button"]');
     await expect(page).toHaveURL(/.*\/login/);
 
     // Visiting protected route now redirects to /login

@@ -30,7 +30,8 @@ test.describe('Authentication Negative Scenarios & Form Validation', () => {
     await expect(page.locator('h2')).toHaveText('Conversations');
 
     // Sign out
-    await page.click('button:has-text("Sign out")');
+    await page.click('[data-testid="user-avatar-badge"]');
+    await page.click('[data-testid="signout-button"]');
     await expect(page).toHaveURL(/.*\/login/);
 
     // Duplicate registration attempt with same email

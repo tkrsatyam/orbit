@@ -15,7 +15,8 @@ test.describe('Deep Linking & ReturnUrl Preservation Flow', () => {
     await expect(page).toHaveURL('http://localhost:4200/');
 
     // Log out to clear session
-    await page.click('button:has-text("Sign out")');
+    await page.click('[data-testid="user-avatar-badge"]');
+    await page.click('[data-testid="signout-button"]');
     await expect(page).toHaveURL(/.*\/login/);
 
     // 2. Access protected route directly as guest
