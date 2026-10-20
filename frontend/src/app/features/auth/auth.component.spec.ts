@@ -60,6 +60,27 @@ describe('AuthComponent', () => {
     expect(component.mode()).toBe('login');
   });
 
+  it('should update tab active class and subtitle when switching modes via UI tabs', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.auth-subtitle')?.textContent).toContain(
+      'Welcome back! Sign in to continue.'
+    );
+    expect(compiled.querySelector('app-login-form')).not.toBeNull();
+    expect(compiled.querySelector('app-register-form')).toBeNull();
+
+    const tabs = compiled.querySelectorAll('.tab-button');
+    const registerTab = tabs[1] as HTMLButtonElement;
+    registerTab.click();
+    fixture.detectChanges();
+
+    expect(component.mode()).toBe('register');
+    expect(compiled.querySelector('.auth-subtitle')?.textContent).toContain(
+      'Create an account to join Orbit.'
+    );
+    expect(compiled.querySelector('app-register-form')).not.toBeNull();
+    expect(compiled.querySelector('app-login-form')).toBeNull();
+  });
+
   it('should call login on authService and navigate to returnUrl on success', () => {
     authServiceMock.login.mockReturnValue(of({ accessToken: 'new_token' }));
 
@@ -95,7 +116,28 @@ describe('AuthComponent', () => {
       password: 'Password123!'
     });
 
-    expect(authServiceMock.register).toHaveBeenCalled();
+    expect(authServiceMock.register).toHaveBeenCalledWith({
+      displayName: 'Satyam',
+      email: 'satyam@test.com',
+      password: 'Password123!'
+    });
     expect(routerMock.navigateByUrl).toHaveBeenCalledWith('/discover', { replaceUrl: true });
+  });
+
+  it('should capture error message on register failure', () => {
+    authServiceMock.register.mockReturnValue(
+      throwError(() => ({
+        error: { message: 'Email is already in use' }
+      }))
+    );
+
+    component.handleRegister({
+      displayName: 'Satyam',
+      email: 'satyam@test.com',
+      password: 'Password123!'
+    });
+
+    expect(component.formError()).toBe('Email is already in use');
+    expect(component.isSubmitting()).toBe(false);
   });
 });

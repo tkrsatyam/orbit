@@ -71,6 +71,24 @@ describe('SelfProfileModalComponent', () => {
     expect(compiled.querySelector('[data-testid="self-profile-initials"]')).toBeNull();
   });
 
+  it('should fallback to default initial U when displayName is empty', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('user', { ...mockUser, displayName: '' });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="self-profile-initials"]')?.textContent?.trim()).toBe('U');
+  });
+
+  it('should fallback joined date to Recently when createdAt is invalid or empty', () => {
+    fixture.componentRef.setInput('isOpen', true);
+    fixture.componentRef.setInput('user', { ...mockUser, createdAt: '' });
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="self-profile-joined"]')?.textContent?.trim()).toBe('Recently');
+  });
+
   it('should emit closeModal when close button is clicked', () => {
     let closed = false;
     component.closeModal.subscribe(() => {

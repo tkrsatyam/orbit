@@ -45,6 +45,21 @@ describe('RegisterFormComponent', () => {
     expect(password.valid).toBe(true);
   });
 
+  it('should display field errors when controls are touched and invalid', () => {
+    component.displayNameControl.markAsTouched();
+    component.emailControl.markAsTouched();
+    component.passwordControl.markAsTouched();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const errors = compiled.querySelectorAll('.field-error');
+    const texts = Array.from(errors).map((el) => el.textContent?.trim());
+
+    expect(texts).toContain('Display name is required.');
+    expect(texts).toContain('Email is required.');
+    expect(texts).toContain('Password is required.');
+  });
+
   it('should emit formSubmit on valid submission', () => {
     let emittedPayload: unknown = null;
     component.formSubmit.subscribe((val) => (emittedPayload = val));
@@ -64,11 +79,33 @@ describe('RegisterFormComponent', () => {
     });
   });
 
+  it('should not emit formSubmit when form is invalid', () => {
+    let emitted = false;
+    component.formSubmit.subscribe(() => (emitted = true));
+
+    component.handleSubmit();
+    expect(emitted).toBe(false);
+  });
+
   it('should display error message when error input is provided', () => {
     fixture.componentRef.setInput('error', 'Email already registered');
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.form-error')?.textContent).toContain('Email already registered');
+  });
+
+  it('should disable submit button and change text when isLoading is true', () => {
+    component.registerForm.setValue({
+      displayName: 'Satyam Kumar',
+      email: 'satyam@orbit.local',
+      password: 'StrongPassword1!'
+    });
+    fixture.componentRef.setInput('isLoading', true);
+    fixture.detectChanges();
+
+    const submitBtn = fixture.nativeElement.querySelector('.submit-button') as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(true);
+    expect(submitBtn.textContent?.trim()).toBe('Creating account...');
   });
 });
