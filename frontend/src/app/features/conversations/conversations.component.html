@@ -1,0 +1,152 @@
+<div class="conversations-container">
+  <header class="conversations-header">
+    <div class="header-brand-title">
+      <div class="orbit-badge" aria-hidden="true">
+        <span>⬡</span>
+      </div>
+      <div>
+        <h2>Conversations</h2>
+        <p class="user-info">
+          Signed in as <strong>{{ currentUserName() }}</strong>
+        </p>
+      </div>
+    </div>
+
+    <div class="header-right-actions">
+      <button
+        type="button"
+        class="new-chat-trigger-btn"
+        (click)="openNewChatModal()"
+        data-testid="new-chat-trigger-btn"
+      >
+        <svg
+          class="new-chat-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+        <span>New Chat</span>
+      </button>
+
+      <div class="user-menu-container">
+        <button
+          type="button"
+          class="avatar-badge-btn"
+          (click)="toggleMenu($event)"
+          [attr.aria-expanded]="isMenuOpen()"
+          aria-haspopup="true"
+          data-testid="user-avatar-badge"
+          [attr.title]="currentUserName()"
+        >
+          {{ userInitial() }}
+        </button>
+
+        @if (isMenuOpen()) {
+          <div
+            class="user-dropdown-menu"
+            role="menu"
+            data-testid="user-dropdown-menu"
+            (click)="$event.stopPropagation()"
+          >
+            <div class="menu-user-header">
+              <span class="menu-user-name">{{ currentUserName() }}</span>
+              @if (currentUser()?.email) {
+                <span class="menu-user-email">{{ currentUser()?.email }}</span>
+              }
+            </div>
+            <div class="dropdown-separator"></div>
+
+            <button
+              type="button"
+              class="dropdown-menu-item profile-item"
+              role="menuitem"
+              (click)="openProfileModal()"
+              data-testid="menu-my-profile-btn"
+            >
+              <svg
+                class="menu-icon profile-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+              <span>My profile</span>
+            </button>
+
+            <div class="dropdown-separator"></div>
+
+            <button
+              type="button"
+              class="dropdown-menu-item signout-item"
+              role="menuitem"
+              (click)="handleLogout()"
+              data-testid="signout-button"
+            >
+              <svg
+                class="menu-icon signout-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>Sign out</span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <section class="conversations-content">
+    <p class="placeholder-text">
+      This is the authenticated home page. Messages and conversations will be loaded here.
+    </p>
+    <div class="action-links">
+      <button
+        type="button"
+        class="btn-primary"
+        (click)="openNewChatModal()"
+        data-testid="action-new-chat-btn"
+      >
+        + New Conversation
+      </button>
+      <a routerLink="/discover" class="btn-secondary">
+        Discover Groups
+      </a>
+      <a routerLink="/groups/demo-group" class="btn-secondary">
+        Sample Protected Group
+      </a>
+    </div>
+  </section>
+
+  <app-self-profile-modal
+    [isOpen]="isProfileOpen()"
+    [user]="currentUser()"
+    (closeModal)="isProfileOpen.set(false)"
+  />
+
+  <app-new-chat-modal
+    [isOpen]="isNewChatOpen()"
+    (closeModal)="isNewChatOpen.set(false)"
+  />
+</div>

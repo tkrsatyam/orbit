@@ -1,0 +1,44 @@
+@if (authService.isLoading()) {
+  <div class="loading-container">
+    <p>Loading...</p>
+  </div>
+} @else {
+  <div class="discover-container">
+    <header class="discover-header">
+      <h2>Discover Groups</h2>
+      <p class="discover-subtitle">
+        Explore public spaces and connect with members on Orbit.
+      </p>
+    </header>
+
+    <div class="groups-list">
+      <div class="group-card">
+        <h3>Orbit Community</h3>
+        <p class="group-description">
+          General discussions, announcements, and project showcase.
+        </p>
+
+        @if (authService.isAuthenticated()) {
+          <button type="button" class="join-button">
+            Join Group
+          </button>
+        } @else {
+          <a routerLink="/register" class="register-link">
+            Register to join
+          </a>
+        }
+      </div>
+    </div>
+
+    <div class="discover-footer">
+      <a routerLink="/" class="back-link">
+        &larr; Back to conversations
+      </a>
+      @if (authService.isAuthenticated()) {
+        <span class="member-tag">
+          Logged in as {{ currentUserName() }}
+        </span>
+      }
+    </div>
+  </div>
+}

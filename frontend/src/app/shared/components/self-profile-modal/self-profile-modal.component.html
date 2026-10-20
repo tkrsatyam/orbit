@@ -1,0 +1,70 @@
+@if (isOpen() && user()) {
+  <div
+    class="modal-backdrop"
+    (click)="onBackdropClick($event)"
+    (keydown.escape)="closeModal.emit()"
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="self-profile-heading"
+  >
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="drag-handle-mobile" aria-hidden="true"></div>
+      <div class="amber-top-stripe" aria-hidden="true"></div>
+
+      <header class="modal-header">
+        <h3 id="self-profile-heading">My Profile</h3>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close profile modal"
+          (click)="closeModal.emit()"
+          data-testid="close-profile-btn"
+        >
+          <svg
+            class="close-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <div class="avatar-row">
+        <div class="avatar-ring">
+          @if (user()?.avatarUrl) {
+            <img [src]="user()?.avatarUrl" [alt]="user()?.displayName" class="profile-avatar-img" />
+          } @else {
+            <div class="profile-avatar-initials" data-testid="self-profile-initials">
+              {{ userInitial() }}
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="identity-section">
+        <h4 class="profile-name" data-testid="self-profile-name">{{ user()?.displayName }}</h4>
+        <p class="profile-email" data-testid="self-profile-email">{{ user()?.email }}</p>
+      </div>
+
+      <div class="profile-bio-card">
+        <span class="section-label">Bio</span>
+        <p class="section-content" data-testid="self-profile-bio">
+          {{ user()?.bio || 'No bio yet. Tell the community about yourself.' }}
+        </p>
+      </div>
+
+      <div class="profile-meta-card">
+        <span class="meta-label">Member Since</span>
+        <p class="meta-val" data-testid="self-profile-joined">{{ formattedJoinedDate() }}</p>
+      </div>
+    </div>
+  </div>
+}

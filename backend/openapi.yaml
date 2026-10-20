@@ -4,16 +4,69 @@ info:
   description: Real-time chat API for connecting over shared professional goals.
   version: v1
 servers:
-- url: http://localhost:8080
+- url: http://localhost
   description: Generated server url
 security:
 - bearerAuth: []
 tags:
 - name: User
   description: User profile management
+- name: Contacts
+  description: "Contact requests, connection management, and relationships"
 - name: Auth
   description: Authentication and session management
 paths:
+  /api/v1/contacts/requests:
+    post:
+      tags:
+      - Contacts
+      summary: Send a connection request
+      description: Sends an outbound connection request to another user
+      operationId: sendRequest
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendRequestDto"
+        required: true
+      responses:
+        "201":
+          description: Connection request created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConnectionRequestResponse"
+        "400":
+          description: Invalid request payload or attempting to connect to self
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Target user account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: "Request already exists, users are already connected, or blocked\
+            \ relationship"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/auth/register:
     post:
       tags:
@@ -266,6 +319,65 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    SendRequestDto:
+      type: object
+      properties:
+        targetUserId:
+          type: string
+          minLength: 1
+      required:
+      - targetUserId
+    ConnectionRequestResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum:
+          - PENDING
+          - CONNECTED
+          - BLOCKED
+        toUser:
+          $ref: "#/components/schemas/ContactUserSummaryDto"
+        createdAt:
+          type: string
+          format: date-time
+    ContactUserSummaryDto:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+    ErrorResponse:
+      type: object
+      description: Standard API error response envelope
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status reason phrase
+          example: Bad Request
+        message:
+          type: string
+          description: Descriptive error message
+          example: Display name must be between 2 and 50 characters
+        path:
+          type: string
+          description: Request URI path
+          example: /api/v1/users/me
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of the error
+          example: 2026-10-18T17:15:00Z
     RegisterRequest:
       type: object
       description: User registration payload
@@ -339,32 +451,6 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
-    ErrorResponse:
-      type: object
-      description: Standard API error response envelope
-      properties:
-        status:
-          type: integer
-          format: int32
-          description: HTTP status code
-          example: 400
-        error:
-          type: string
-          description: HTTP status reason phrase
-          example: Bad Request
-        message:
-          type: string
-          description: Descriptive error message
-          example: Display name must be between 2 and 50 characters
-        path:
-          type: string
-          description: Request URI path
-          example: /api/v1/users/me
-        timestamp:
-          type: string
-          format: date-time
-          description: ISO-8601 UTC timestamp of the error
-          example: 2026-10-18T17:15:00Z
     LoginRequest:
       type: object
       description: User authentication payload

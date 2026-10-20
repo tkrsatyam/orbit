@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
+import { ContactService } from '../../core/services/contact.service';
 import { ConversationsComponent } from './conversations.component';
 
 describe('ConversationsComponent', () => {
@@ -10,6 +11,10 @@ describe('ConversationsComponent', () => {
   let authServiceMock: {
     currentUser: ReturnType<typeof vi.fn>;
     logout: ReturnType<typeof vi.fn>;
+  };
+  let contactServiceMock: {
+    sendConnectionRequest: ReturnType<typeof vi.fn>;
+    hasPendingRequest: ReturnType<typeof vi.fn>;
   };
   let router: Router;
 
@@ -25,11 +30,17 @@ describe('ConversationsComponent', () => {
       logout: vi.fn().mockReturnValue(of(undefined))
     };
 
+    contactServiceMock = {
+      sendConnectionRequest: vi.fn(),
+      hasPendingRequest: vi.fn().mockReturnValue(false)
+    };
+
     await TestBed.configureTestingModule({
       imports: [ConversationsComponent],
       providers: [
         provideRouter([]),
-        { provide: AuthService, useValue: authServiceMock }
+        { provide: AuthService, useValue: authServiceMock },
+        { provide: ContactService, useValue: contactServiceMock }
       ]
     }).compileComponents();
 
@@ -80,7 +91,7 @@ describe('ConversationsComponent', () => {
 
   it('should open self profile modal when My profile is clicked in dropdown and close via close button', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.modal-backdrop')).toBeNull();
+    expect(compiled.querySelector('.self-profile-card')).toBeNull();
 
     const avatarBadge = compiled.querySelector('[data-testid="user-avatar-badge"]') as HTMLButtonElement;
     avatarBadge.click();
@@ -91,7 +102,6 @@ describe('ConversationsComponent', () => {
     fixture.detectChanges();
 
     expect(component.isMenuOpen()).toBe(false);
-    expect(compiled.querySelector('.modal-backdrop')).not.toBeNull();
     expect(compiled.querySelector('[data-testid="self-profile-name"]')?.textContent?.trim()).toBe('Satyam Kumar');
     expect(compiled.querySelector('[data-testid="self-profile-email"]')?.textContent?.trim()).toBe('satyam@orbit.local');
     expect(compiled.querySelector('[data-testid="self-profile-bio"]')?.textContent?.trim()).toBe('SWE @ Orbit');
@@ -100,7 +110,38 @@ describe('ConversationsComponent', () => {
     closeBtn.click();
     fixture.detectChanges();
 
-    expect(compiled.querySelector('.modal-backdrop')).toBeNull();
+    expect(compiled.querySelector('.self-profile-card')).toBeNull();
+  });
+
+  it('should open new chat modal when clicking New Chat button in header', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).toBeNull();
+
+    const newChatBtn = compiled.querySelector('[data-testid="new-chat-trigger-btn"]') as HTMLButtonElement;
+    newChatBtn.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).not.toBeNull();
+    expect(component.isNewChatOpen()).toBe(true);
+
+    const closeBtn = compiled.querySelector('[data-testid="close-new-chat-modal-btn"]') as HTMLButtonElement;
+    closeBtn.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).toBeNull();
+    expect(component.isNewChatOpen()).toBe(false);
+  });
+
+  it('should open new chat modal when clicking + New Conversation button in action area', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).toBeNull();
+
+    const newChatBtn = compiled.querySelector('[data-testid="action-new-chat-btn"]') as HTMLButtonElement;
+    newChatBtn.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).not.toBeNull();
+    expect(component.isNewChatOpen()).toBe(true);
   });
 
   it('should close dropdown menu on escape key', () => {
