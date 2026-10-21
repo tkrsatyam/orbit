@@ -1,17 +1,17 @@
 <form [formGroup]="loginForm" (ngSubmit)="handleSubmit()" class="auth-form">
   @if (error()) {
-    <div class="form-error">
+    <div class="form-error" role="alert">
       {{ error() }}
     </div>
   }
 
   <div class="form-group">
-    <label for="login-email">Email</label>
+    <label for="login-email">EMAIL ADDRESS</label>
     <input
       id="login-email"
       type="email"
       formControlName="email"
-      placeholder="name@example.com"
+      placeholder="satyam.kumar@example.com"
       autocomplete="email"
     />
     @if (emailControl.touched && emailControl.hasError('required')) {
@@ -22,12 +22,12 @@
   </div>
 
   <div class="form-group">
-    <label for="login-password">Password</label>
+    <label for="login-password">PASSWORD</label>
     <input
       id="login-password"
       type="password"
       formControlName="password"
-      placeholder="••••••••"
+      placeholder="••••••••••••••"
       autocomplete="current-password"
     />
     @if (passwordControl.touched && passwordControl.hasError('required')) {
@@ -40,6 +40,6 @@
     [disabled]="loginForm.invalid || isLoading()"
     class="submit-button"
   >
-    {{ isLoading() ? 'Signing in...' : 'Sign in' }}
+    {{ isLoading() ? 'Signing in...' : 'Sign In to Orbit' }}
   </button>
 </form>

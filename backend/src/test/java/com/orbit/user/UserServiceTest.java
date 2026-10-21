@@ -200,4 +200,39 @@ class UserServiceTest {
 
         verifyNoInteractions(contactService);
     }
+
+    @Test
+    void getSuggestedUsersReturnsExcludingSelfAndContacts() {
+        String currentUserId = "user-1";
+        when(contactService.getExcludedUserIdsForSuggestions(currentUserId))
+                .thenReturn(java.util.Set.of("user-2", "user-3"));
+
+        User candidate = User.builder()
+                .id("user-4")
+                .displayName("Alex Rivera")
+                .bio("Full stack dev")
+                .avatarUrl("https://example.com/alex.jpg")
+                .build();
+
+        java.util.Set<String> expectedExcluded = java.util.Set.of("user-1", "user-2", "user-3");
+        when(userRepository.findByIdNotIn(
+                org.mockito.ArgumentMatchers.argThat(set -> set.containsAll(expectedExcluded) && set.size() == 3),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)
+        )).thenReturn(java.util.List.of(candidate));
+
+        java.util.List<com.orbit.user.dto.SuggestedUserResponse> result = userService.getSuggestedUsers(currentUserId);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo("user-4");
+        assertThat(result.get(0).displayName()).isEqualTo("Alex Rivera");
+        assertThat(result.get(0).initials()).isEqualTo("AR");
+        assertThat(result.get(0).bio()).isEqualTo("Full stack dev");
+    }
+
+    @Test
+    void getSuggestedUsersReturnsEmptyWhenUserIdNullOrBlank() {
+        assertThat(userService.getSuggestedUsers(null)).isEmpty();
+        assertThat(userService.getSuggestedUsers("   ")).isEmpty();
+        verifyNoInteractions(userRepository);
+    }
 }

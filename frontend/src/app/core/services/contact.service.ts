@@ -1,8 +1,16 @@
 import { HttpClient } from '@angular/common/http';
-import { inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { ConnectionRequestResponse, SendRequestDto } from '../models/contact.model';
+import {
+  AcceptRequestResponse,
+  ConnectionRequestResponse,
+  IncomingRequest,
+  IncomingRequestsResponse,
+  RequestAction,
+  RespondRequestPayload,
+  SendRequestDto
+} from '../models/contact.model';
 
 @Injectable({
   providedIn: 'root'
@@ -16,6 +24,12 @@ export class ContactService {
    */
   private readonly sentPendingUserIds = signal<Set<string>>(new Set<string>());
   readonly pendingUserIds = this.sentPendingUserIds.asReadonly();
+
+  /**
+   * Reactive state for pending incoming connection requests.
+   */
+  readonly incomingRequests = signal<IncomingRequest[]>([]);
+  readonly incomingCount = computed(() => this.incomingRequests().length);
 
   /**
    * Sends an outbound connection request to a target user.
@@ -41,5 +55,33 @@ export class ContactService {
    */
   hasPendingRequest(targetUserId: string): boolean {
     return this.sentPendingUserIds().has(targetUserId);
+  }
+
+  /**
+   * Retrieves all pending incoming connection requests for the authenticated user.
+   * Updates the reactive incomingRequests signal.
+   */
+  loadIncomingRequests(): Observable<IncomingRequestsResponse> {
+    return this.http.get<IncomingRequestsResponse>(`${this.baseUrl}/requests`).pipe(
+      tap(response => {
+        this.incomingRequests.set(response.content || []);
+      })
+    );
+  }
+
+  /**
+   * Accepts or declines an incoming connection request.
+   * Updates the reactive incomingRequests signal by removing the acted-upon request.
+   *
+   * @param requestId ID of the connection request
+   * @param action ACCEPT or DECLINE
+   */
+  respondToRequest(requestId: string, action: RequestAction): Observable<AcceptRequestResponse | void> {
+    const payload: RespondRequestPayload = { action };
+    return this.http.patch<AcceptRequestResponse | void>(`${this.baseUrl}/requests/${requestId}`, payload).pipe(
+      tap(() => {
+        this.incomingRequests.update(requests => requests.filter(req => req.id !== requestId));
+      })
+    );
   }
 }

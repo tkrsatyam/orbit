@@ -30,7 +30,9 @@
 .DS_Store
 Thumbs.db
 
-# Misc
+# Playwright & Testing
+**/test-results/
+**/playwright-report/
 /ORBIT_PROJECT_INSTRUCTIONS.md
 
 # Agent Rules & Customizations (Local only)

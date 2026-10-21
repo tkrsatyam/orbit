@@ -4,8 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.GlobalExceptionHandler;
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
 import com.orbit.contact.dto.ContactUserSummaryDto;
+import com.orbit.contact.dto.IncomingRequestDto;
+import com.orbit.contact.dto.IncomingRequestsResponse;
+import com.orbit.contact.dto.RequestAction;
+import com.orbit.contact.dto.RespondRequestDto;
 import com.orbit.contact.dto.SendRequestDto;
 import com.orbit.contact.model.ContactStatus;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,6 +28,8 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -145,5 +152,105 @@ class ContactControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.message").value("A connection request has already been sent to this user"));
+    }
+
+    @Test
+    void getIncomingRequestsReturns200WithContent() throws Exception {
+        IncomingRequestDto req = IncomingRequestDto.builder()
+                .id("req-123")
+                .fromUser(new ContactUserSummaryDto("sender-1", "Alice", "https://avatar.url/1.png"))
+                .createdAt(Instant.parse("2026-10-21T00:00:00Z"))
+                .build();
+        IncomingRequestsResponse response = new IncomingRequestsResponse(List.of(req));
+
+        when(contactService.getIncomingRequests("user-123")).thenReturn(response);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(get(REQUESTS_PATH)
+                        .principal(principal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("req-123"))
+                .andExpect(jsonPath("$.content[0].fromUser.displayName").value("Alice"))
+                .andExpect(jsonPath("$.content[0].fromUser.avatarUrl").value("https://avatar.url/1.png"));
+    }
+
+    @Test
+    void respondToRequestAcceptReturns200WithConversationId() throws Exception {
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.ACCEPT);
+        AcceptRequestResponse response = AcceptRequestResponse.builder()
+                .status("ACCEPTED")
+                .conversationId("conv-456")
+                .build();
+
+        when(contactService.respondToRequest("user-123", "req-1", RequestAction.ACCEPT))
+                .thenReturn(response);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/req-1")
+                        .principal(principal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.conversationId").value("conv-456"));
+    }
+
+    @Test
+    void respondToRequestDeclineReturns204() throws Exception {
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.DECLINE);
+
+        when(contactService.respondToRequest("user-123", "req-1", RequestAction.DECLINE))
+                .thenReturn(null);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/req-1")
+                        .principal(principal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void respondToRequestReturns404WhenNotFound() throws Exception {
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.ACCEPT);
+
+        when(contactService.respondToRequest("user-123", "req-999", RequestAction.ACCEPT))
+                .thenThrow(new ResourceNotFoundException("Connection request not found"));
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/req-999")
+                        .principal(principal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Connection request not found"));
+    }
+
+    @Test
+    void respondToRequestReturns409WhenConflict() throws Exception {
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.ACCEPT);
+
+        when(contactService.respondToRequest("user-123", "req-1", RequestAction.ACCEPT))
+                .thenThrow(new ConflictException("Connection request is not in PENDING state"));
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/req-1")
+                        .principal(principal)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("Connection request is not in PENDING state"));
     }
 }

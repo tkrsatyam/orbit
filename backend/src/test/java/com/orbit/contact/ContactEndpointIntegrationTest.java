@@ -2,9 +2,14 @@ package com.orbit.contact;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.orbit.auth.token.JwtService;
+import com.orbit.contact.dto.RequestAction;
+import com.orbit.contact.dto.RespondRequestDto;
 import com.orbit.contact.dto.SendRequestDto;
 import com.orbit.contact.model.Contact;
 import com.orbit.contact.model.ContactStatus;
+import com.orbit.conversation.ConversationRepository;
+import com.orbit.conversation.model.Conversation;
+import com.orbit.conversation.model.ConversationType;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
 import com.orbit.user.model.UserRole;
@@ -20,7 +25,9 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -43,6 +50,9 @@ class ContactEndpointIntegrationTest {
     private ContactRepository contactRepository;
 
     @Autowired
+    private ConversationRepository conversationRepository;
+
+    @Autowired
     private JwtService jwtService;
 
     @Autowired
@@ -53,6 +63,7 @@ class ContactEndpointIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        conversationRepository.deleteAll();
         contactRepository.deleteAll();
         userRepository.deleteAll();
 
@@ -228,5 +239,91 @@ class ContactEndpointIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:4200"))
                 .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_CREDENTIALS, "true"));
+    }
+
+    @Test
+    void getIncomingRequestsReturnsPendingForAuthenticatedUser() throws Exception {
+        contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        String targetToken = generateToken(targetUser);
+
+        mockMvc.perform(get(REQUESTS_PATH)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + targetToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].fromUser.id").value(requester.getId()))
+                .andExpect(jsonPath("$.content[0].fromUser.displayName").value("Satyam Kumar"));
+    }
+
+    @Test
+    void patchRequestAcceptEstablishesConnectionAndCreatesConversation() throws Exception {
+        Contact pending = contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        String targetToken = generateToken(targetUser);
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.ACCEPT);
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/" + pending.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + targetToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.conversationId").isNotEmpty());
+
+        Contact updated = contactRepository.findById(pending.getId()).orElseThrow();
+        assertThat(updated.getStatus()).isEqualTo(ContactStatus.CONNECTED);
+        assertThat(updated.getConversationId()).isNotNull();
+
+        Conversation conv = conversationRepository.findById(updated.getConversationId()).orElseThrow();
+        assertThat(conv.getType()).isEqualTo(ConversationType.DIRECT);
+        assertThat(conv.getParticipantIds()).containsExactlyInAnyOrder(requester.getId(), targetUser.getId());
+    }
+
+    @Test
+    void patchRequestDeclineDeletesContactDocumentQuietly() throws Exception {
+        Contact pending = contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        String targetToken = generateToken(targetUser);
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.DECLINE);
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/" + pending.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + targetToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNoContent());
+
+        assertThat(contactRepository.findById(pending.getId())).isEmpty();
+    }
+
+    @Test
+    void patchRequestFailsWhenUserIsNotReceiver() throws Exception {
+        Contact pending = contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.PENDING)
+                .build());
+
+        // Requester attempts to accept their own sent request
+        String requesterToken = generateToken(requester);
+        RespondRequestDto dto = new RespondRequestDto(RequestAction.ACCEPT);
+
+        mockMvc.perform(patch(REQUESTS_PATH + "/" + pending.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
     }
 }

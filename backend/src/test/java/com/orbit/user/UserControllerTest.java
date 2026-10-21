@@ -143,4 +143,27 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("User not found: nonexistent"));
     }
+
+    @Test
+    void getSuggestedUsersReturns200WithUserList() throws Exception {
+        com.orbit.user.dto.SuggestedUserResponse suggested = new com.orbit.user.dto.SuggestedUserResponse(
+                "target-789",
+                "Priya Sharma",
+                "Frontend Engineer",
+                "https://example.com/priya.jpg",
+                "PS"
+        );
+
+        when(userService.getSuggestedUsers("requester-123")).thenReturn(List.of(suggested));
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(get("/api/v1/users/suggested").principal(principal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("target-789"))
+                .andExpect(jsonPath("$[0].displayName").value("Priya Sharma"))
+                .andExpect(jsonPath("$[0].bio").value("Frontend Engineer"))
+                .andExpect(jsonPath("$[0].initials").value("PS"));
+    }
 }

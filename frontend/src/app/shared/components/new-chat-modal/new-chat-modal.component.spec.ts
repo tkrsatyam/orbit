@@ -1,6 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
+import { IncomingRequest } from '../../../core/models/contact.model';
+import { SuggestedUser } from '../../../core/models/user.model';
 import { ContactService } from '../../../core/services/contact.service';
+import { UserService } from '../../../core/services/user.service';
 import { NewChatModalComponent } from './new-chat-modal.component';
 
 describe('NewChatModalComponent', () => {
@@ -9,18 +13,59 @@ describe('NewChatModalComponent', () => {
   let mockContactService: {
     sendConnectionRequest: ReturnType<typeof vi.fn>;
     hasPendingRequest: ReturnType<typeof vi.fn>;
+    loadIncomingRequests: ReturnType<typeof vi.fn>;
+    respondToRequest: ReturnType<typeof vi.fn>;
+    incomingRequests: ReturnType<typeof signal<IncomingRequest[]>>;
+    incomingCount: ReturnType<typeof signal<number>>;
   };
+  let mockUserService: {
+    getSuggestedUsers: ReturnType<typeof vi.fn>;
+  };
+
+  const mockIncomingRequest: IncomingRequest = {
+    id: 'req-inv-1',
+    fromUser: {
+      id: 'target-user-1',
+      displayName: 'Sneha Kapoor',
+      avatarUrl: null
+    },
+    createdAt: '2026-10-21T00:00:00Z'
+  };
+
+  const mockSuggestedUsers: SuggestedUser[] = [
+    {
+      id: 'vikram-k-id',
+      displayName: 'Vikram K',
+      bio: 'Java 25 builder',
+      initials: 'VK'
+    },
+    {
+      id: 'rohan-mehta-id',
+      displayName: 'Rohan Mehta',
+      bio: 'DevOps architect',
+      initials: 'RM'
+    }
+  ];
 
   beforeEach(async () => {
     mockContactService = {
       sendConnectionRequest: vi.fn(),
-      hasPendingRequest: vi.fn().mockReturnValue(false)
+      hasPendingRequest: vi.fn().mockReturnValue(false),
+      loadIncomingRequests: vi.fn().mockReturnValue(of({ content: [] })),
+      respondToRequest: vi.fn().mockReturnValue(of({ status: 'ACCEPTED', conversationId: 'conv-10' })),
+      incomingRequests: signal<IncomingRequest[]>([]),
+      incomingCount: signal<number>(0)
+    };
+
+    mockUserService = {
+      getSuggestedUsers: vi.fn().mockReturnValue(of(mockSuggestedUsers))
     };
 
     await TestBed.configureTestingModule({
       imports: [NewChatModalComponent],
       providers: [
-        { provide: ContactService, useValue: mockContactService }
+        { provide: ContactService, useValue: mockContactService },
+        { provide: UserService, useValue: mockUserService }
       ]
     }).compileComponents();
 
@@ -123,5 +168,43 @@ describe('NewChatModalComponent', () => {
     expect(pendingBtn).toBeTruthy();
     expect(pendingBtn.disabled).toBe(true);
     expect(pendingBtn.textContent).toContain('Pending...');
+  });
+
+  it('should render incoming requests section in modal when incomingRequests signal has items', () => {
+    mockContactService.incomingRequests.set([mockIncomingRequest]);
+    mockContactService.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const section = fixture.nativeElement.querySelector('[data-testid="modal-incoming-section"]');
+    expect(section).not.toBeNull();
+    expect(section.textContent).toContain('Sneha Kapoor');
+    expect(section.textContent).toContain('INCOMING REQUESTS (1)');
+  });
+
+  it('should respond to incoming request with ACCEPT when Accept button clicked in modal', () => {
+    mockContactService.incomingRequests.set([mockIncomingRequest]);
+    mockContactService.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const acceptBtn = fixture.nativeElement.querySelector('[data-testid="modal-accept-btn-req-inv-1"]');
+    expect(acceptBtn).not.toBeNull();
+    acceptBtn.click();
+
+    expect(mockContactService.respondToRequest).toHaveBeenCalledWith('req-inv-1', 'ACCEPT');
+    expect(component.successMessage()).toContain('Connection request accepted.');
+  });
+
+  it('should respond to incoming request with DECLINE when Decline button clicked in modal', () => {
+    mockContactService.respondToRequest.mockReturnValue(of(undefined));
+    mockContactService.incomingRequests.set([mockIncomingRequest]);
+    mockContactService.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const declineBtn = fixture.nativeElement.querySelector('[data-testid="modal-decline-btn-req-inv-1"]');
+    expect(declineBtn).not.toBeNull();
+    declineBtn.click();
+
+    expect(mockContactService.respondToRequest).toHaveBeenCalledWith('req-inv-1', 'DECLINE');
+    expect(component.successMessage()).toContain('Connection request declined.');
   });
 });

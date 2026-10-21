@@ -27,8 +27,26 @@ Orbit's visual identity is **Carbon Graphite & Warm Amber**. It combines a dark 
 
 ---
 
-## 2. Iconography, Group Avatars & Interaction Standards
+## 2. Brand Vector Assets & Iconography Standards
 
+### Official Brand Assets (`docs/brand/` & `frontend/public/brand/`)
+
+Orbit's custom brand identity replaces all placeholder geometric shapes and text glyphs:
+
+| Asset | File Name | Dimensions / ViewBox | Primary Placement in Penpot |
+| :--- | :--- | :--- | :--- |
+| **Kinetic Orbit Mark** | `orbit-icon.svg` | `100 × 100` | Desktop navigation rail squircle (`26 × 26` centered at `x: board.x + 21, y: 825`), Component Library showcase |
+| **Kinetic Light Mark** | `orbit-icon-light.svg` | `100 × 100` | Light mode navigation rail & brand header |
+| **Horizontal Logo Lockup** | `orbit-logo-horizontal.svg` | `240 × 60` | Mobile Conversation List header (`104 × 26` at `x: 488, y: 1819`), Marketing & Documentation headers |
+| **Squircle App Icon** | `orbit-app-icon.svg` | `192 × 192` (`rx: 42`) | Desktop Authentication Hero Panel (`64 × 64` at `x: 6100, y: 916`), Mobile Authentication Card (`52 × 52` at `x: 6209, y: 1900`), PWA app icon |
+
+### Kinetic Orbit Mark Anatomy
+- **Dual-Arc Orbital Sweep**: Warm amber lower arc (`#D97706` → `#F59E0B` → `#FCD34D`) and crisp slate/white upper arc (`#FFFFFF` → `#EDEDEF` → `#94A3B8`) sweeping counter-clockwise with rounded terminals (`stroke-width: 7`).
+- **Gravitational Orbit Track**: Subtle concentric dashed guide (`stroke: #F59E0B`, `stroke-width: 1.5`, `stroke-dasharray: 3 4`, `opacity: 0.45`).
+- **Core Glow**: Radial core emitter (`#FEF08A` → `#F59E0B` → `#B45309`) anchored at `(50, 50)`.
+- **Satellites & Beacons**: Trailing entrance node (`r: 3.2`, `#EDEDEF`) at `(26.9, 25.2)` and active beacon with ambient amber corona at `(73.1, 74.8)`.
+
+### Production UI Standards
 1. **Monochrome Vector SVGs Only**: No raw OS emoji glyphs are used for UI actions or indicators. All buttons, badges, and navigational items use clean stroke-based SVG paths (Lucide / Custom SVGs).
 2. **Read Receipts**: Read receipts use Telegram/WhatsApp-style overlapping double-check vectors (`stroke-width: 1.8`, `#F59E0B`), not separate text unicode characters.
 3. **Send Button**: Clean button featuring text "Send" and a modern directional paper-plane vector icon.

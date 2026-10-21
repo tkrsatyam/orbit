@@ -8,3 +8,11 @@ export interface UserProfile {
   connectionStatus?: ConnectionStatus;
   available?: boolean;
 }
+
+export interface SuggestedUser {
+  id: string;
+  displayName: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  initials?: string | null;
+}

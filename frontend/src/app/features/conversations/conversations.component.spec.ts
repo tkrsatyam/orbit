@@ -1,8 +1,11 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
+import { signal } from '@angular/core';
 import { of } from 'rxjs';
+import { IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { UserService } from '../../core/services/user.service';
 import { ConversationsComponent } from './conversations.component';
 
 describe('ConversationsComponent', () => {
@@ -15,8 +18,22 @@ describe('ConversationsComponent', () => {
   let contactServiceMock: {
     sendConnectionRequest: ReturnType<typeof vi.fn>;
     hasPendingRequest: ReturnType<typeof vi.fn>;
+    loadIncomingRequests: ReturnType<typeof vi.fn>;
+    respondToRequest: ReturnType<typeof vi.fn>;
+    incomingRequests: ReturnType<typeof signal<IncomingRequest[]>>;
+    incomingCount: ReturnType<typeof signal<number>>;
   };
   let router: Router;
+
+  const mockIncomingRequest: IncomingRequest = {
+    id: 'req-456',
+    fromUser: {
+      id: 'user-ananya',
+      displayName: 'Ananya Roy',
+      avatarUrl: null
+    },
+    createdAt: '2026-10-21T00:00:00Z'
+  };
 
   beforeEach(async () => {
     authServiceMock = {
@@ -32,7 +49,11 @@ describe('ConversationsComponent', () => {
 
     contactServiceMock = {
       sendConnectionRequest: vi.fn(),
-      hasPendingRequest: vi.fn().mockReturnValue(false)
+      hasPendingRequest: vi.fn().mockReturnValue(false),
+      loadIncomingRequests: vi.fn().mockReturnValue(of({ content: [] })),
+      respondToRequest: vi.fn().mockReturnValue(of({ status: 'ACCEPTED', conversationId: 'conv-99' })),
+      incomingRequests: signal<IncomingRequest[]>([]),
+      incomingCount: signal<number>(0)
     };
 
     await TestBed.configureTestingModule({
@@ -40,7 +61,8 @@ describe('ConversationsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
-        { provide: ContactService, useValue: contactServiceMock }
+        { provide: ContactService, useValue: contactServiceMock },
+        { provide: UserService, useValue: { getSuggestedUsers: vi.fn().mockReturnValue(of([])) } }
       ]
     }).compileComponents();
 
@@ -152,5 +174,45 @@ describe('ConversationsComponent', () => {
     fixture.detectChanges();
 
     expect(component.isMenuOpen()).toBe(false);
+  });
+
+  it('should display incoming request banner and badge when incomingRequests signal has items', () => {
+    contactServiceMock.incomingRequests.set([mockIncomingRequest]);
+    contactServiceMock.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const banner = compiled.querySelector('[data-testid="incoming-requests-container"]');
+    expect(banner).not.toBeNull();
+    expect(compiled.querySelector('[data-testid="incoming-requests-badge"]')?.textContent?.trim()).toBe('1');
+    expect(compiled.querySelector('.sender-name')?.textContent).toContain('Ananya Roy');
+    expect(compiled.querySelector('.request-action-label')?.textContent).toContain('sent you a connection request');
+  });
+
+  it('should dispatch ACCEPT action when Accept button is clicked', () => {
+    contactServiceMock.incomingRequests.set([mockIncomingRequest]);
+    contactServiceMock.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const acceptBtn = compiled.querySelector('[data-testid="accept-request-btn-req-456"]') as HTMLButtonElement;
+    expect(acceptBtn).not.toBeNull();
+    acceptBtn.click();
+
+    expect(contactServiceMock.respondToRequest).toHaveBeenCalledWith('req-456', 'ACCEPT');
+  });
+
+  it('should dispatch DECLINE action when Decline button is clicked', () => {
+    contactServiceMock.respondToRequest.mockReturnValue(of(undefined));
+    contactServiceMock.incomingRequests.set([mockIncomingRequest]);
+    contactServiceMock.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const declineBtn = compiled.querySelector('[data-testid="decline-request-btn-req-456"]') as HTMLButtonElement;
+    expect(declineBtn).not.toBeNull();
+    declineBtn.click();
+
+    expect(contactServiceMock.respondToRequest).toHaveBeenCalledWith('req-456', 'DECLINE');
   });
 });

@@ -313,4 +313,39 @@ class UserEndpointIntegrationTest {
                 .andExpect(jsonPath("$.connectionStatus").value("NONE"))
                 .andExpect(jsonPath("$.available").doesNotExist());
     }
+
+    @Test
+    void getSuggestedUsersReturnsOnlyUnconnectedUsersExcludingSelf() throws Exception {
+        User unconnectedUser = userRepository.save(User.builder()
+                .email("unconnected@example.com")
+                .passwordHash("hashed-pw")
+                .displayName("Unconnected Builder")
+                .bio("Looking to connect")
+                .role(UserRole.USER)
+                .build());
+
+        // Connect seededUser and otherUser
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .build());
+
+        String token = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(get("/api/v1/users/suggested")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(unconnectedUser.getId()))
+                .andExpect(jsonPath("$[0].displayName").value("Unconnected Builder"))
+                .andExpect(jsonPath("$[0].initials").value("UB"));
+    }
+
+    @Test
+    void getSuggestedUsersReturns401WhenUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/v1/users/suggested"))
+                .andExpect(status().isUnauthorized());
+    }
 }

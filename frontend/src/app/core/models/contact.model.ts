@@ -16,3 +16,24 @@ export interface ConnectionRequestResponse {
 export interface SendRequestDto {
   targetUserId: string;
 }
+
+export interface IncomingRequest {
+  id: string;
+  fromUser: ContactUserSummary;
+  createdAt: string;
+}
+
+export interface IncomingRequestsResponse {
+  content: IncomingRequest[];
+}
+
+export type RequestAction = 'ACCEPT' | 'DECLINE';
+
+export interface RespondRequestPayload {
+  action: RequestAction;
+}
+
+export interface AcceptRequestResponse {
+  status: string;
+  conversationId: string;
+}

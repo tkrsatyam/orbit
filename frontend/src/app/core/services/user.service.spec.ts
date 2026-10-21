@@ -62,4 +62,25 @@ describe('UserService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(maskedProfile);
   });
+
+  it('should fetch suggested users list', () => {
+    const mockSuggested = [
+      {
+        id: 'u-1',
+        displayName: 'Aarav Patel',
+        bio: 'Java dev',
+        initials: 'AP'
+      }
+    ];
+
+    service.getSuggestedUsers().subscribe((users) => {
+      expect(users.length).toBe(1);
+      expect(users[0].displayName).toBe('Aarav Patel');
+      expect(users[0].initials).toBe('AP');
+    });
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/suggested`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockSuggested);
+  });
 });

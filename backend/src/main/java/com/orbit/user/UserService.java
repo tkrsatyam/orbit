@@ -4,9 +4,17 @@ import com.orbit.common.exception.ResourceNotFoundException;
 import com.orbit.contact.ContactService;
 import com.orbit.user.dto.ConnectionStatus;
 import com.orbit.user.dto.SelfProfileResponse;
+import com.orbit.user.dto.SuggestedUserResponse;
 import com.orbit.user.dto.UserProfileResponse;
 import com.orbit.user.model.User;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Service
 public class UserService {
@@ -62,5 +70,28 @@ public class UserService {
                 : ConnectionStatus.NONE;
 
         return UserProfileResponse.of(targetUser, connectionStatus);
+    }
+
+    /**
+     * Retrieves suggested users for connection, excluding the requester and any users
+     * with an existing contact relationship (pending, connected, or blocked).
+     *
+     * @param currentUserId ID of the authenticated user
+     * @return list of suggested user summaries
+     */
+    public List<SuggestedUserResponse> getSuggestedUsers(String currentUserId) {
+        if (currentUserId == null || currentUserId.isBlank()) {
+            return List.of();
+        }
+
+        Set<String> excludedIds = new HashSet<>(contactService.getExcludedUserIdsForSuggestions(currentUserId));
+        excludedIds.add(currentUserId);
+
+        Pageable pageable = PageRequest.of(0, 15, Sort.by(Sort.Direction.DESC, "createdAt"));
+        List<User> users = userRepository.findByIdNotIn(excludedIds, pageable);
+
+        return users.stream()
+                .map(SuggestedUserResponse::from)
+                .toList();
     }
 }

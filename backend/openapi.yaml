@@ -9,14 +9,34 @@ servers:
 security:
 - bearerAuth: []
 tags:
-- name: User
-  description: User profile management
 - name: Contacts
   description: "Contact requests, connection management, and relationships"
+- name: User
+  description: User profile management
 - name: Auth
   description: Authentication and session management
 paths:
   /api/v1/contacts/requests:
+    get:
+      tags:
+      - Contacts
+      summary: Get pending incoming connection requests
+      description: Retrieves all pending incoming connection requests for the authenticated
+        user
+      operationId: getIncomingRequests
+      responses:
+        "200":
+          description: Pending requests retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/IncomingRequestsResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       tags:
       - Contacts
@@ -246,6 +266,64 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/contacts/requests/{requestId}:
+    patch:
+      tags:
+      - Contacts
+      summary: Accept or decline a connection request
+      description: Responds to an incoming connection request by accepting or declining
+        it
+      operationId: respondToRequest
+      parameters:
+      - name: requestId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RespondRequestDto"
+        required: true
+      responses:
+        "200":
+          description: Connection request accepted successfully and DM conversation
+            created
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/AcceptRequestResponse"
+        "204":
+          description: Connection request declined and deleted quietly
+          content:
+            '*/*':
+              schema:
+                type: object
+        "400":
+          description: Invalid action or request payload
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Connection request not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Connection request is not in PENDING state
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/users/{userId}:
     get:
       tags:
@@ -281,6 +359,28 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "429":
           description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/users/suggested:
+    get:
+      tags:
+      - User
+      summary: Get suggested users to connect with
+      description: Returns active users excluding the requester and existing contacts/blocks
+      operationId: getSuggestedUsers
+      responses:
+        "200":
+          description: Suggested users retrieved successfully
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SuggestedUserResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
           content:
             '*/*':
               schema:
@@ -469,6 +569,23 @@ components:
       required:
       - email
       - password
+    RespondRequestDto:
+      type: object
+      properties:
+        action:
+          type: string
+          enum:
+          - ACCEPT
+          - DECLINE
+      required:
+      - action
+    AcceptRequestResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        conversationId:
+          type: string
     UserProfileResponse:
       type: object
       description: Public user profile or masked profile unavailable response
@@ -514,6 +631,19 @@ components:
           description: Availability flag present only when profile is masked due to
             a block
           example: false
+    SuggestedUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        initials:
+          type: string
     SelfProfileResponse:
       type: object
       description: Authenticated user's own profile
@@ -547,6 +677,23 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
+    IncomingRequestDto:
+      type: object
+      properties:
+        id:
+          type: string
+        fromUser:
+          $ref: "#/components/schemas/ContactUserSummaryDto"
+        createdAt:
+          type: string
+          format: date-time
+    IncomingRequestsResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/IncomingRequestDto"
   securitySchemes:
     bearerAuth:
       type: http
