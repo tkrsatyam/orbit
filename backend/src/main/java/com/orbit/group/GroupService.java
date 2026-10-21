@@ -10,9 +10,11 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
+import com.orbit.group.dto.UpdateGroupRequest;
 import com.orbit.group.model.Group;
 import com.orbit.group.model.GroupMember;
 import com.orbit.group.model.GroupRole;
+import com.orbit.group.model.GroupVisibility;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -189,5 +191,81 @@ public class GroupService {
                     return GroupResponse.from(group, callerRole);
                 })
                 .toList();
+    }
+
+    /**
+     * Retrieves group details. Public groups are visible to all authenticated users.
+     * Private groups are visible to members only; returns 404 if user is not a member.
+     *
+     * @param userId Authenticated user ID
+     * @param groupId Group ID
+     * @return GroupResponse representing the group
+     */
+    public GroupResponse getGroupDetails(String userId, String groupId) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        GroupMember callerMember = group.getMembers().stream()
+                .filter(m -> m.getUserId().equals(userId))
+                .findFirst()
+                .orElse(null);
+
+        if (group.getVisibility() == GroupVisibility.PRIVATE && callerMember == null) {
+            throw new ResourceNotFoundException("Group not found");
+        }
+
+        GroupRole callerRole = callerMember != null ? callerMember.getRole() : null;
+        return GroupResponse.from(group, callerRole);
+    }
+
+    /**
+     * Updates group metadata. Admin-only operation.
+     *
+     * @param userId Authenticated user ID (must be an Admin)
+     * @param groupId Target group ID
+     * @param request Update fields (name, description, topicTag)
+     * @return Updated GroupResponse
+     */
+    public GroupResponse updateGroup(String userId, String groupId, UpdateGroupRequest request) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        boolean isAdmin = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(userId) && m.getRole() == GroupRole.ADMIN);
+
+        if (!isAdmin) {
+            throw new ForbiddenException("Only group admins can update group details");
+        }
+
+        if (request.name() != null && !request.name().isBlank()) {
+            String normalizedName = request.name().trim();
+            if (groupRepository.existsByNameIgnoreCaseAndIdNot(normalizedName, groupId)) {
+                throw new ConflictException("Group name is already taken");
+            }
+            group.setName(normalizedName);
+        }
+
+        if (request.description() != null) {
+            group.setDescription(request.description().trim().isEmpty() ? null : request.description().trim());
+        }
+
+        if (request.topicTag() != null) {
+            String topic = request.topicTag().trim();
+            if (!topic.isEmpty() && !topic.startsWith("#")) {
+                topic = "#" + topic;
+            }
+            group.setTopicTag(topic.isEmpty() ? null : topic);
+        }
+
+        group.setUpdatedAt(Instant.now());
+        Group savedGroup = groupRepository.save(group);
+
+        return GroupResponse.from(savedGroup, GroupRole.ADMIN);
     }
 }

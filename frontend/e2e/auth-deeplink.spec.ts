@@ -34,8 +34,8 @@ test.describe('Deep Linking & ReturnUrl Preservation Flow', () => {
 
     // 4. Verify redirected to returnUrl rather than root '/'
     await expect(page).toHaveURL('http://localhost:4200/groups/engineering');
-    await expect(page.locator('h2')).toHaveText('Group: engineering');
-    await expect(page.locator('text=This is a protected group view.')).toBeVisible();
+    await expect(page.locator('h2')).toHaveText('Space Unavailable');
+    await expect(page.locator('text=Group not found')).toBeVisible();
   });
 
   test('preserves returnUrl when switching to register and restores target upon account creation', async ({ page }) => {
@@ -59,6 +59,6 @@ test.describe('Deep Linking & ReturnUrl Preservation Flow', () => {
 
     // Verify redirected directly to targetUrl
     await expect(page).toHaveURL('http://localhost:4200/groups/product-team');
-    await expect(page.locator('h2')).toHaveText('Group: product-team');
+    await expect(page.locator('h2')).toHaveText('Space Unavailable');
   });
 });
