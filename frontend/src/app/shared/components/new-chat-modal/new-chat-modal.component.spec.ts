@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
-import { IncomingRequest } from '../../../core/models/contact.model';
+import { ContactResponse, IncomingRequest } from '../../../core/models/contact.model';
 import { SuggestedUser } from '../../../core/models/user.model';
 import { ContactService } from '../../../core/services/contact.service';
 import { UserService } from '../../../core/services/user.service';
@@ -11,6 +11,9 @@ describe('NewChatModalComponent', () => {
   let component: NewChatModalComponent;
   let fixture: ComponentFixture<NewChatModalComponent>;
   let mockContactService: {
+    contacts: ReturnType<typeof signal<ContactResponse[]>>;
+    loadContacts: ReturnType<typeof vi.fn>;
+    removeContact: ReturnType<typeof vi.fn>;
     sendConnectionRequest: ReturnType<typeof vi.fn>;
     hasPendingRequest: ReturnType<typeof vi.fn>;
     loadIncomingRequests: ReturnType<typeof vi.fn>;
@@ -20,6 +23,16 @@ describe('NewChatModalComponent', () => {
   };
   let mockUserService: {
     getSuggestedUsers: ReturnType<typeof vi.fn>;
+  };
+
+  const mockContact: ContactResponse = {
+    id: 'contact-1',
+    userId: 'user-b',
+    displayName: 'Ananya Roy',
+    avatarUrl: null,
+    bio: 'Full Stack Engineer',
+    online: true,
+    conversationId: 'conv-123'
   };
 
   const mockIncomingRequest: IncomingRequest = {
@@ -49,6 +62,9 @@ describe('NewChatModalComponent', () => {
 
   beforeEach(async () => {
     mockContactService = {
+      contacts: signal<ContactResponse[]>([mockContact]),
+      loadContacts: vi.fn().mockReturnValue(of({ content: [mockContact] })),
+      removeContact: vi.fn().mockReturnValue(of(undefined)),
       sendConnectionRequest: vi.fn(),
       hasPendingRequest: vi.fn().mockReturnValue(false),
       loadIncomingRequests: vi.fn().mockReturnValue(of({ content: [] })),
@@ -71,7 +87,7 @@ describe('NewChatModalComponent', () => {
 
     fixture = TestBed.createComponent(NewChatModalComponent);
     component = fixture.componentInstance;
-    component.isOpen = true;
+    fixture.componentRef.setInput('isOpen', true);
     fixture.detectChanges();
   });
 
@@ -84,7 +100,7 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should not render anything when isOpen is false', () => {
-    component.isOpen = false;
+    fixture.componentRef.setInput('isOpen', false);
     fixture.detectChanges();
     const modalEl = fixture.nativeElement.querySelector('[data-testid="new-chat-modal-card"]');
     expect(modalEl).toBeNull();
@@ -111,7 +127,94 @@ describe('NewChatModalComponent', () => {
     expect(spy).toHaveBeenCalled();
   });
 
-  it('should send connection request when entering target user ID', () => {
+  it('should render connected contacts in Direct Message tab by default when contacts exist', () => {
+    expect(component.activeTab()).toBe('contacts');
+    const contactCard = fixture.nativeElement.querySelector('[data-testid="contact-card-contact-1"]');
+    expect(contactCard).toBeTruthy();
+    expect(contactCard.textContent).toContain('Ananya Roy');
+    expect(contactCard.textContent).toContain('Full Stack Engineer');
+
+    const presenceDot = fixture.nativeElement.querySelector('[data-testid="presence-dot-contact-1"]');
+    expect(presenceDot.classList).toContain('online');
+  });
+
+  it('should emit selectConversation with contact conversationId and close modal when Message is clicked', () => {
+    const selectSpy = vi.spyOn(component.selectConversation, 'emit');
+    const closeSpy = vi.spyOn(component.closeModal, 'emit');
+
+    const messageBtn = fixture.nativeElement.querySelector('[data-testid="message-contact-btn-contact-1"]');
+    messageBtn.click();
+
+    expect(selectSpy).toHaveBeenCalledWith('conv-123');
+    expect(closeSpy).toHaveBeenCalled();
+  });
+
+  it('should show inline confirmation when remove button is clicked and handle cancel', () => {
+    const removeBtn = fixture.nativeElement.querySelector('[data-testid="remove-contact-btn-contact-1"]');
+    removeBtn.click();
+    fixture.detectChanges();
+
+    expect(component.confirmingRemoveId()).toBe('contact-1');
+    const confirmBox = fixture.nativeElement.querySelector('[data-testid="remove-confirm-box"]');
+    expect(confirmBox).toBeTruthy();
+
+    const cancelBtn = fixture.nativeElement.querySelector('[data-testid="cancel-remove-btn-contact-1"]');
+    cancelBtn.click();
+    fixture.detectChanges();
+
+    expect(component.confirmingRemoveId()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="remove-confirm-box"]')).toBeNull();
+  });
+
+  it('should call removeContact and display success feedback when unfriend is confirmed', () => {
+    component.promptRemoveContact('contact-1');
+    fixture.detectChanges();
+
+    const confirmBtn = fixture.nativeElement.querySelector('[data-testid="confirm-remove-btn-contact-1"]');
+    confirmBtn.click();
+    fixture.detectChanges();
+
+    expect(mockContactService.removeContact).toHaveBeenCalledWith('contact-1');
+    expect(component.successMessage()).toBe('Removed Ananya Roy from your contacts.');
+    expect(component.confirmingRemoveId()).toBeNull();
+  });
+
+  it('should switch between Direct Message and Add Connection tabs', () => {
+    const connectTabBtn = fixture.nativeElement.querySelector('[data-testid="tab-connect-btn"]');
+    connectTabBtn.click();
+    fixture.detectChanges();
+
+    expect(component.activeTab()).toBe('connect');
+    expect(fixture.nativeElement.querySelector('[data-testid="connect-tab-content"]')).toBeTruthy();
+
+    const contactsTabBtn = fixture.nativeElement.querySelector('[data-testid="tab-contacts-btn"]');
+    contactsTabBtn.click();
+    fixture.detectChanges();
+
+    expect(component.activeTab()).toBe('contacts');
+    expect(fixture.nativeElement.querySelector('[data-testid="contacts-tab-content"]')).toBeTruthy();
+  });
+
+  it('should display empty state in Direct Message tab when contact list is empty', () => {
+    mockContactService.contacts.set([]);
+    component.setActiveTab('contacts');
+    fixture.detectChanges();
+
+    const emptyState = fixture.nativeElement.querySelector('[data-testid="no-contacts-empty-state"]');
+    expect(emptyState).toBeTruthy();
+    expect(emptyState.textContent).toContain('No connections yet');
+
+    const switchBtn = fixture.nativeElement.querySelector('[data-testid="switch-to-connect-tab-btn"]');
+    switchBtn.click();
+    fixture.detectChanges();
+
+    expect(component.activeTab()).toBe('connect');
+  });
+
+  it('should send connection request when entering target user ID in connect tab', () => {
+    component.setActiveTab('connect');
+    fixture.detectChanges();
+
     const response = {
       id: 'req-1',
       status: 'PENDING' as const,
@@ -130,6 +233,9 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should display error message when connect request fails', () => {
+    component.setActiveTab('connect');
+    fixture.detectChanges();
+
     mockContactService.sendConnectionRequest.mockReturnValue(
       throwError(() => ({ error: { message: 'A connection request has already been sent to this user' } }))
     );
@@ -144,6 +250,9 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should send connection request when clicking + Connect on suggested user', () => {
+    component.setActiveTab('connect');
+    fixture.detectChanges();
+
     const response = {
       id: 'req-2',
       status: 'PENDING' as const,
@@ -161,6 +270,7 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should render Pending button when a user has a pending request', () => {
+    component.setActiveTab('connect');
     mockContactService.hasPendingRequest.mockImplementation((id: string) => id === 'rohan-mehta-id');
     fixture.detectChanges();
 
@@ -171,6 +281,7 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should render incoming requests section in modal when incomingRequests signal has items', () => {
+    component.setActiveTab('connect');
     mockContactService.incomingRequests.set([mockIncomingRequest]);
     mockContactService.incomingCount.set(1);
     fixture.detectChanges();
@@ -182,6 +293,7 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should respond to incoming request with ACCEPT when Accept button clicked in modal', () => {
+    component.setActiveTab('connect');
     mockContactService.incomingRequests.set([mockIncomingRequest]);
     mockContactService.incomingCount.set(1);
     fixture.detectChanges();
@@ -195,6 +307,7 @@ describe('NewChatModalComponent', () => {
   });
 
   it('should respond to incoming request with DECLINE when Decline button clicked in modal', () => {
+    component.setActiveTab('connect');
     mockContactService.respondToRequest.mockReturnValue(of(undefined));
     mockContactService.incomingRequests.set([mockIncomingRequest]);
     mockContactService.incomingCount.set(1);

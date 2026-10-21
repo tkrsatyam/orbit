@@ -5,6 +5,8 @@ import { environment } from '../../../environments/environment';
 import {
   AcceptRequestResponse,
   ConnectionRequestResponse,
+  ContactListResponse,
+  ContactResponse,
   IncomingRequest,
   IncomingRequestsResponse,
   RequestAction,
@@ -30,6 +32,12 @@ export class ContactService {
    */
   readonly incomingRequests = signal<IncomingRequest[]>([]);
   readonly incomingCount = computed(() => this.incomingRequests().length);
+
+  /**
+   * Reactive state for established contacts.
+   */
+  readonly contacts = signal<ContactResponse[]>([]);
+  readonly contactsCount = computed(() => this.contacts().length);
 
   /**
    * Sends an outbound connection request to a target user.
@@ -81,6 +89,32 @@ export class ContactService {
     return this.http.patch<AcceptRequestResponse | void>(`${this.baseUrl}/requests/${requestId}`, payload).pipe(
       tap(() => {
         this.incomingRequests.update(requests => requests.filter(req => req.id !== requestId));
+      })
+    );
+  }
+
+  /**
+   * Retrieves all established contacts for the authenticated user.
+   * Updates the reactive contacts signal.
+   */
+  loadContacts(): Observable<ContactListResponse> {
+    return this.http.get<ContactListResponse>(this.baseUrl).pipe(
+      tap(response => {
+        this.contacts.set(response.content || []);
+      })
+    );
+  }
+
+  /**
+   * Removes an established contact relationship (unfriend).
+   * Updates the reactive contacts signal by removing the unfriended contact.
+   *
+   * @param contactId ID of the contact document to delete
+   */
+  removeContact(contactId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${contactId}`).pipe(
+      tap(() => {
+        this.contacts.update(list => list.filter(c => c.id !== contactId && c.userId !== contactId));
       })
     );
   }

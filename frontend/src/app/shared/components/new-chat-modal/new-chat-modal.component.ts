@@ -1,5 +1,6 @@
 import { Component, EventEmitter, HostListener, inject, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ContactResponse } from '../../../core/models/contact.model';
 import { ContactService } from '../../../core/services/contact.service';
 import { UserService } from '../../../core/services/user.service';
 import { SuggestedUser } from '../../../core/models/user.model';
@@ -17,11 +18,17 @@ export class NewChatModalComponent implements OnInit, OnChanges {
 
   @Input({ required: true }) isOpen: boolean = false;
   @Output() closeModal = new EventEmitter<void>();
+  @Output() selectConversation = new EventEmitter<string>();
+
+  readonly activeTab = signal<'contacts' | 'connect'>('contacts');
+  private userExplicitlySelectedTab = false;
 
   directTargetUserId = signal<string>('');
   isConnecting = signal<boolean>(false);
   activeTargetId = signal<string | null>(null);
   activeRespondingId = signal<string | null>(null);
+  confirmingRemoveId = signal<string | null>(null);
+  isRemovingContact = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -41,12 +48,33 @@ export class NewChatModalComponent implements OnInit, OnChanges {
   }
 
   private refreshData(): void {
+    this.contactService.loadContacts().subscribe({
+      next: (res) => {
+        if ((!res.content || res.content.length === 0) && !this.userExplicitlySelectedTab) {
+          this.activeTab.set('connect');
+        }
+      },
+      error: () => {
+        if (!this.userExplicitlySelectedTab) {
+          this.activeTab.set('connect');
+        }
+      }
+    });
+
     this.contactService.loadIncomingRequests().subscribe({
       error: () => {
         // Non-blocking initial fetch
       }
     });
+
     this.loadSuggestedUsers();
+  }
+
+  setActiveTab(tab: 'contacts' | 'connect'): void {
+    this.userExplicitlySelectedTab = true;
+    this.activeTab.set(tab);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
   }
 
   loadSuggestedUsers(): void {
@@ -84,6 +112,39 @@ export class NewChatModalComponent implements OnInit, OnChanges {
     return this.activeRespondingId() === requestId;
   }
 
+  messageContact(contact: ContactResponse): void {
+    this.selectConversation.emit(contact.conversationId);
+    this.closeModal.emit();
+  }
+
+  promptRemoveContact(contactId: string): void {
+    this.confirmingRemoveId.set(contactId);
+  }
+
+  cancelRemoveContact(): void {
+    this.confirmingRemoveId.set(null);
+  }
+
+  confirmRemoveContact(contact: ContactResponse): void {
+    this.isRemovingContact.set(true);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.contactService.removeContact(contact.id).subscribe({
+      next: () => {
+        this.isRemovingContact.set(false);
+        this.confirmingRemoveId.set(null);
+        this.successMessage.set(`Removed ${contact.displayName} from your contacts.`);
+      },
+      error: (err) => {
+        this.isRemovingContact.set(false);
+        this.confirmingRemoveId.set(null);
+        const msg = err.error?.message || 'Failed to remove contact.';
+        this.errorMessage.set(msg);
+      }
+    });
+  }
+
   connectDirect(): void {
     const targetId = this.directTargetUserId().trim();
     if (!targetId) {
@@ -107,6 +168,7 @@ export class NewChatModalComponent implements OnInit, OnChanges {
         this.activeRespondingId.set(null);
         if (action === 'ACCEPT') {
           this.successMessage.set('Connection request accepted.');
+          this.contactService.loadContacts().subscribe();
         } else {
           this.successMessage.set('Connection request declined.');
         }

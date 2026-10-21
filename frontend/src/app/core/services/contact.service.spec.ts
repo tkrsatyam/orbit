@@ -148,4 +148,66 @@ describe('ContactService', () => {
     expect(service.incomingRequests().length).toBe(0);
     expect(service.incomingCount()).toBe(0);
   });
+
+  it('should load contacts and populate contacts signal', () => {
+    const mockContacts = {
+      content: [
+        {
+          id: 'contact-1',
+          userId: 'u-1',
+          displayName: 'Vikram K',
+          avatarUrl: null,
+          bio: 'Java builder',
+          online: true,
+          conversationId: 'conv-1'
+        }
+      ]
+    };
+
+    service.loadContacts().subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/contacts`);
+    expect(req.request.method).toBe('GET');
+
+    req.flush(mockContacts);
+
+    expect(service.contacts().length).toBe(1);
+    expect(service.contactsCount()).toBe(1);
+    expect(service.contacts()[0].displayName).toBe('Vikram K');
+    expect(service.contacts()[0].online).toBe(true);
+  });
+
+  it('should remove contact and update contacts signal', () => {
+    service.contacts.set([
+      {
+        id: 'contact-1',
+        userId: 'u-1',
+        displayName: 'Vikram K',
+        avatarUrl: null,
+        bio: 'Java builder',
+        online: true,
+        conversationId: 'conv-1'
+      },
+      {
+        id: 'contact-2',
+        userId: 'u-2',
+        displayName: 'Sneha K',
+        avatarUrl: null,
+        bio: 'Angular prepper',
+        online: false,
+        conversationId: 'conv-2'
+      }
+    ]);
+
+    service.removeContact('contact-1').subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/contacts/contact-1`);
+    expect(req.request.method).toBe('DELETE');
+
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.contacts().length).toBe(1);
+    expect(service.contactsCount()).toBe(1);
+    expect(service.contacts()[0].id).toBe('contact-2');
+  });
 });

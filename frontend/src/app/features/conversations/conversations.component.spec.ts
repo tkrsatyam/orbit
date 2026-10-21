@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
-import { IncomingRequest } from '../../core/models/contact.model';
+import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
 import { UserService } from '../../core/services/user.service';
@@ -16,6 +16,9 @@ describe('ConversationsComponent', () => {
     logout: ReturnType<typeof vi.fn>;
   };
   let contactServiceMock: {
+    contacts: ReturnType<typeof signal<ContactResponse[]>>;
+    loadContacts: ReturnType<typeof vi.fn>;
+    removeContact: ReturnType<typeof vi.fn>;
     sendConnectionRequest: ReturnType<typeof vi.fn>;
     hasPendingRequest: ReturnType<typeof vi.fn>;
     loadIncomingRequests: ReturnType<typeof vi.fn>;
@@ -48,6 +51,9 @@ describe('ConversationsComponent', () => {
     };
 
     contactServiceMock = {
+      contacts: signal<ContactResponse[]>([]),
+      loadContacts: vi.fn().mockReturnValue(of({ content: [] })),
+      removeContact: vi.fn().mockReturnValue(of(undefined)),
       sendConnectionRequest: vi.fn(),
       hasPendingRequest: vi.fn().mockReturnValue(false),
       loadIncomingRequests: vi.fn().mockReturnValue(of({ content: [] })),

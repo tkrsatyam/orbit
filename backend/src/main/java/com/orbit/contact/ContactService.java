@@ -4,6 +4,8 @@ import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.ResourceNotFoundException;
 import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
+import com.orbit.contact.dto.ContactListResponse;
+import com.orbit.contact.dto.ContactResponse;
 import com.orbit.contact.dto.ContactUserSummaryDto;
 import com.orbit.contact.dto.IncomingRequestDto;
 import com.orbit.contact.dto.IncomingRequestsResponse;
@@ -253,5 +255,77 @@ public class ContactService {
             }
         }
         return excluded;
+    }
+
+    /**
+     * Retrieves all established contacts for the authenticated user.
+     * Enforces P1-11: returns connected contacts with profile info, live online status,
+     * and conversationId for direct chat initiation.
+     *
+     * @param userId the ID of the authenticated user
+     * @return ContactListResponse containing the list of established contacts
+     */
+    public ContactListResponse getContactList(String userId) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+
+        List<Contact> contacts = contactRepository.findByUserIdAndStatus(userId, ContactStatus.CONNECTED);
+        if (contacts.isEmpty()) {
+            return new ContactListResponse(new ArrayList<>());
+        }
+
+        List<String> otherUserIds = contacts.stream()
+                .map(contact -> userId.equals(contact.getRequesterId()) ? contact.getReceiverId() : contact.getRequesterId())
+                .toList();
+
+        Map<String, User> userMap = userRepository.findAllById(otherUserIds).stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        List<ContactResponse> dtos = contacts.stream()
+                .map(contact -> {
+                    String otherUserId = userId.equals(contact.getRequesterId()) ? contact.getReceiverId() : contact.getRequesterId();
+                    User otherUser = userMap.get(otherUserId);
+
+                    String displayName = otherUser != null ? otherUser.getDisplayName() : "Orbit User";
+                    String avatarUrl = otherUser != null ? otherUser.getAvatarUrl() : null;
+                    String bio = otherUser != null ? otherUser.getBio() : null;
+                    boolean online = otherUser != null && otherUser.isOnline();
+
+                    return ContactResponse.builder()
+                            .id(contact.getId())
+                            .userId(otherUserId)
+                            .displayName(displayName)
+                            .avatarUrl(avatarUrl)
+                            .bio(bio)
+                            .online(online)
+                            .conversationId(contact.getConversationId())
+                            .build();
+                })
+                .toList();
+
+        return new ContactListResponse(dtos);
+    }
+
+    /**
+     * Removes an established contact relationship (unfriend).
+     * Enforces ADR 006: Hard-deletes the Contact document quietly without storing a
+     * REMOVED status. Chat history in Conversation and Message collections is preserved.
+     *
+     * @param userId the ID of the authenticated user requesting removal
+     * @param contactId the contact document ID (or target user ID) to remove
+     */
+    public void removeContact(String userId, String contactId) {
+        if (userId == null || userId.isBlank() || contactId == null || contactId.isBlank()) {
+            throw new IllegalArgumentException("User ID and contact ID are required");
+        }
+
+        Contact contact = contactRepository.findById(contactId)
+                .filter(c -> c.getStatus() == ContactStatus.CONNECTED
+                        && (userId.equals(c.getRequesterId()) || userId.equals(c.getReceiverId())))
+                .or(() -> contactRepository.findConnectedBetweenUsers(userId, contactId))
+                .orElseThrow(() -> new ResourceNotFoundException("Contact not found"));
+
+        contactRepository.delete(contact);
     }
 }

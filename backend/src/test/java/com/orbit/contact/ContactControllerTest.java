@@ -6,6 +6,8 @@ import com.orbit.common.exception.GlobalExceptionHandler;
 import com.orbit.common.exception.ResourceNotFoundException;
 import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
+import com.orbit.contact.dto.ContactListResponse;
+import com.orbit.contact.dto.ContactResponse;
 import com.orbit.contact.dto.ContactUserSummaryDto;
 import com.orbit.contact.dto.IncomingRequestDto;
 import com.orbit.contact.dto.IncomingRequestsResponse;
@@ -28,6 +30,7 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -252,5 +255,60 @@ class ContactControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.message").value("Connection request is not in PENDING state"));
+    }
+
+    @Test
+    void getContactsReturns200WithList() throws Exception {
+        ContactResponse contact = ContactResponse.builder()
+                .id("contact-1")
+                .userId("peer-1")
+                .displayName("Vikram K")
+                .avatarUrl("https://example.com/avatar.jpg")
+                .bio("Spring builder")
+                .online(true)
+                .conversationId("conv-123")
+                .build();
+        ContactListResponse response = new ContactListResponse(List.of(contact));
+
+        when(contactService.getContactList("user-123")).thenReturn(response);
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(get("/api/v1/contacts")
+                        .principal(principal))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("contact-1"))
+                .andExpect(jsonPath("$.content[0].userId").value("peer-1"))
+                .andExpect(jsonPath("$.content[0].displayName").value("Vikram K"))
+                .andExpect(jsonPath("$.content[0].avatarUrl").value("https://example.com/avatar.jpg"))
+                .andExpect(jsonPath("$.content[0].bio").value("Spring builder"))
+                .andExpect(jsonPath("$.content[0].online").value(true))
+                .andExpect(jsonPath("$.content[0].conversationId").value("conv-123"));
+    }
+
+    @Test
+    void removeContactReturns204WhenSuccessful() throws Exception {
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(delete("/api/v1/contacts/contact-1")
+                        .principal(principal))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void removeContactReturns404WhenNotFound() throws Exception {
+        org.mockito.Mockito.doThrow(new ResourceNotFoundException("Contact not found"))
+                .when(contactService).removeContact("user-123", "missing-contact");
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("user-123", null, List.of());
+
+        mockMvc.perform(delete("/api/v1/contacts/missing-contact")
+                        .principal(principal))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Contact not found"));
     }
 }

@@ -46,44 +46,35 @@
         </button>
       </header>
 
-      <!-- Direct User ID Connect Input -->
-      <div class="search-section">
-        <div class="search-input-wrapper">
-          <svg
-            class="search-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            class="search-input"
-            placeholder="Enter user ID to connect..."
-            [(ngModel)]="directTargetUserId"
-            (keydown.enter)="connectDirect()"
-            data-testid="target-user-id-input"
-          />
-          <button
-            type="button"
-            class="direct-connect-btn"
-            (click)="connectDirect()"
-            [disabled]="isConnecting() || !directTargetUserId().trim()"
-            data-testid="direct-connect-submit-btn"
-          >
-            @if (isConnecting() && activeTargetId() === directTargetUserId().trim()) {
-              <span class="btn-spinner"></span>
-            } @else {
-              + Connect
-            }
-          </button>
-        </div>
+      <!-- Segmented Tabs -->
+      <div class="tabs-container" role="tablist" aria-label="Conversation Options">
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          [class.active]="activeTab() === 'contacts'"
+          [attr.aria-selected]="activeTab() === 'contacts'"
+          (click)="setActiveTab('contacts')"
+          data-testid="tab-contacts-btn"
+        >
+          <span>Direct Message</span>
+          @if (contactService.contacts().length > 0) {
+            <span class="tab-badge" data-testid="contacts-count-badge">
+              {{ contactService.contacts().length }}
+            </span>
+          }
+        </button>
+        <button
+          type="button"
+          role="tab"
+          class="tab-btn"
+          [class.active]="activeTab() === 'connect'"
+          [attr.aria-selected]="activeTab() === 'connect'"
+          (click)="setActiveTab('connect')"
+          data-testid="tab-connect-btn"
+        >
+          <span>Add Connection / Discover</span>
+        </button>
       </div>
 
       <!-- Alert Feedback -->
@@ -98,102 +89,279 @@
         </div>
       }
 
-      <!-- Pending Incoming Requests Section -->
-      @if (contactService.incomingRequests().length > 0) {
-        <div class="incoming-section" data-testid="modal-incoming-section">
-          <h3 class="section-label">INCOMING REQUESTS ({{ contactService.incomingCount() }})</h3>
-          <div class="incoming-list">
-            @for (req of contactService.incomingRequests(); track req.id) {
-              <div class="incoming-card" [attr.data-testid]="'modal-incoming-card-' + req.id">
-                <div class="incoming-avatar" aria-hidden="true">
-                  {{ req.fromUser.displayName.charAt(0).toUpperCase() }}
+      <!-- Tab Content: Contacts (Direct Message) -->
+      @if (activeTab() === 'contacts') {
+        <div class="tab-content contacts-tab" data-testid="contacts-tab-content">
+          @if (contactService.contacts().length === 0) {
+            <div class="empty-state-card" data-testid="no-contacts-empty-state">
+              <svg
+                class="empty-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                <circle cx="9" cy="7" r="4" />
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+              </svg>
+              <h4 class="empty-title">No connections yet</h4>
+              <p class="empty-desc">
+                Find peers and fellow engineers to start direct messaging.
+              </p>
+              <button
+                type="button"
+                class="btn-switch-tab"
+                (click)="setActiveTab('connect')"
+                data-testid="switch-to-connect-tab-btn"
+              >
+                + Add Connection
+              </button>
+            </div>
+          } @else {
+            <div class="contacts-list" data-testid="contacts-list">
+              @for (contact of contactService.contacts(); track contact.id) {
+                <div class="contact-card" [attr.data-testid]="'contact-card-' + contact.id">
+                  <div class="avatar-wrapper">
+                    <div class="avatar-badge" aria-hidden="true">
+                      @if (contact.avatarUrl) {
+                        <img [src]="contact.avatarUrl" [alt]="contact.displayName" class="avatar-image" />
+                      } @else {
+                        {{ contact.displayName.charAt(0).toUpperCase() }}
+                      }
+                    </div>
+                    <span
+                      class="presence-dot"
+                      [class.online]="contact.online"
+                      [attr.title]="contact.online ? 'Online' : 'Offline'"
+                      [attr.data-testid]="'presence-dot-' + contact.id"
+                    ></span>
+                  </div>
+
+                  <div class="contact-info">
+                    <div class="name-row">
+                      <span class="contact-name">{{ contact.displayName }}</span>
+                      @if (contact.online) {
+                        <span class="status-badge-online">Active now</span>
+                      }
+                    </div>
+                    <span class="contact-bio">{{ contact.bio || 'Connected builder' }}</span>
+                  </div>
+
+                  <div class="contact-actions">
+                    @if (confirmingRemoveId() === contact.id) {
+                      <div class="remove-confirm-box" data-testid="remove-confirm-box">
+                        <span class="remove-prompt">Remove contact?</span>
+                        <button
+                          type="button"
+                          class="btn-confirm-remove"
+                          (click)="confirmRemoveContact(contact)"
+                          [disabled]="isRemovingContact()"
+                          [attr.data-testid]="'confirm-remove-btn-' + contact.id"
+                        >
+                          @if (isRemovingContact()) {
+                            <span class="btn-spinner"></span>
+                          } @else {
+                            Remove
+                          }
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-cancel-remove"
+                          (click)="cancelRemoveContact()"
+                          [disabled]="isRemovingContact()"
+                          [attr.data-testid]="'cancel-remove-btn-' + contact.id"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-message"
+                        (click)="messageContact(contact)"
+                        [attr.data-testid]="'message-contact-btn-' + contact.id"
+                      >
+                        Message
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-remove-icon"
+                        (click)="promptRemoveContact(contact.id)"
+                        title="Remove contact"
+                        aria-label="Remove contact"
+                        [attr.data-testid]="'remove-contact-btn-' + contact.id"
+                      >
+                        <svg
+                          class="action-icon"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          aria-hidden="true"
+                        >
+                          <polyline points="3 6 5 6 21 6" />
+                          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          <line x1="10" y1="11" x2="10" y2="17" />
+                          <line x1="14" y1="11" x2="14" y2="17" />
+                        </svg>
+                      </button>
+                    }
+                  </div>
                 </div>
-                <div class="incoming-details">
-                  <span class="incoming-name">{{ req.fromUser.displayName }}</span>
-                  <span class="incoming-subtitle">sent you a connection request</span>
-                </div>
-                <div class="incoming-actions">
-                  <button
-                    type="button"
-                    class="btn-accept"
-                    (click)="respondToIncoming(req.id, 'ACCEPT')"
-                    [disabled]="isResponding(req.id)"
-                    [attr.data-testid]="'modal-accept-btn-' + req.id"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    type="button"
-                    class="btn-decline"
-                    (click)="respondToIncoming(req.id, 'DECLINE')"
-                    [disabled]="isResponding(req.id)"
-                    [attr.data-testid]="'modal-decline-btn-' + req.id"
-                  >
-                    Decline
-                  </button>
-                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Tab Content: Connect / Discover -->
+      @if (activeTab() === 'connect') {
+        <div class="tab-content connect-tab" data-testid="connect-tab-content">
+          <!-- Direct User ID Connect Input -->
+          <div class="search-section">
+            <div class="search-input-wrapper">
+              <svg
+                class="search-icon"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                class="search-input"
+                placeholder="Enter user ID to connect..."
+                [(ngModel)]="directTargetUserId"
+                (keydown.enter)="connectDirect()"
+                data-testid="target-user-id-input"
+              />
+              <button
+                type="button"
+                class="direct-connect-btn"
+                (click)="connectDirect()"
+                [disabled]="isConnecting() || !directTargetUserId().trim()"
+                data-testid="direct-connect-submit-btn"
+              >
+                @if (isConnecting() && activeTargetId() === directTargetUserId().trim()) {
+                  <span class="btn-spinner"></span>
+                } @else {
+                  + Connect
+                }
+              </button>
+            </div>
+          </div>
+
+          <!-- Pending Incoming Requests Section -->
+          @if (contactService.incomingRequests().length > 0) {
+            <div class="incoming-section" data-testid="modal-incoming-section">
+              <h3 class="section-label">INCOMING REQUESTS ({{ contactService.incomingCount() }})</h3>
+              <div class="incoming-list">
+                @for (req of contactService.incomingRequests(); track req.id) {
+                  <div class="incoming-card" [attr.data-testid]="'modal-incoming-card-' + req.id">
+                    <div class="incoming-avatar" aria-hidden="true">
+                      {{ req.fromUser.displayName.charAt(0).toUpperCase() }}
+                    </div>
+                    <div class="incoming-details">
+                      <span class="incoming-name">{{ req.fromUser.displayName }}</span>
+                      <span class="incoming-subtitle">sent you a connection request</span>
+                    </div>
+                    <div class="incoming-actions">
+                      <button
+                        type="button"
+                        class="btn-accept"
+                        (click)="respondToIncoming(req.id, 'ACCEPT')"
+                        [disabled]="isResponding(req.id)"
+                        [attr.data-testid]="'modal-accept-btn-' + req.id"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-decline"
+                        (click)="respondToIncoming(req.id, 'DECLINE')"
+                        [disabled]="isResponding(req.id)"
+                        [attr.data-testid]="'modal-decline-btn-' + req.id"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Suggested People to Connect With -->
+          <div class="discover-section" data-testid="suggested-people-section">
+            <h3 class="section-label">SUGGESTED PEOPLE</h3>
+
+            @if (isLoadingSuggestions()) {
+              <div class="empty-state-text" data-testid="suggestions-loading">
+                Loading suggestions...
+              </div>
+            } @else if (suggestedUsers().length === 0) {
+              <div class="empty-state-text" data-testid="no-suggestions-message">
+                No other users available to connect with right now.
+              </div>
+            } @else {
+              <div class="people-list">
+                @for (user of suggestedUsers(); track user.id) {
+                  <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
+                    <div class="avatar-badge" aria-hidden="true">
+                      {{ user.initials || 'U' }}
+                    </div>
+
+                    <div class="person-info">
+                      <span class="person-name">{{ user.displayName }}</span>
+                      <span class="person-bio">{{ user.bio || 'Community member' }}</span>
+                    </div>
+
+                    <div class="person-action">
+                      @if (isRequestPending(user.id)) {
+                        <button
+                          type="button"
+                          class="connect-btn pending-btn"
+                          disabled
+                          [attr.data-testid]="'pending-btn-' + user.id"
+                        >
+                          Pending...
+                        </button>
+                      } @else {
+                        <button
+                          type="button"
+                          class="connect-btn"
+                          (click)="connectToUser(user)"
+                          [disabled]="isConnecting() && activeTargetId() === user.id"
+                          [attr.data-testid]="'connect-btn-' + user.id"
+                        >
+                          @if (isConnecting() && activeTargetId() === user.id) {
+                            <span class="btn-spinner"></span>
+                          } @else {
+                            + Connect
+                          }
+                        </button>
+                      }
+                    </div>
+                  </div>
+                }
               </div>
             }
           </div>
         </div>
       }
-
-      <!-- Suggested People to Connect With -->
-      <div class="discover-section" data-testid="suggested-people-section">
-        <h3 class="section-label">SUGGESTED PEOPLE</h3>
-
-        @if (isLoadingSuggestions()) {
-          <div class="empty-state-text" data-testid="suggestions-loading">
-            Loading suggestions...
-          </div>
-        } @else if (suggestedUsers().length === 0) {
-          <div class="empty-state-text" data-testid="no-suggestions-message">
-            No other users available to connect with right now.
-          </div>
-        } @else {
-          <div class="people-list">
-            @for (user of suggestedUsers(); track user.id) {
-              <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
-                <div class="avatar-badge" aria-hidden="true">
-                  {{ user.initials || 'U' }}
-                </div>
-
-                <div class="person-info">
-                  <span class="person-name">{{ user.displayName }}</span>
-                  <span class="person-bio">{{ user.bio || 'Community member' }}</span>
-                </div>
-
-                <div class="person-action">
-                  @if (isRequestPending(user.id)) {
-                    <button
-                      type="button"
-                      class="connect-btn pending-btn"
-                      disabled
-                      [attr.data-testid]="'pending-btn-' + user.id"
-                    >
-                      Pending...
-                    </button>
-                  } @else {
-                    <button
-                      type="button"
-                      class="connect-btn"
-                      (click)="connectToUser(user)"
-                      [disabled]="isConnecting() && activeTargetId() === user.id"
-                      [attr.data-testid]="'connect-btn-' + user.id"
-                    >
-                      @if (isConnecting() && activeTargetId() === user.id) {
-                        <span class="btn-spinner"></span>
-                      } @else {
-                        + Connect
-                      }
-                    </button>
-                  }
-                </div>
-              </div>
-            }
-          </div>
-        }
-      </div>
 
       <!-- Footer Info -->
       <footer class="card-footer">

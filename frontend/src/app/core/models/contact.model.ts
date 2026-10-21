@@ -37,3 +37,17 @@ export interface AcceptRequestResponse {
   status: string;
   conversationId: string;
 }
+
+export interface ContactResponse {
+  id: string;
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  bio?: string | null;
+  online: boolean;
+  conversationId: string;
+}
+
+export interface ContactListResponse {
+  content: ContactResponse[];
+}

@@ -54,7 +54,7 @@ Orbit's custom brand identity replaces all placeholder geometric shapes and text
    * Groups support uploaded community photos via Cloudflare R2 (`avatarUrl` in `Group` model).
    * Default community avatars feature distinct domain-specific vector badges (Coffee cup for Java & Spring, Code brackets `< >` for DSA, Layers for Full Stack, Shield for Angular, Compass for Career Switchers, Cloud for DevOps), replacing plain `#` symbols.
    * Topic tags (e.g. `#java-spring`, `#interview-prep`) are rendered as subtle metadata pills.
-5. **Left Rail Navigation**: Restricted strictly to 3 core tabs (`Chats`, `Groups`, `Discover`), with bottom utilities for Theme Toggle (`Sun/Moon`), Settings (`Gear`), and Profile avatar.
+5. **Left Rail Navigation**: Restricted strictly to 4 core tabs (`Chats`, `Groups`, `Contacts`, `Discover`), with bottom utilities for Theme Toggle (`Sun/Moon`), Settings (`Gear`), and Profile avatar.
 6. **Text Auto-Wrapping**: Every multiline text container has constrained width and `growType: "auto-height"` to ensure natural multi-line wrapping without horizontal overflow.
 
 ---
@@ -91,11 +91,11 @@ x: 40
 ### Detailed Screen Pair Specifications
 
 1. **Pair 1: Direct Messages (1:1 Chat)**
-   * **Desktop (`1440 × 900`)**: 3-pane workstation. Left rail (68px) with 3 core tabs (Chats, Groups, Discover), conversation list sidebar (312px) with search and filter tabs, active chat thread (764px) with quoted reply and paper plane send button, and contact info drawer (296px) with wrapped bio card and danger actions.
+   * **Desktop (`1440 × 900`)**: 3-pane workstation. Left rail (68px) with 4 core tabs (Chats, Groups, Contacts, Discover), conversation list sidebar (312px) with search and filter tabs, active chat thread (764px) with quoted reply and paper plane send button, and contact info drawer (296px) with wrapped bio card, "Remove Contact" neutral secondary action, and "Block <Name>" danger action.
    * **Mobile (`390 × 844`)**:
      - `Mobile — Conversation List`: Top Orbit header, search trigger, horizontal filter chips, touch chat cards with community avatars, and fixed bottom navigation bar (`Chats`, `Groups`, `Discover`, `Profile`).
      - `Mobile — Direct Messages`: Full-width thread with `←` back button, contact presence header, touch message bubbles, overlapping double-tick receipt, and bottom composer dock.
-     - `Mobile — User Profile Sheet` (at `x: 900`): Slide-up bottom sheet triggered by the `(i)` button in `Mobile — Direct Messages`. Contains 68px avatar with online status, Ananya Roy identity, quick actions ("Mute Notifications", "Send Direct Message"), wrapped bio card, mutual groups chips, membership metadata, and "Block User" destructive action.
+     - `Mobile — User Profile Sheet` (at `x: 900`): Slide-up bottom sheet triggered by the `(i)` button in `Mobile — Direct Messages`. Contains 68px avatar with online status, Ananya Roy identity, quick actions ("Mute Notifications", "Send Direct Message"), wrapped bio card, mutual groups chips, membership metadata, neutral secondary "Remove Contact" (Unfriend) action, and "Block User" destructive action.
 
 2. **Pair 2: Group Chat & Communities**
    * **Desktop (`1440 × 900`)**: Group chat workstation. Top header with group community photo badge and topic pill, pinned message banner, AI Assistant `/summary` response card, member role list with Admin badges, wrapped group description card, and Leave Group action.
@@ -130,8 +130,11 @@ x: 40
    * **Mobile (`390 × 844`) at `x: 9040`**: Bottom sheet with drag handle, R2 avatar upload trigger, touch input fields, Public/Private switcher, and primary "Create Space" button.
 
 8. **Pair 8: New Chat & Contacts (Modal & Sheet)**
-   * **Desktop (`1440 × 900`) at `x: 10540`**: Dedicated modal overlay triggered from `+ New` in the Direct Messages sidebar. Contains member search bar with SVG lens, contact cards displaying avatars, presence dots, display names, bios, and contextual action buttons ("Message", "+ Connect", "Pending...").
-   * **Mobile (`390 × 844`) at `x: 10540`**: Bottom sheet with search input, recommended builder list, connection request actions, and touch targets.
+   * **Desktop (`1440 × 900`) at `x: 10540`**: Dedicated modal overlay triggered from `+ New` in the Direct Messages sidebar. Structured with segmented tabs:
+     - **Direct Message (My Contacts)**: Lists existing connected contacts with live presence indicators and primary amber `Message` buttons (which immediately route to the 1:1 chat thread).
+     - **Add Connection / Discover**: Dedicated search and suggested users list with `+ Connect` and `Pending...` request states.
+     - Footer guidance banner prompting users to switch tabs for peer discovery.
+   * **Mobile (`390 × 844`) at `x: 10540`**: Bottom sheet with search input, `SUGGESTED PEOPLE` section header (distinguishing non-connected peers from established contacts), connection request actions (`+ Connect`, `Pending`), and touch targets.
 
 9. **Design Tokens & UI Component Library (`1440 × 1120`, `y: 2680`)**
    * Official Orbit color token hierarchy (Carbon Graphite & Warm Amber).
