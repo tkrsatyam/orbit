@@ -4,6 +4,8 @@ import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.ResourceNotFoundException;
 import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
+import com.orbit.contact.dto.ContactListResponse;
+import com.orbit.contact.dto.ContactResponse;
 import com.orbit.contact.dto.IncomingRequestsResponse;
 import com.orbit.contact.dto.RequestAction;
 import com.orbit.contact.model.Contact;
@@ -448,6 +450,183 @@ class ContactServiceTest {
         assertThatThrownBy(() -> contactService.respondToRequest("user-bob", null, RequestAction.ACCEPT))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> contactService.respondToRequest("user-bob", "req-1", null))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void getContactListReturnsConnectedContactsWithProfileAndPresence() {
+        String authUserId = "auth-user";
+        Contact contact1 = Contact.builder()
+                .id("contact-1")
+                .requesterId(authUserId)
+                .receiverId("peer-1")
+                .status(ContactStatus.CONNECTED)
+                .conversationId("conv-1")
+                .build();
+        Contact contact2 = Contact.builder()
+                .id("contact-2")
+                .requesterId("peer-2")
+                .receiverId(authUserId)
+                .status(ContactStatus.CONNECTED)
+                .conversationId("conv-2")
+                .build();
+
+        when(contactRepository.findByUserIdAndStatus(authUserId, ContactStatus.CONNECTED))
+                .thenReturn(java.util.List.of(contact1, contact2));
+
+        User peer1 = User.builder()
+                .id("peer-1")
+                .displayName("Vikram K")
+                .avatarUrl("https://example.com/avatar1.jpg")
+                .bio("Java builder")
+                .online(true)
+                .build();
+        User peer2 = User.builder()
+                .id("peer-2")
+                .displayName("Sneha K")
+                .avatarUrl(null)
+                .bio("Angular prepper")
+                .online(false)
+                .build();
+
+        when(userRepository.findAllById(java.util.List.of("peer-1", "peer-2")))
+                .thenReturn(java.util.List.of(peer1, peer2));
+
+        ContactListResponse response = contactService.getContactList(authUserId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getContent()).hasSize(2);
+
+        ContactResponse item1 = response.getContent().get(0);
+        assertThat(item1.getId()).isEqualTo("contact-1");
+        assertThat(item1.getUserId()).isEqualTo("peer-1");
+        assertThat(item1.getDisplayName()).isEqualTo("Vikram K");
+        assertThat(item1.getAvatarUrl()).isEqualTo("https://example.com/avatar1.jpg");
+        assertThat(item1.getBio()).isEqualTo("Java builder");
+        assertThat(item1.isOnline()).isTrue();
+        assertThat(item1.getConversationId()).isEqualTo("conv-1");
+
+        ContactResponse item2 = response.getContent().get(1);
+        assertThat(item2.getId()).isEqualTo("contact-2");
+        assertThat(item2.getUserId()).isEqualTo("peer-2");
+        assertThat(item2.getDisplayName()).isEqualTo("Sneha K");
+        assertThat(item2.isOnline()).isFalse();
+        assertThat(item2.getConversationId()).isEqualTo("conv-2");
+    }
+
+    @Test
+    void getContactListReturnsEmptyWhenNoContactsExist() {
+        when(contactRepository.findByUserIdAndStatus("user-none", ContactStatus.CONNECTED))
+                .thenReturn(java.util.List.of());
+
+        ContactListResponse response = contactService.getContactList("user-none");
+
+        assertThat(response).isNotNull();
+        assertThat(response.getContent()).isEmpty();
+    }
+
+    @Test
+    void getContactListThrowsIllegalArgumentOnNullOrBlankUserId() {
+        assertThatThrownBy(() -> contactService.getContactList(null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.getContactList("   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void removeContactSucceedsWhenFoundByIdAndConnected() {
+        String authUserId = "auth-user";
+        Contact contact = Contact.builder()
+                .id("contact-100")
+                .requesterId(authUserId)
+                .receiverId("peer-1")
+                .status(ContactStatus.CONNECTED)
+                .conversationId("conv-1")
+                .build();
+
+        when(contactRepository.findById("contact-100")).thenReturn(Optional.of(contact));
+
+        contactService.removeContact(authUserId, "contact-100");
+
+        verify(contactRepository).delete(contact);
+    }
+
+    @Test
+    void removeContactSucceedsWhenFoundViaTargetUserIdFallback() {
+        String authUserId = "auth-user";
+        String targetUserId = "peer-2";
+        Contact contact = Contact.builder()
+                .id("contact-200")
+                .requesterId(targetUserId)
+                .receiverId(authUserId)
+                .status(ContactStatus.CONNECTED)
+                .conversationId("conv-2")
+                .build();
+
+        when(contactRepository.findById(targetUserId)).thenReturn(Optional.empty());
+        when(contactRepository.findConnectedBetweenUsers(authUserId, targetUserId))
+                .thenReturn(Optional.of(contact));
+
+        contactService.removeContact(authUserId, targetUserId);
+
+        verify(contactRepository).delete(contact);
+    }
+
+    @Test
+    void removeContactThrowsNotFoundWhenContactNotConnected() {
+        String authUserId = "auth-user";
+        Contact contact = Contact.builder()
+                .id("contact-300")
+                .requesterId(authUserId)
+                .receiverId("peer-3")
+                .status(ContactStatus.PENDING)
+                .build();
+
+        when(contactRepository.findById("contact-300")).thenReturn(Optional.of(contact));
+        when(contactRepository.findConnectedBetweenUsers(authUserId, "contact-300")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> contactService.removeContact(authUserId, "contact-300"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Contact not found");
+    }
+
+    @Test
+    void removeContactThrowsNotFoundWhenUserIsNotParticipant() {
+        String authUserId = "auth-user";
+        Contact contact = Contact.builder()
+                .id("contact-400")
+                .requesterId("user-x")
+                .receiverId("user-y")
+                .status(ContactStatus.CONNECTED)
+                .build();
+
+        when(contactRepository.findById("contact-400")).thenReturn(Optional.of(contact));
+        when(contactRepository.findConnectedBetweenUsers(authUserId, "contact-400")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> contactService.removeContact(authUserId, "contact-400"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Contact not found");
+    }
+
+    @Test
+    void removeContactThrowsNotFoundWhenContactDoesNotExist() {
+        when(contactRepository.findById("missing-id")).thenReturn(Optional.empty());
+        when(contactRepository.findConnectedBetweenUsers("auth-user", "missing-id")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> contactService.removeContact("auth-user", "missing-id"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Contact not found");
+    }
+
+    @Test
+    void removeContactThrowsIllegalArgumentOnNullOrBlankArguments() {
+        assertThatThrownBy(() -> contactService.removeContact(null, "contact-1"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.removeContact("user-1", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.removeContact("   ", "contact-1"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.removeContact("user-1", "   "))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

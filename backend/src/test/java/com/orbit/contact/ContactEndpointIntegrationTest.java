@@ -25,6 +25,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -323,6 +324,132 @@ class ContactEndpointIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void getContactsRequiresAuthentication() throws Exception {
+        mockMvc.perform(get("/api/v1/contacts"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getContactsReturnsConnectedContactsWithDetails() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.DIRECT)
+                .participantIds(java.util.List.of(requester.getId(), targetUser.getId()))
+                .build());
+
+        contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .conversationId(conv.getId())
+                .build());
+
+        String requesterToken = generateToken(requester);
+
+        mockMvc.perform(get("/api/v1/contacts")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].userId").value(targetUser.getId()))
+                .andExpect(jsonPath("$.content[0].displayName").value(targetUser.getDisplayName()))
+                .andExpect(jsonPath("$.content[0].avatarUrl").value(targetUser.getAvatarUrl()))
+                .andExpect(jsonPath("$.content[0].online").value(false))
+                .andExpect(jsonPath("$.content[0].conversationId").value(conv.getId()));
+    }
+
+    @Test
+    void deleteContactRequiresAuthentication() throws Exception {
+        mockMvc.perform(delete("/api/v1/contacts/any-id"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void deleteContactRemovesDocumentAndPreservesConversation() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.DIRECT)
+                .participantIds(java.util.List.of(requester.getId(), targetUser.getId()))
+                .build());
+
+        Contact connected = contactRepository.save(Contact.builder()
+                .requesterId(requester.getId())
+                .receiverId(targetUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .conversationId(conv.getId())
+                .build());
+
+        String requesterToken = generateToken(requester);
+
+        // Delete contact using contact document ID
+        mockMvc.perform(delete("/api/v1/contacts/" + connected.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken))
+                .andExpect(status().isNoContent());
+
+        // Verify contact document is hard deleted
+        assertThat(contactRepository.findById(connected.getId())).isEmpty();
+
+        // Verify conversation is preserved (ADR 006)
+        assertThat(conversationRepository.findById(conv.getId())).isPresent();
+    }
+
+    @Test
+    void deleteContactRemovesDocumentUsingTargetUserIdFallback() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.DIRECT)
+                .participantIds(java.util.List.of(requester.getId(), targetUser.getId()))
+                .build());
+
+        Contact connected = contactRepository.save(Contact.builder()
+                .requesterId(targetUser.getId())
+                .receiverId(requester.getId())
+                .status(ContactStatus.CONNECTED)
+                .conversationId(conv.getId())
+                .build());
+
+        String requesterToken = generateToken(requester);
+
+        // Delete contact using the other user's ID
+        mockMvc.perform(delete("/api/v1/contacts/" + targetUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken))
+                .andExpect(status().isNoContent());
+
+        // Verify contact document is hard deleted
+        assertThat(contactRepository.findById(connected.getId())).isEmpty();
+    }
+
+    @Test
+    void deleteContactReturns404WhenContactDoesNotExist() throws Exception {
+        String requesterToken = generateToken(requester);
+
+        mockMvc.perform(delete("/api/v1/contacts/" + new ObjectId().toHexString())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void deleteContactReturns404WhenUserIsNotParticipant() throws Exception {
+        User thirdUser = userRepository.save(User.builder()
+                .email("third@orbit.internal")
+                .passwordHash("hashed-pw-3")
+                .displayName("Third Person")
+                .role(UserRole.USER)
+                .build());
+
+        Contact connected = contactRepository.save(Contact.builder()
+                .requesterId(targetUser.getId())
+                .receiverId(thirdUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .build());
+
+        String requesterToken = generateToken(requester);
+
+        mockMvc.perform(delete("/api/v1/contacts/" + connected.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + requesterToken))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404));
     }

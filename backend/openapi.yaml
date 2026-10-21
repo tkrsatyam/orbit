@@ -417,6 +417,56 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/contacts:
+    get:
+      tags:
+      - Contacts
+      summary: Get authenticated user's contact list
+      description: Retrieves all established contacts with live presence status for
+        the authenticated user
+      operationId: getContacts
+      responses:
+        "200":
+          description: Contacts retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ContactListResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/contacts/{contactId}:
+    delete:
+      tags:
+      - Contacts
+      summary: Remove a contact (unfriend)
+      description: Permanently removes an established contact relationship quietly
+        without lingering status records
+      operationId: removeContact
+      parameters:
+      - name: contactId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Contact removed successfully
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Contact relationship not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     SendRequestDto:
@@ -677,6 +727,30 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
+    ContactListResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContactResponse"
+    ContactResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        displayName:
+          type: string
+        avatarUrl:
+          type: string
+        bio:
+          type: string
+        online:
+          type: boolean
+        conversationId:
+          type: string
     IncomingRequestDto:
       type: object
       properties:

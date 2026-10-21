@@ -3,6 +3,7 @@ package com.orbit.contact;
 import com.orbit.common.dto.ErrorResponse;
 import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
+import com.orbit.contact.dto.ContactListResponse;
 import com.orbit.contact.dto.IncomingRequestsResponse;
 import com.orbit.contact.dto.RequestAction;
 import com.orbit.contact.dto.RespondRequestDto;
@@ -18,6 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -155,6 +157,57 @@ public class ContactController {
         }
 
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Get authenticated user's contact list", description = "Retrieves all established contacts with live presence status for the authenticated user")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Contacts retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = ContactListResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping
+    public ResponseEntity<ContactListResponse> getContacts(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication) {
+
+        String userId = resolveUserId(principalUserId, authentication);
+        ContactListResponse response = contactService.getContactList(userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Remove a contact (unfriend)", description = "Permanently removes an established contact relationship quietly without lingering status records")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Contact removed successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Contact relationship not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{contactId}")
+    public ResponseEntity<Void> removeContact(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String contactId) {
+
+        String userId = resolveUserId(principalUserId, authentication);
+        contactService.removeContact(userId, contactId);
+        return ResponseEntity.noContent().build();
     }
 
     private String resolveUserId(String principalUserId, Authentication authentication) {
