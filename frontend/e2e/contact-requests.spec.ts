@@ -168,4 +168,92 @@ test.describe('Accept and Decline Connection Requests Flow (ORDM-34)', () => {
       `Connection request sent to ${userBName}.`
     );
   });
+
+  test('user views contact list, verifies presence, and removes contact (ORDM-35 unfriend)', async ({
+    page,
+    request
+  }) => {
+    const timestamp = Date.now() + 3;
+    const userAEmail = `user_unfriend_a_${timestamp}@example.com`;
+    const userBEmail = `user_unfriend_b_${timestamp}@example.com`;
+    const password = 'Password123!';
+    const userAName = 'Unfriend Initiator';
+    const userBName = 'Connected Colleague';
+
+    // 1. Create User A via backend
+    const userARes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userAEmail, password, displayName: userAName }
+    });
+    expect(userARes.ok()).toBeTruthy();
+    const userAData = await userARes.json();
+    const userAToken = userAData.accessToken;
+    const userAId = userAData.user.id;
+
+    // 2. Create User B via backend
+    const userBRes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userBEmail, password, displayName: userBName }
+    });
+    expect(userBRes.ok()).toBeTruthy();
+    const userBData = await userBRes.json();
+    const userBToken = userBData.accessToken;
+
+    // 3. User B sends connection request to User A
+    const sendReqRes = await request.post(`${backendBase}/api/v1/contacts/requests`, {
+      headers: { Authorization: `Bearer ${userBToken}` },
+      data: { targetUserId: userAId }
+    });
+    expect(sendReqRes.status()).toBe(201);
+    const reqData = await sendReqRes.json();
+    const requestId = reqData.id;
+
+    // 4. User A accepts connection request via API
+    const acceptRes = await request.patch(`${backendBase}/api/v1/contacts/requests/${requestId}`, {
+      headers: { Authorization: `Bearer ${userAToken}` },
+      data: { action: 'ACCEPT' }
+    });
+    expect(acceptRes.status()).toBe(200);
+
+    // 5. User A logs in via Frontend UI
+    await page.goto('/login');
+    await page.fill('#login-email', userAEmail);
+    await page.fill('#login-password', password);
+    await page.click('button[type="submit"]');
+
+    await expect(page).toHaveURL('http://localhost:4200/');
+
+    // 6. Open New Chat modal
+    await page.click('[data-testid="new-chat-trigger-btn"]');
+    const modal = page.locator('[data-testid="new-chat-modal-card"]');
+    await expect(modal).toBeVisible();
+
+    // 7. By default, since User A has 1 contact, Direct Message tab is active
+    await expect(page.locator('[data-testid="contacts-count-badge"]')).toHaveText('1');
+    const contactCard = page.locator('[data-testid^="contact-card-"]');
+    await expect(contactCard).toBeVisible();
+    await expect(contactCard).toContainText(userBName);
+
+    // 8. Click Remove contact button
+    const removeBtn = page.locator('[data-testid^="remove-contact-btn-"]');
+    await expect(removeBtn).toBeVisible();
+    await removeBtn.click();
+
+    // 9. Confirm removal prompt
+    const confirmBox = page.locator('[data-testid="remove-confirm-box"]');
+    await expect(confirmBox).toBeVisible();
+    await page.locator('[data-testid^="confirm-remove-btn-"]').click();
+
+    // 10. Success alert and empty state appear
+    await expect(page.locator('[data-testid="new-chat-success-alert"]')).toContainText(
+      `Removed ${userBName} from your contacts.`
+    );
+    await expect(page.locator('[data-testid="no-contacts-empty-state"]')).toBeVisible();
+
+    // 11. Backend verification: 0 contacts
+    const listRes = await request.get(`${backendBase}/api/v1/contacts`, {
+      headers: { Authorization: `Bearer ${userAToken}` }
+    });
+    expect(listRes.status()).toBe(200);
+    const listData = await listRes.json();
+    expect(listData.content).toHaveLength(0);
+  });
 });
