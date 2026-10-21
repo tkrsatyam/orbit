@@ -44,27 +44,30 @@
 }
 
 .hero-brand-section {
-  margin-bottom: 52px;
-}
-
-.hero-logo-wrapper {
-  margin-bottom: 24px;
-}
-
-.hero-brand-icon {
-  width: 64px;
-  height: 64px;
-  display: block;
-  border-radius: 14px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  margin-bottom: 48px;
 }
 
 .auth-title {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0 0 12px 0;
-  color: var(--orbit-text-primary);
+  margin: 0 0 16px 0;
+  line-height: 1;
+}
+
+.hero-brand-logo {
+  width: 200px;
+  height: 50px;
+  display: block;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .hero-tagline {
@@ -127,9 +130,8 @@
 
 .mobile-brand-header {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 10px;
   margin-bottom: 24px;
 
   @media (min-width: 1024px) {
@@ -137,27 +139,10 @@
   }
 }
 
-.mobile-badge {
-  width: 52px;
-  height: 52px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  img {
-    width: 52px;
-    height: 52px;
-    display: block;
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-  }
-}
-
-.mobile-brand-title {
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  color: var(--orbit-text-primary);
+.mobile-brand-logo {
+  width: 168px;
+  height: 42px;
+  display: block;
 }
 
 // -------------------------------------------------------------
