@@ -19,9 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -227,5 +229,29 @@ public class ContactService {
                     ? ConnectionStatus.BLOCKED
                     : ConnectionStatus.NONE;
         };
+    }
+
+    /**
+     * Resolves all user IDs with which the specified user has an existing relationship
+     * (connected, pending in either direction, or blocked in either direction).
+     *
+     * @param userId the ID of the user
+     * @return a set of user IDs that should be excluded from connection suggestions
+     */
+    public Set<String> getExcludedUserIdsForSuggestions(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return Set.of();
+        }
+
+        List<Contact> contacts = contactRepository.findAllByUserId(userId);
+        Set<String> excluded = new HashSet<>();
+        for (Contact contact : contacts) {
+            if (userId.equals(contact.getRequesterId())) {
+                excluded.add(contact.getReceiverId());
+            } else if (userId.equals(contact.getReceiverId())) {
+                excluded.add(contact.getRequesterId());
+            }
+        }
+        return excluded;
     }
 }

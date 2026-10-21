@@ -281,6 +281,16 @@
   height: 14px;
 }
 
+.empty-state-text {
+  padding: 18px 16px;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  background: var(--orbit-bg, #121214);
+  border: 1px dashed var(--orbit-border, #2e2e33);
+  border-radius: 8px;
+}
+
 .card-footer {
   padding: 16px 24px 20px 24px;
   border-top: 1px solid var(--orbit-border, #2e2e33);

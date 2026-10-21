@@ -138,51 +138,61 @@
         </div>
       }
 
-      <!-- Suggested Community Builders List -->
-      <div class="discover-section">
-        <h3 class="section-label">DISCOVER PEOPLE IN YOUR GROUPS</h3>
+      <!-- Suggested People to Connect With -->
+      <div class="discover-section" data-testid="suggested-people-section">
+        <h3 class="section-label">SUGGESTED PEOPLE</h3>
 
-        <div class="people-list">
-          @for (user of suggestedUsers; track user.id) {
-            <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
-              <div class="avatar-badge" aria-hidden="true">
-                {{ user.initials }}
-              </div>
+        @if (isLoadingSuggestions()) {
+          <div class="empty-state-text" data-testid="suggestions-loading">
+            Loading suggestions...
+          </div>
+        } @else if (suggestedUsers().length === 0) {
+          <div class="empty-state-text" data-testid="no-suggestions-message">
+            No other users available to connect with right now.
+          </div>
+        } @else {
+          <div class="people-list">
+            @for (user of suggestedUsers(); track user.id) {
+              <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
+                <div class="avatar-badge" aria-hidden="true">
+                  {{ user.initials || 'U' }}
+                </div>
 
-              <div class="person-info">
-                <span class="person-name">{{ user.displayName }}</span>
-                <span class="person-bio">{{ user.bio }}</span>
-              </div>
+                <div class="person-info">
+                  <span class="person-name">{{ user.displayName }}</span>
+                  <span class="person-bio">{{ user.bio || 'Community member' }}</span>
+                </div>
 
-              <div class="person-action">
-                @if (isRequestPending(user.id)) {
-                  <button
-                    type="button"
-                    class="connect-btn pending-btn"
-                    disabled
-                    [attr.data-testid]="'pending-btn-' + user.id"
-                  >
-                    Pending...
-                  </button>
-                } @else {
-                  <button
-                    type="button"
-                    class="connect-btn"
-                    (click)="connectToUser(user)"
-                    [disabled]="isConnecting() && activeTargetId() === user.id"
-                    [attr.data-testid]="'connect-btn-' + user.id"
-                  >
-                    @if (isConnecting() && activeTargetId() === user.id) {
-                      <span class="btn-spinner"></span>
-                    } @else {
-                      + Connect
-                    }
-                  </button>
-                }
+                <div class="person-action">
+                  @if (isRequestPending(user.id)) {
+                    <button
+                      type="button"
+                      class="connect-btn pending-btn"
+                      disabled
+                      [attr.data-testid]="'pending-btn-' + user.id"
+                    >
+                      Pending...
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="connect-btn"
+                      (click)="connectToUser(user)"
+                      [disabled]="isConnecting() && activeTargetId() === user.id"
+                      [attr.data-testid]="'connect-btn-' + user.id"
+                    >
+                      @if (isConnecting() && activeTargetId() === user.id) {
+                        <span class="btn-spinner"></span>
+                      } @else {
+                        + Connect
+                      }
+                    </button>
+                  }
+                </div>
               </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
       </div>
 
       <!-- Footer Info -->

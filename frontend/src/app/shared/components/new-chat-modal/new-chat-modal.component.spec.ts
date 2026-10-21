@@ -2,7 +2,9 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { of, throwError } from 'rxjs';
 import { IncomingRequest } from '../../../core/models/contact.model';
+import { SuggestedUser } from '../../../core/models/user.model';
 import { ContactService } from '../../../core/services/contact.service';
+import { UserService } from '../../../core/services/user.service';
 import { NewChatModalComponent } from './new-chat-modal.component';
 
 describe('NewChatModalComponent', () => {
@@ -16,6 +18,9 @@ describe('NewChatModalComponent', () => {
     incomingRequests: ReturnType<typeof signal<IncomingRequest[]>>;
     incomingCount: ReturnType<typeof signal<number>>;
   };
+  let mockUserService: {
+    getSuggestedUsers: ReturnType<typeof vi.fn>;
+  };
 
   const mockIncomingRequest: IncomingRequest = {
     id: 'req-inv-1',
@@ -27,6 +32,21 @@ describe('NewChatModalComponent', () => {
     createdAt: '2026-10-21T00:00:00Z'
   };
 
+  const mockSuggestedUsers: SuggestedUser[] = [
+    {
+      id: 'vikram-k-id',
+      displayName: 'Vikram K',
+      bio: 'Java 25 builder',
+      initials: 'VK'
+    },
+    {
+      id: 'rohan-mehta-id',
+      displayName: 'Rohan Mehta',
+      bio: 'DevOps architect',
+      initials: 'RM'
+    }
+  ];
+
   beforeEach(async () => {
     mockContactService = {
       sendConnectionRequest: vi.fn(),
@@ -37,10 +57,15 @@ describe('NewChatModalComponent', () => {
       incomingCount: signal<number>(0)
     };
 
+    mockUserService = {
+      getSuggestedUsers: vi.fn().mockReturnValue(of(mockSuggestedUsers))
+    };
+
     await TestBed.configureTestingModule({
       imports: [NewChatModalComponent],
       providers: [
-        { provide: ContactService, useValue: mockContactService }
+        { provide: ContactService, useValue: mockContactService },
+        { provide: UserService, useValue: mockUserService }
       ]
     }).compileComponents();
 

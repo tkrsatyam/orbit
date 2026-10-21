@@ -363,6 +363,28 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/users/suggested:
+    get:
+      tags:
+      - User
+      summary: Get suggested users to connect with
+      description: Returns active users excluding the requester and existing contacts/blocks
+      operationId: getSuggestedUsers
+      responses:
+        "200":
+          description: Suggested users retrieved successfully
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SuggestedUserResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/users/me:
     get:
       tags:
@@ -609,6 +631,19 @@ components:
           description: Availability flag present only when profile is masked due to
             a block
           example: false
+    SuggestedUserResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        displayName:
+          type: string
+        bio:
+          type: string
+        avatarUrl:
+          type: string
+        initials:
+          type: string
     SelfProfileResponse:
       type: object
       description: Authenticated user's own profile

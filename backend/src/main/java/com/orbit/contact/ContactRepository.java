@@ -18,4 +18,7 @@ public interface ContactRepository extends MongoRepository<Contact, String> {
     Optional<Contact> findByRequesterIdAndReceiverId(String requesterId, String receiverId);
 
     List<Contact> findByReceiverIdAndStatus(String receiverId, ContactStatus status);
+
+    @Query("{ $or: [ { 'requesterId': ?0 }, { 'receiverId': ?0 } ] }")
+    List<Contact> findAllByUserId(String userId);
 }

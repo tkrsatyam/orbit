@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { UserService } from '../../core/services/user.service';
 import { ConversationsComponent } from './conversations.component';
 
 describe('ConversationsComponent', () => {
@@ -60,7 +61,8 @@ describe('ConversationsComponent', () => {
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
-        { provide: ContactService, useValue: contactServiceMock }
+        { provide: ContactService, useValue: contactServiceMock },
+        { provide: UserService, useValue: { getSuggestedUsers: vi.fn().mockReturnValue(of([])) } }
       ]
     }).compileComponents();
 

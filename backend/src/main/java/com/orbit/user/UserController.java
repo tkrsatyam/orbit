@@ -2,6 +2,7 @@ package com.orbit.user;
 
 import com.orbit.common.dto.ErrorResponse;
 import com.orbit.user.dto.SelfProfileResponse;
+import com.orbit.user.dto.SuggestedUserResponse;
 import com.orbit.user.dto.UserProfileResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @Tag(name = "User", description = "User profile management")
 @RestController
@@ -59,6 +62,28 @@ public class UserController {
         String userId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
         SelfProfileResponse profile = userService.getSelfProfile(userId);
         return ResponseEntity.ok(profile);
+    }
+
+    @Operation(summary = "Get suggested users to connect with", description = "Returns active users excluding the requester and existing contacts/blocks")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Suggested users retrieved successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping("/suggested")
+    public ResponseEntity<List<SuggestedUserResponse>> getSuggestedUsers(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication) {
+
+        String userId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
+        List<SuggestedUserResponse> suggested = userService.getSuggestedUsers(userId);
+        return ResponseEntity.ok(suggested);
     }
 
     @Operation(summary = "Get user profile by ID", description = "Returns public profile of a user, or degraded available=false if blocked")

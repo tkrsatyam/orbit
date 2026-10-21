@@ -116,4 +116,56 @@ test.describe('Accept and Decline Connection Requests Flow (ORDM-34)', () => {
     // 7. Banner disappears quietly
     await expect(requestCard).not.toBeVisible();
   });
+
+  test('user opens new chat modal, sees real suggested user from database, and connects directly', async ({
+    page,
+    request
+  }) => {
+    const timestamp = Date.now() + 2;
+    const userAEmail = `user_a_${timestamp}@example.com`;
+    const userBEmail = `user_b_${timestamp}@example.com`;
+    const password = 'Password123!';
+    const userAName = 'Active Searcher';
+    const userBName = 'Suggested Colleague';
+
+    // 1. Create User B via backend
+    const userBRes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userBEmail, password, displayName: userBName }
+    });
+    expect(userBRes.ok()).toBeTruthy();
+    const userBData = await userBRes.json();
+    const userBId = userBData.user.id;
+
+    // 2. User A registers via UI
+    await page.goto('/register');
+    await page.fill('#register-displayName', userAName);
+    await page.fill('#register-email', userAEmail);
+    await page.fill('#register-password', password);
+    await page.click('button[type="submit"]');
+
+    await expect(page).toHaveURL('http://localhost:4200/');
+
+    // 3. Open New Chat modal
+    await page.click('[data-testid="new-chat-trigger-btn"]');
+    const modal = page.locator('[data-testid="new-chat-modal-card"]');
+    await expect(modal).toBeVisible();
+
+    // 4. Verify User B appears in Suggested People section
+    const userBCard = page.locator(`[data-testid="person-card-${userBId}"]`);
+    await expect(userBCard).toBeVisible();
+    await expect(userBCard).toContainText(userBName);
+
+    // 5. Click + Connect directly on User B's card
+    const connectBtn = page.locator(`[data-testid="connect-btn-${userBId}"]`);
+    await expect(connectBtn).toBeVisible();
+    await connectBtn.click();
+
+    // 6. Verify pending button state and success alert
+    const pendingBtn = page.locator(`[data-testid="pending-btn-${userBId}"]`);
+    await expect(pendingBtn).toBeVisible();
+    await expect(pendingBtn).toContainText('Pending...');
+    await expect(page.locator('[data-testid="new-chat-success-alert"]')).toContainText(
+      `Connection request sent to ${userBName}.`
+    );
+  });
 });
