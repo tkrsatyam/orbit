@@ -5,6 +5,7 @@ import { of } from 'rxjs';
 import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
 import { ConversationsComponent } from './conversations.component';
 
@@ -30,6 +31,13 @@ describe('ConversationsComponent', () => {
     getSuggestedUsers: ReturnType<typeof vi.fn>;
     blockUser: ReturnType<typeof vi.fn>;
   };
+  let groupServiceMock: {
+    myGroups: ReturnType<typeof signal<GroupResponse[]>>;
+    loadMyGroups: ReturnType<typeof vi.fn>;
+    createGroup: ReturnType<typeof vi.fn>;
+    generateInvite: ReturnType<typeof vi.fn>;
+    joinViaInvite: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
 
   const mockIncomingRequest: IncomingRequest = {
@@ -40,6 +48,20 @@ describe('ConversationsComponent', () => {
       avatarUrl: null
     },
     createdAt: '2026-10-21T00:00:00Z'
+  };
+
+  const mockGroup: GroupResponse = {
+    id: 'grp-1',
+    name: 'Engineers Orbit',
+    description: 'Backend Architecture',
+    topicTag: '#backend',
+    visibility: 'PUBLIC',
+    avatarUrl: null,
+    coverImageUrl: null,
+    memberCount: 5,
+    conversationId: 'conv-1',
+    createdAt: '2026-10-21T00:00:00Z',
+    role: 'ADMIN'
   };
 
   beforeEach(async () => {
@@ -71,13 +93,22 @@ describe('ConversationsComponent', () => {
       blockUser: vi.fn().mockReturnValue(of(undefined))
     };
 
+    groupServiceMock = {
+      myGroups: signal<GroupResponse[]>([mockGroup]),
+      loadMyGroups: vi.fn().mockReturnValue(of([mockGroup])),
+      createGroup: vi.fn().mockReturnValue(of(mockGroup)),
+      generateInvite: vi.fn().mockReturnValue(of({ inviteToken: 'tok-123', inviteUrl: 'http://localhost/invite/tok-123', expiresAt: '2026-10-28T00:00:00Z' })),
+      joinViaInvite: vi.fn().mockReturnValue(of({ groupId: 'grp-1', groupName: 'Engineers Orbit', role: 'MEMBER', joinedAt: '2026-10-21T00:00:00Z' }))
+    };
+
     await TestBed.configureTestingModule({
       imports: [ConversationsComponent],
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
-        { provide: UserService, useValue: userServiceMock }
+        { provide: UserService, useValue: userServiceMock },
+        { provide: GroupService, useValue: groupServiceMock }
       ]
     }).compileComponents();
 
@@ -91,7 +122,7 @@ describe('ConversationsComponent', () => {
 
   it('should render user display name in header and initial in avatar badge', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.user-info')?.textContent).toContain('Satyam Kumar');
+    expect(compiled.querySelector('.welcome-heading')?.textContent).toContain('Satyam Kumar');
     expect(compiled.querySelector('[data-testid="user-avatar-badge"]')?.textContent?.trim()).toBe('S');
   });
 
@@ -243,5 +274,73 @@ describe('ConversationsComponent', () => {
 
     expect(userServiceMock.blockUser).toHaveBeenCalledWith('user-ananya');
     expect(contactServiceMock.loadIncomingRequests).toHaveBeenCalled();
+  });
+
+  it('should call groupService.loadMyGroups on initialization', () => {
+    expect(groupServiceMock.loadMyGroups).toHaveBeenCalled();
+  });
+
+  it('should switch navigation tab to GROUPS and render groups list', () => {
+    component.setNavTab('GROUPS');
+    fixture.detectChanges();
+
+    expect(component.activeNavTab()).toBe('GROUPS');
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.group-list-item')).not.toBeNull();
+    expect(compiled.textContent).toContain('Engineers Orbit');
+  });
+
+  it('should open and close create group modal', () => {
+    expect(component.isCreateGroupOpen()).toBe(false);
+
+    component.openCreateGroupModal();
+    fixture.detectChanges();
+    expect(component.isCreateGroupOpen()).toBe(true);
+
+    component.closeCreateGroupModal();
+    fixture.detectChanges();
+    expect(component.isCreateGroupOpen()).toBe(false);
+  });
+
+  it('should filter groups by visibility when setGroupFilter is called', () => {
+    const publicGroup: GroupResponse = {
+      id: 'grp-pub',
+      name: 'Public Space',
+      description: 'Open discussions',
+      topicTag: '#general',
+      visibility: 'PUBLIC',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 10,
+      conversationId: 'conv-pub',
+      createdAt: '2026-10-21T00:00:00Z',
+      role: 'ADMIN'
+    };
+    const privateGroup: GroupResponse = {
+      id: 'grp-priv',
+      name: 'Private Space',
+      description: 'Stealth dev',
+      topicTag: '#stealth',
+      visibility: 'PRIVATE',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 3,
+      conversationId: 'conv-priv',
+      createdAt: '2026-10-21T00:00:00Z',
+      role: 'MEMBER'
+    };
+    groupServiceMock.myGroups.set([publicGroup, privateGroup]);
+    fixture.detectChanges();
+
+    component.setGroupFilter('PUBLIC');
+    expect(component.filteredGroups().length).toBe(1);
+    expect(component.filteredGroups()[0].name).toBe('Public Space');
+
+    component.setGroupFilter('PRIVATE');
+    expect(component.filteredGroups().length).toBe(1);
+    expect(component.filteredGroups()[0].name).toBe('Private Space');
+
+    component.setGroupFilter('ALL');
+    expect(component.filteredGroups().length).toBe(2);
   });
 });

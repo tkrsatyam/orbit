@@ -9,6 +9,8 @@ servers:
 security:
 - bearerAuth: []
 tags:
+- name: Groups
+  description: "Group CRUD, membership, roles, and invite links"
 - name: Contacts
   description: "Contact requests, connection management, and relationships"
 - name: User
@@ -97,6 +99,133 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/groups:
+    post:
+      tags:
+      - Groups
+      summary: Create a new group
+      description: Creates a group and its associated group conversation. Creator
+        becomes first Admin.
+      operationId: createGroup
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGroupRequest"
+        required: true
+      responses:
+        "201":
+          description: Group created successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "400":
+          description: Validation failure
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Group name already taken
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/groups/{groupId}/invite:
+    post:
+      tags:
+      - Groups
+      summary: Generate group invite link
+      description: Generates a 7-day invite link for a private group. Admin-only.
+      operationId: createInvite
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "201":
+          description: Invite link generated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/InviteResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: User is not an admin of this group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/groups/join-via-invite/{inviteToken}:
+    post:
+      tags:
+      - Groups
+      summary: Join group via invite link
+      description: "Joins a private group using a valid, non-expired invite token."
+      operationId: joinViaInvite
+      parameters:
+      - name: inviteToken
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successfully joined the group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupJoinResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Invite token not found or expired
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: User is already a member of this group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/contacts/requests:
     get:
       tags:
@@ -498,6 +627,30 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/groups/mine:
+    get:
+      tags:
+      - Groups
+      summary: List current user's groups
+      description: Returns all groups that the authenticated user is a member of.
+      operationId: getMyGroups
+      responses:
+        "200":
+          description: List of user's joined groups
+          content:
+            '*/*':
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GroupResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/contacts:
     get:
       tags:
@@ -576,6 +729,124 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of the error
           example: 2026-10-18T17:15:00Z
+    CreateGroupRequest:
+      type: object
+      description: Payload for creating a new group
+      properties:
+        name:
+          type: string
+          description: Unique group name
+          example: FAANG Interview Prep
+          maxLength: 100
+          minLength: 3
+        description:
+          type: string
+          description: Optional description
+          example: Weekly mock interviews and distributed system design
+          maxLength: 500
+          minLength: 0
+        topicTag:
+          type: string
+          description: Topic tag for categorization
+          example: interview-prep
+          maxLength: 50
+          minLength: 0
+        visibility:
+          type: string
+          description: Visibility determining join mechanism
+          enum:
+          - PUBLIC
+          - PRIVATE
+          example: PUBLIC
+      required:
+      - name
+      - visibility
+    GroupResponse:
+      type: object
+      description: Group details response
+      properties:
+        id:
+          type: string
+          description: Group ID
+          example: 64f1a2b3c4d5e6f7a8b9c0e2
+        name:
+          type: string
+          description: Group name
+          example: FAANG Interview Prep
+        description:
+          type: string
+          description: Group description
+          example: Weekly mock interviews and distributed system design
+        topicTag:
+          type: string
+          description: Topic tag
+          example: interview-prep
+        visibility:
+          type: string
+          description: Group visibility
+          enum:
+          - PUBLIC
+          - PRIVATE
+          example: PUBLIC
+        avatarUrl:
+          type: string
+          description: Group avatar URL
+          example: https://pub-xxx.r2.dev/groups/avatar.jpg
+        coverImageUrl:
+          type: string
+          description: Group cover image URL
+          example: https://pub-xxx.r2.dev/groups/cover.jpg
+        memberCount:
+          type: integer
+          format: int32
+          description: Number of active members
+          example: 1
+        conversationId:
+          type: string
+          description: Associated conversation ID
+          example: 64f1a2b3c4d5e6f7a8b9c0e1
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of creation
+        role:
+          type: string
+          description: Caller's role within the group
+          enum:
+          - ADMIN
+          - MEMBER
+          example: ADMIN
+    InviteResponse:
+      type: object
+      description: Private group invite link response
+      properties:
+        inviteLink:
+          type: string
+          description: Full invite URL
+          example: http://localhost:4200/invite/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        expiresAt:
+          type: string
+          format: date-time
+          description: Timestamp when the invite expires (7 days after issuance)
+    GroupJoinResponse:
+      type: object
+      description: Response returned upon joining a group
+      properties:
+        groupId:
+          type: string
+          description: Group ID
+          example: 64f1a2b3c4d5e6f7a8b9c0e2
+        conversationId:
+          type: string
+          description: Conversation ID for messaging
+          example: 64f1a2b3c4d5e6f7a8b9c0e1
+        role:
+          type: string
+          description: Role assigned to new member
+          enum:
+          - ADMIN
+          - MEMBER
+          example: MEMBER
     SendRequestDto:
       type: object
       properties:
