@@ -23,6 +23,7 @@ describe('NewChatModalComponent', () => {
   };
   let mockUserService: {
     getSuggestedUsers: ReturnType<typeof vi.fn>;
+    blockUser: ReturnType<typeof vi.fn>;
   };
 
   const mockContact: ContactResponse = {
@@ -74,7 +75,8 @@ describe('NewChatModalComponent', () => {
     };
 
     mockUserService = {
-      getSuggestedUsers: vi.fn().mockReturnValue(of(mockSuggestedUsers))
+      getSuggestedUsers: vi.fn().mockReturnValue(of(mockSuggestedUsers)),
+      blockUser: vi.fn().mockReturnValue(of(undefined))
     };
 
     await TestBed.configureTestingModule({
@@ -177,6 +179,36 @@ describe('NewChatModalComponent', () => {
     expect(mockContactService.removeContact).toHaveBeenCalledWith('contact-1');
     expect(component.successMessage()).toBe('Removed Ananya Roy from your contacts.');
     expect(component.confirmingRemoveId()).toBeNull();
+  });
+
+  it('should show inline confirmation when block button is clicked and handle cancel', () => {
+    const blockBtn = fixture.nativeElement.querySelector('[data-testid="block-contact-btn-contact-1"]');
+    blockBtn.click();
+    fixture.detectChanges();
+
+    expect(component.confirmingBlockId()).toBe('contact-1');
+    const confirmBox = fixture.nativeElement.querySelector('[data-testid="block-confirm-box"]');
+    expect(confirmBox).toBeTruthy();
+
+    const cancelBtn = fixture.nativeElement.querySelector('[data-testid="cancel-block-btn-contact-1"]');
+    cancelBtn.click();
+    fixture.detectChanges();
+
+    expect(component.confirmingBlockId()).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="block-confirm-box"]')).toBeNull();
+  });
+
+  it('should call userService.blockUser and display success feedback when block is confirmed', () => {
+    component.promptBlockContact('contact-1');
+    fixture.detectChanges();
+
+    const confirmBtn = fixture.nativeElement.querySelector('[data-testid="confirm-block-btn-contact-1"]');
+    confirmBtn.click();
+    fixture.detectChanges();
+
+    expect(mockUserService.blockUser).toHaveBeenCalledWith('user-b');
+    expect(component.successMessage()).toBe('Blocked Ananya Roy.');
+    expect(component.confirmingBlockId()).toBeNull();
   });
 
   it('should switch between Direct Message and Add Connection tabs', () => {
@@ -319,5 +351,19 @@ describe('NewChatModalComponent', () => {
 
     expect(mockContactService.respondToRequest).toHaveBeenCalledWith('req-inv-1', 'DECLINE');
     expect(component.successMessage()).toContain('Connection request declined.');
+  });
+
+  it('should call userService.blockUser when Block button clicked on incoming request in modal', () => {
+    component.setActiveTab('connect');
+    mockContactService.incomingRequests.set([mockIncomingRequest]);
+    mockContactService.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const blockBtn = fixture.nativeElement.querySelector('[data-testid="modal-block-btn-req-inv-1"]');
+    expect(blockBtn).not.toBeNull();
+    blockBtn.click();
+
+    expect(mockUserService.blockUser).toHaveBeenCalledWith('target-user-1');
+    expect(component.successMessage()).toContain('Blocked Sneha Kapoor.');
   });
 });

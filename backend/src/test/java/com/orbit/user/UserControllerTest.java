@@ -17,8 +17,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.time.Instant;
 import java.util.List;
 
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -165,5 +169,83 @@ class UserControllerTest {
                 .andExpect(jsonPath("$[0].displayName").value("Priya Sharma"))
                 .andExpect(jsonPath("$[0].bio").value("Frontend Engineer"))
                 .andExpect(jsonPath("$[0].initials").value("PS"));
+    }
+
+    @Test
+    void blockUserReturns204WhenSuccessful() throws Exception {
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(post(USERS_PATH + "target-456/block").principal(principal))
+                .andExpect(status().isNoContent());
+
+        verify(userService).blockUser("requester-123", "target-456");
+    }
+
+    @Test
+    void blockUserReturns400WhenSelfBlock() throws Exception {
+        doThrow(new IllegalArgumentException("Cannot block yourself"))
+                .when(userService).blockUser("requester-123", "requester-123");
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(post(USERS_PATH + "requester-123/block").principal(principal))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Cannot block yourself"));
+    }
+
+    @Test
+    void blockUserReturns404WhenTargetNotFound() throws Exception {
+        doThrow(new ResourceNotFoundException("Target user not found: missing-id"))
+                .when(userService).blockUser("requester-123", "missing-id");
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(post(USERS_PATH + "missing-id/block").principal(principal))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Target user not found: missing-id"));
+    }
+
+    @Test
+    void unblockUserReturns204WhenSuccessful() throws Exception {
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(delete(USERS_PATH + "target-456/block").principal(principal))
+                .andExpect(status().isNoContent());
+
+        verify(userService).unblockUser("requester-123", "target-456");
+    }
+
+    @Test
+    void unblockUserReturns400WhenSelfUnblock() throws Exception {
+        doThrow(new IllegalArgumentException("Cannot unblock yourself"))
+                .when(userService).unblockUser("requester-123", "requester-123");
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(delete(USERS_PATH + "requester-123/block").principal(principal))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Cannot unblock yourself"));
+    }
+
+    @Test
+    void unblockUserReturns404WhenTargetNotFound() throws Exception {
+        doThrow(new ResourceNotFoundException("Target user not found: missing-id"))
+                .when(userService).unblockUser("requester-123", "missing-id");
+
+        UsernamePasswordAuthenticationToken principal =
+                UsernamePasswordAuthenticationToken.authenticated("requester-123", null, List.of());
+
+        mockMvc.perform(delete(USERS_PATH + "missing-id/block").principal(principal))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Target user not found: missing-id"));
     }
 }

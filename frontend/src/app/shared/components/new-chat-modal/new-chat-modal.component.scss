@@ -354,6 +354,82 @@
   }
 }
 
+.btn-block-icon {
+  background: transparent;
+  border: 1px solid var(--orbit-border, #2e2e33);
+  color: var(--orbit-text-muted, #a1a1aa);
+  padding: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: var(--orbit-danger, #f43f5e);
+    border-color: var(--orbit-danger, #f43f5e);
+    background: rgba(244, 63, 94, 0.1);
+  }
+
+  .action-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+.block-confirm-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.block-prompt {
+  font-size: 0.75rem;
+  color: var(--orbit-danger, #f43f5e);
+  font-weight: 500;
+}
+
+.btn-confirm-block {
+  background: var(--orbit-danger, #f43f5e);
+  color: #ffffff;
+  border: none;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.btn-cancel-block {
+  background: transparent;
+  color: var(--orbit-text-muted, #a1a1aa);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  font-size: 0.75rem;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+
+  &:hover {
+    color: var(--orbit-text-primary, #ededef);
+    background: var(--orbit-elevated, #27272a);
+  }
+}
+
 .empty-state-card {
   padding: 32px 20px;
   text-align: center;
@@ -694,6 +770,29 @@
 
     &:hover:not(:disabled) {
       background: var(--orbit-elevated, #27272a);
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  .btn-block {
+    padding: 5px 12px;
+    background: transparent;
+    color: var(--orbit-text-muted, #a1a1aa);
+    border: 1px solid var(--orbit-border, #2e2e33);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      color: var(--orbit-danger, #f43f5e);
+      border-color: var(--orbit-danger, #f43f5e);
+      background: rgba(244, 63, 94, 0.1);
     }
 
     &:disabled {

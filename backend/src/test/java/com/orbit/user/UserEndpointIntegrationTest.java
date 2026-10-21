@@ -18,8 +18,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -347,5 +350,128 @@ class UserEndpointIntegrationTest {
     void getSuggestedUsersReturns401WhenUnauthenticated() throws Exception {
         mockMvc.perform(get("/api/v1/users/suggested"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void postBlockUserReturns204AndDegradesBlockedUserProfile() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+        String tokenB = jwtService.generateAccessToken(otherUser.getId());
+
+        mockMvc.perform(post(USERS_PATH + otherUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        Contact contact = contactRepository.findBetweenUsers(seededUser.getId(), otherUser.getId()).orElseThrow();
+        assertThat(contact.getStatus()).isEqualTo(ContactStatus.BLOCKED);
+        assertThat(contact.getBlockedBy()).isEqualTo(seededUser.getId());
+
+        // Blocked user (otherUser) sees masked profile
+        mockMvc.perform(get(USERS_PATH + seededUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(seededUser.getId()))
+                .andExpect(jsonPath("$.available").value(false))
+                .andExpect(jsonPath("$.displayName").doesNotExist());
+
+        // Blocker (seededUser) retains full profile access
+        mockMvc.perform(get(USERS_PATH + otherUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(otherUser.getId()))
+                .andExpect(jsonPath("$.connectionStatus").value("BLOCKED"))
+                .andExpect(jsonPath("$.displayName").value("Other User"));
+    }
+
+    @Test
+    void postBlockUserOnExistingContactUpdatesStatusToBlocked() throws Exception {
+        contactRepository.save(Contact.builder()
+                .requesterId(seededUser.getId())
+                .receiverId(otherUser.getId())
+                .status(ContactStatus.CONNECTED)
+                .build());
+
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(post(USERS_PATH + otherUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        Contact contact = contactRepository.findBetweenUsers(seededUser.getId(), otherUser.getId()).orElseThrow();
+        assertThat(contact.getStatus()).isEqualTo(ContactStatus.BLOCKED);
+        assertThat(contact.getBlockedBy()).isEqualTo(seededUser.getId());
+    }
+
+    @Test
+    void postBlockUserSelfReturns400() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(post(USERS_PATH + seededUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Cannot block yourself"));
+    }
+
+    @Test
+    void postBlockUserTargetNotFoundReturns404() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+        String missingId = new ObjectId().toHexString();
+
+        mockMvc.perform(post(USERS_PATH + missingId + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void deleteBlockUserReturns204AndHardDeletesContactDocument() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+        String tokenB = jwtService.generateAccessToken(otherUser.getId());
+
+        // First block
+        mockMvc.perform(post(USERS_PATH + otherUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        assertThat(contactRepository.findBetweenUsers(seededUser.getId(), otherUser.getId())).isPresent();
+
+        // Now unblock
+        mockMvc.perform(delete(USERS_PATH + otherUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        // Contact document is hard-deleted
+        assertThat(contactRepository.findBetweenUsers(seededUser.getId(), otherUser.getId())).isEmpty();
+
+        // Target user's profile view is restored to normal with NONE status
+        mockMvc.perform(get(USERS_PATH + seededUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenB))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(seededUser.getId()))
+                .andExpect(jsonPath("$.displayName").value("Satyam Kumar"))
+                .andExpect(jsonPath("$.connectionStatus").value("NONE"))
+                .andExpect(jsonPath("$.available").doesNotExist());
+    }
+
+    @Test
+    void deleteBlockUserSelfReturns400() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+
+        mockMvc.perform(delete(USERS_PATH + seededUser.getId() + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("Cannot unblock yourself"));
+    }
+
+    @Test
+    void deleteBlockUserTargetNotFoundReturns404() throws Exception {
+        String tokenA = jwtService.generateAccessToken(seededUser.getId());
+        String missingId = new ObjectId().toHexString();
+
+        mockMvc.perform(delete(USERS_PATH + missingId + "/block")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
     }
 }

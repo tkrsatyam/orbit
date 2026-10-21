@@ -16,6 +16,87 @@ tags:
 - name: Auth
   description: Authentication and session management
 paths:
+  /api/v1/users/{userId}/block:
+    post:
+      tags:
+      - User
+      summary: Block a user
+      description: "Blocks a user by their userId, establishing a one-directional\
+        \ block relationship per ADR 007 and ADR 013"
+      operationId: blockUser
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: User blocked successfully
+        "400":
+          description: Invalid request or attempt to block self
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Target user account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+      - User
+      summary: Unblock a user
+      description: "Unblocks a user by their userId, hard-deleting the contact relationship\
+        \ per ADR 006 and ADR 013"
+      operationId: unblockUser
+      parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: User unblocked successfully
+        "400":
+          description: Invalid request or attempt to unblock self
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: "Missing, invalid, expired, or blacklisted access token"
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Target user account not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          description: Rate limit exceeded
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/contacts/requests:
     get:
       tags:
@@ -469,6 +550,32 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
+    ErrorResponse:
+      type: object
+      description: Standard API error response envelope
+      properties:
+        status:
+          type: integer
+          format: int32
+          description: HTTP status code
+          example: 400
+        error:
+          type: string
+          description: HTTP status reason phrase
+          example: Bad Request
+        message:
+          type: string
+          description: Descriptive error message
+          example: Display name must be between 2 and 50 characters
+        path:
+          type: string
+          description: Request URI path
+          example: /api/v1/users/me
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 UTC timestamp of the error
+          example: 2026-10-18T17:15:00Z
     SendRequestDto:
       type: object
       properties:
@@ -502,32 +609,6 @@ components:
           type: string
         avatarUrl:
           type: string
-    ErrorResponse:
-      type: object
-      description: Standard API error response envelope
-      properties:
-        status:
-          type: integer
-          format: int32
-          description: HTTP status code
-          example: 400
-        error:
-          type: string
-          description: HTTP status reason phrase
-          example: Bad Request
-        message:
-          type: string
-          description: Descriptive error message
-          example: Display name must be between 2 and 50 characters
-        path:
-          type: string
-          description: Request URI path
-          example: /api/v1/users/me
-        timestamp:
-          type: string
-          format: date-time
-          description: ISO-8601 UTC timestamp of the error
-          example: 2026-10-18T17:15:00Z
     RegisterRequest:
       type: object
       description: User registration payload

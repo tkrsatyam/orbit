@@ -26,6 +26,10 @@ describe('ConversationsComponent', () => {
     incomingRequests: ReturnType<typeof signal<IncomingRequest[]>>;
     incomingCount: ReturnType<typeof signal<number>>;
   };
+  let userServiceMock: {
+    getSuggestedUsers: ReturnType<typeof vi.fn>;
+    blockUser: ReturnType<typeof vi.fn>;
+  };
   let router: Router;
 
   const mockIncomingRequest: IncomingRequest = {
@@ -62,13 +66,18 @@ describe('ConversationsComponent', () => {
       incomingCount: signal<number>(0)
     };
 
+    userServiceMock = {
+      getSuggestedUsers: vi.fn().mockReturnValue(of([])),
+      blockUser: vi.fn().mockReturnValue(of(undefined))
+    };
+
     await TestBed.configureTestingModule({
       imports: [ConversationsComponent],
       providers: [
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
-        { provide: UserService, useValue: { getSuggestedUsers: vi.fn().mockReturnValue(of([])) } }
+        { provide: UserService, useValue: userServiceMock }
       ]
     }).compileComponents();
 
@@ -220,5 +229,19 @@ describe('ConversationsComponent', () => {
     declineBtn.click();
 
     expect(contactServiceMock.respondToRequest).toHaveBeenCalledWith('req-456', 'DECLINE');
+  });
+
+  it('should dispatch BLOCK action and reload incoming requests when Block button is clicked', () => {
+    contactServiceMock.incomingRequests.set([mockIncomingRequest]);
+    contactServiceMock.incomingCount.set(1);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const blockBtn = compiled.querySelector('[data-testid="block-request-btn-req-456"]') as HTMLButtonElement;
+    expect(blockBtn).not.toBeNull();
+    blockBtn.click();
+
+    expect(userServiceMock.blockUser).toHaveBeenCalledWith('user-ananya');
+    expect(contactServiceMock.loadIncomingRequests).toHaveBeenCalled();
   });
 });

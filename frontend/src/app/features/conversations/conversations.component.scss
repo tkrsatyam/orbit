@@ -425,6 +425,29 @@
       cursor: not-allowed;
     }
   }
+
+  .btn-block {
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--orbit-text-muted, #a1a1aa);
+    border: 1px solid var(--orbit-border, #2e2e33);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+
+    &:hover:not(:disabled) {
+      color: var(--orbit-danger, #f43f5e);
+      border-color: var(--orbit-danger, #f43f5e);
+      background: rgba(244, 63, 94, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  }
 }
 
 .btn-spinner {

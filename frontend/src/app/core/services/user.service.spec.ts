@@ -83,4 +83,20 @@ describe('UserService', () => {
     expect(req.request.method).toBe('GET');
     req.flush(mockSuggested);
   });
+
+  it('should post block user by target user id', () => {
+    service.blockUser('target-user-99').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/target-user-99/block`);
+    expect(req.request.method).toBe('POST');
+    req.flush(null);
+  });
+
+  it('should delete unblock user by target user id', () => {
+    service.unblockUser('target-user-99').subscribe();
+
+    const req = httpMock.expectOne(`${environment.apiBaseUrl}/api/v1/users/target-user-99/block`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
 });

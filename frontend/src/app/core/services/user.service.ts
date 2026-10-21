@@ -24,4 +24,20 @@ export class UserService {
   getSuggestedUsers(): Observable<SuggestedUser[]> {
     return this.http.get<SuggestedUser[]>(`${environment.apiBaseUrl}/api/v1/users/suggested`);
   }
+
+  /**
+   * Blocks a target user by their user ID per ADR 007 and ADR 013.
+   * Works whether or not an existing contact document exists.
+   */
+  blockUser(userId: string): Observable<void> {
+    return this.http.post<void>(`${environment.apiBaseUrl}/api/v1/users/${userId}/block`, {});
+  }
+
+  /**
+   * Unblocks a target user by their user ID per ADR 006 and ADR 013,
+   * permanently deleting the contact/block document.
+   */
+  unblockUser(userId: string): Observable<void> {
+    return this.http.delete<void>(`${environment.apiBaseUrl}/api/v1/users/${userId}/block`);
+  }
 }
