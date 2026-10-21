@@ -98,6 +98,46 @@
         </div>
       }
 
+      <!-- Pending Incoming Requests Section -->
+      @if (contactService.incomingRequests().length > 0) {
+        <div class="incoming-section" data-testid="modal-incoming-section">
+          <h3 class="section-label">INCOMING REQUESTS ({{ contactService.incomingCount() }})</h3>
+          <div class="incoming-list">
+            @for (req of contactService.incomingRequests(); track req.id) {
+              <div class="incoming-card" [attr.data-testid]="'modal-incoming-card-' + req.id">
+                <div class="incoming-avatar" aria-hidden="true">
+                  {{ req.fromUser.displayName.charAt(0).toUpperCase() }}
+                </div>
+                <div class="incoming-details">
+                  <span class="incoming-name">{{ req.fromUser.displayName }}</span>
+                  <span class="incoming-subtitle">sent you a connection request</span>
+                </div>
+                <div class="incoming-actions">
+                  <button
+                    type="button"
+                    class="btn-accept"
+                    (click)="respondToIncoming(req.id, 'ACCEPT')"
+                    [disabled]="isResponding(req.id)"
+                    [attr.data-testid]="'modal-accept-btn-' + req.id"
+                  >
+                    Accept
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-decline"
+                    (click)="respondToIncoming(req.id, 'DECLINE')"
+                    [disabled]="isResponding(req.id)"
+                    [attr.data-testid]="'modal-decline-btn-' + req.id"
+                  >
+                    Decline
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
+
       <!-- Suggested Community Builders List -->
       <div class="discover-section">
         <h3 class="section-label">DISCOVER PEOPLE IN YOUR GROUPS</h3>
@@ -118,29 +158,16 @@
                 @if (isRequestPending(user.id)) {
                   <button
                     type="button"
-                    class="btn-status-pending"
+                    class="connect-btn pending-btn"
                     disabled
                     [attr.data-testid]="'pending-btn-' + user.id"
                   >
-                    <svg
-                      class="status-icon"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      aria-hidden="true"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <polyline points="12 6 12 12 16 14" />
-                    </svg>
                     Pending...
                   </button>
                 } @else {
                   <button
                     type="button"
-                    class="btn-connect"
+                    class="connect-btn"
                     (click)="connectToUser(user)"
                     [disabled]="isConnecting() && activeTargetId() === user.id"
                     [attr.data-testid]="'connect-btn-' + user.id"
@@ -158,9 +185,9 @@
         </div>
       </div>
 
-      <!-- Bottom Notice -->
+      <!-- Footer Info -->
       <footer class="card-footer">
-        <p class="footer-notice">
+        <p class="footer-note">
           Connections allow direct messaging and real-time presence visibility.
         </p>
       </footer>

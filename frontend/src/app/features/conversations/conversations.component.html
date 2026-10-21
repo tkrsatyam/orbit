@@ -5,7 +5,14 @@
         <span>⬡</span>
       </div>
       <div>
-        <h2>Conversations</h2>
+        <div class="title-with-badge">
+          <h2>Conversations</h2>
+          @if (contactService.incomingCount() > 0) {
+            <span class="incoming-badge" data-testid="incoming-requests-badge">
+              {{ contactService.incomingCount() }}
+            </span>
+          }
+        </div>
         <p class="user-info">
           Signed in as <strong>{{ currentUserName() }}</strong>
         </p>
@@ -116,6 +123,65 @@
       </div>
     </div>
   </header>
+
+  <!-- Non-blocking Incoming Requests Banner -->
+  @if (contactService.incomingRequests().length > 0) {
+    <div class="incoming-requests-container" data-testid="incoming-requests-container">
+      @for (req of contactService.incomingRequests(); track req.id) {
+        <div class="incoming-request-card" [attr.data-testid]="'incoming-request-card-' + req.id">
+          <div class="card-accent-bar" aria-hidden="true"></div>
+          <div class="request-content-row">
+            <div class="request-sender-avatar" aria-hidden="true">
+              @if (req.fromUser.avatarUrl) {
+                <img [src]="req.fromUser.avatarUrl" [alt]="req.fromUser.displayName" class="avatar-img" />
+              } @else {
+                <span>{{ req.fromUser.displayName.charAt(0).toUpperCase() }}</span>
+              }
+            </div>
+
+            <div class="request-text-info">
+              <div class="request-title-line">
+                <strong class="sender-name">{{ req.fromUser.displayName }}</strong>
+                <span class="request-action-label">sent you a connection request</span>
+              </div>
+              <p class="request-description">
+                Connecting enables direct messages, typing indicators, and presence.
+              </p>
+            </div>
+
+            <div class="request-button-actions">
+              <button
+                type="button"
+                class="btn-accept"
+                (click)="handleAcceptRequest(req)"
+                [disabled]="isProcessingRequest(req.id)"
+                [attr.data-testid]="'accept-request-btn-' + req.id"
+              >
+                @if (isProcessingRequest(req.id) && activeAction() === 'ACCEPT') {
+                  <span class="btn-spinner"></span>
+                } @else {
+                  Accept
+                }
+              </button>
+              <button
+                type="button"
+                class="btn-decline"
+                (click)="handleDeclineRequest(req)"
+                [disabled]="isProcessingRequest(req.id)"
+                [attr.data-testid]="'decline-request-btn-' + req.id"
+              >
+                @if (isProcessingRequest(req.id) && activeAction() === 'DECLINE') {
+                  <span class="btn-spinner"></span>
+                } @else {
+                  Decline
+                }
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
 
   <section class="conversations-content">
     <p class="placeholder-text">

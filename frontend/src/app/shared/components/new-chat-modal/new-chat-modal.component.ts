@@ -1,4 +1,4 @@
-import { Component, EventEmitter, HostListener, inject, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, HostListener, inject, Input, OnChanges, Output, SimpleChanges, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ContactService } from '../../../core/services/contact.service';
 
@@ -16,8 +16,8 @@ export interface DiscoverUserItem {
   templateUrl: './new-chat-modal.component.html',
   styleUrl: './new-chat-modal.component.scss'
 })
-export class NewChatModalComponent {
-  private readonly contactService = inject(ContactService);
+export class NewChatModalComponent implements OnChanges {
+  readonly contactService = inject(ContactService);
 
   @Input({ required: true }) isOpen: boolean = false;
   @Output() closeModal = new EventEmitter<void>();
@@ -25,6 +25,7 @@ export class NewChatModalComponent {
   directTargetUserId = signal<string>('');
   isConnecting = signal<boolean>(false);
   activeTargetId = signal<string | null>(null);
+  activeRespondingId = signal<string | null>(null);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -58,6 +59,16 @@ export class NewChatModalComponent {
     }
   ];
 
+  ngOnChanges(changes: SimpleChanges): void {
+    if (changes['isOpen'] && this.isOpen) {
+      this.contactService.loadIncomingRequests().subscribe({
+        error: () => {
+          // Non-blocking initial fetch
+        }
+      });
+    }
+  }
+
   @HostListener('document:keydown.escape')
   onEscape(): void {
     if (this.isOpen) {
@@ -75,6 +86,10 @@ export class NewChatModalComponent {
     return this.contactService.hasPendingRequest(userId);
   }
 
+  isResponding(requestId: string): boolean {
+    return this.activeRespondingId() === requestId;
+  }
+
   connectDirect(): void {
     const targetId = this.directTargetUserId().trim();
     if (!targetId) {
@@ -86,6 +101,28 @@ export class NewChatModalComponent {
 
   connectToUser(user: DiscoverUserItem): void {
     this.executeConnect(user.id, user.displayName);
+  }
+
+  respondToIncoming(requestId: string, action: 'ACCEPT' | 'DECLINE'): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activeRespondingId.set(requestId);
+
+    this.contactService.respondToRequest(requestId, action).subscribe({
+      next: () => {
+        this.activeRespondingId.set(null);
+        if (action === 'ACCEPT') {
+          this.successMessage.set('Connection request accepted.');
+        } else {
+          this.successMessage.set('Connection request declined.');
+        }
+      },
+      error: err => {
+        this.activeRespondingId.set(null);
+        const msg = err.error?.message || `Failed to ${action.toLowerCase()} request.`;
+        this.errorMessage.set(msg);
+      }
+    });
   }
 
   private executeConnect(targetUserId: string, displayName?: string): void {

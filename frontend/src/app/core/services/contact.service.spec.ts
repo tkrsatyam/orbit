@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../environments/environment';
-import { ConnectionRequestResponse } from '../models/contact.model';
+import { AcceptRequestResponse, ConnectionRequestResponse, IncomingRequestsResponse } from '../models/contact.model';
 import { ContactService } from './contact.service';
 
 describe('ContactService', () => {
@@ -26,10 +26,12 @@ describe('ContactService', () => {
     httpTesting.verify();
   });
 
-  it('should be created with empty pending user IDs', () => {
+  it('should be created with empty pending user IDs and empty incoming requests', () => {
     expect(service).toBeTruthy();
     expect(service.pendingUserIds().size).toBe(0);
     expect(service.hasPendingRequest('user-1')).toBe(false);
+    expect(service.incomingRequests().length).toBe(0);
+    expect(service.incomingCount()).toBe(0);
   });
 
   it('should dispatch POST to /api/v1/contacts/requests and update pendingUserIds signal on success', () => {
@@ -78,5 +80,72 @@ describe('ContactService', () => {
 
     expect(errorResponse.status).toBe(409);
     expect(service.hasPendingRequest(targetUserId)).toBe(false);
+  });
+
+  it('should load incoming requests and populate incomingRequests signal', () => {
+    const mockIncoming: IncomingRequestsResponse = {
+      content: [
+        {
+          id: 'req-1',
+          fromUser: { id: 'u-1', displayName: 'Ananya Roy' },
+          createdAt: '2026-10-21T00:00:00Z'
+        }
+      ]
+    };
+
+    service.loadIncomingRequests().subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/contacts/requests`);
+    expect(req.request.method).toBe('GET');
+
+    req.flush(mockIncoming);
+
+    expect(service.incomingRequests().length).toBe(1);
+    expect(service.incomingCount()).toBe(1);
+    expect(service.incomingRequests()[0].fromUser.displayName).toBe('Ananya Roy');
+  });
+
+  it('should dispatch PATCH with ACCEPT and remove request from incomingRequests signal', () => {
+    service.incomingRequests.set([
+      { id: 'req-1', fromUser: { id: 'u-1', displayName: 'Ananya Roy' }, createdAt: '2026-10-21T00:00:00Z' },
+      { id: 'req-2', fromUser: { id: 'u-2', displayName: 'Vikram K' }, createdAt: '2026-10-21T00:00:00Z' }
+    ]);
+
+    const mockResponse: AcceptRequestResponse = {
+      status: 'ACCEPTED',
+      conversationId: 'conv-123'
+    };
+
+    let result: AcceptRequestResponse | void = undefined;
+    service.respondToRequest('req-1', 'ACCEPT').subscribe(res => {
+      result = res;
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/contacts/requests/req-1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ action: 'ACCEPT' });
+
+    req.flush(mockResponse);
+
+    expect(result).toEqual(mockResponse);
+    expect(service.incomingRequests().length).toBe(1);
+    expect(service.incomingRequests()[0].id).toBe('req-2');
+  });
+
+  it('should dispatch PATCH with DECLINE and remove request from incomingRequests signal', () => {
+    service.incomingRequests.set([
+      { id: 'req-1', fromUser: { id: 'u-1', displayName: 'Ananya Roy' }, createdAt: '2026-10-21T00:00:00Z' }
+    ]);
+
+    service.respondToRequest('req-1', 'DECLINE').subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/contacts/requests/req-1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ action: 'DECLINE' });
+
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.incomingRequests().length).toBe(0);
+    expect(service.incomingCount()).toBe(0);
   });
 });

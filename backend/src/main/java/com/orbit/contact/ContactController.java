@@ -1,7 +1,11 @@
 package com.orbit.contact;
 
 import com.orbit.common.dto.ErrorResponse;
+import com.orbit.contact.dto.AcceptRequestResponse;
 import com.orbit.contact.dto.ConnectionRequestResponse;
+import com.orbit.contact.dto.IncomingRequestsResponse;
+import com.orbit.contact.dto.RequestAction;
+import com.orbit.contact.dto.RespondRequestDto;
 import com.orbit.contact.dto.SendRequestDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -14,6 +18,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -73,8 +80,84 @@ public class ContactController {
             Authentication authentication,
             @Valid @RequestBody SendRequestDto requestDto) {
 
-        String requesterId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
+        String requesterId = resolveUserId(principalUserId, authentication);
         ConnectionRequestResponse response = contactService.sendRequest(requesterId, requestDto.getTargetUserId());
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @Operation(summary = "Get pending incoming connection requests", description = "Retrieves all pending incoming connection requests for the authenticated user")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Pending requests retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = IncomingRequestsResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping("/requests")
+    public ResponseEntity<IncomingRequestsResponse> getIncomingRequests(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication) {
+
+        String receiverId = resolveUserId(principalUserId, authentication);
+        IncomingRequestsResponse response = contactService.getIncomingRequests(receiverId);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Accept or decline a connection request", description = "Responds to an incoming connection request by accepting or declining it")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Connection request accepted successfully and DM conversation created",
+                    content = @Content(schema = @Schema(implementation = AcceptRequestResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Connection request declined and deleted quietly"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid action or request payload",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Connection request not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Connection request is not in PENDING state",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PatchMapping("/requests/{requestId}")
+    public ResponseEntity<?> respondToRequest(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String requestId,
+            @Valid @RequestBody RespondRequestDto respondDto) {
+
+        String receiverId = resolveUserId(principalUserId, authentication);
+        AcceptRequestResponse response = contactService.respondToRequest(receiverId, requestId, respondDto.getAction());
+
+        if (respondDto.getAction() == RequestAction.DECLINE) {
+            return ResponseEntity.noContent().build();
+        }
+
+        return ResponseEntity.ok(response);
+    }
+
+    private String resolveUserId(String principalUserId, Authentication authentication) {
+        return principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
     }
 }
