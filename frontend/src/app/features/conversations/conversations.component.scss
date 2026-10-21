@@ -32,7 +32,12 @@
   align-items: center;
   justify-content: center;
   color: var(--orbit-accent);
-  font-size: 1.25rem;
+}
+
+.orbit-brand-mark {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 .conversations-header h2 {

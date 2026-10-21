@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- Crisp Upper Arc Gradient: Warm Charcoal for Light Mode -->
+    <linearGradient id="orbit-charcoal-arc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1C1917"/>
+      <stop offset="70%" stop-color="#292524"/>
+      <stop offset="100%" stop-color="#57534E"/>
+    </linearGradient>
+
+    <!-- Crisp Lower Arc Gradient: Deep Honey Amber -->
+    <linearGradient id="orbit-amber-light-arc" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#B45309"/>
+      <stop offset="60%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#F59E0B"/>
+    </linearGradient>
+
+    <!-- Radial Core Glow -->
+    <radialGradient id="orbit-core-light-glow" cx="45%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#FEF3C7"/>
+      <stop offset="45%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Concentric Gravitational Orbit Ring -->
+  <circle cx="50" cy="50" r="16" stroke="#D97706" stroke-width="1.5" stroke-dasharray="3 4" opacity="0.35"/>
+
+  <!-- Lower Orbital Sweep (Honey Amber) -->
+  <path d="M 50 84 C 31.22 84 16 68.78 16 50 C 16 40.2 20.2 31.4 26.9 25.2" 
+        stroke="url(#orbit-amber-light-arc)" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Upper Orbital Sweep (Deep Charcoal) -->
+  <path d="M 50 16 C 68.78 16 84 31.22 84 50 C 84 59.8 79.8 68.6 73.1 74.8" 
+        stroke="url(#orbit-charcoal-arc)" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Trailing Satellite Node -->
+  <circle cx="26.9" cy="25.2" r="3.2" fill="#1C1917" opacity="0.85"/>
+
+  <!-- Active Orbital Beacon -->
+  <circle cx="73.1" cy="74.8" r="8" stroke="#D97706" stroke-width="1.5" opacity="0.3"/>
+  <circle cx="73.1" cy="74.8" r="4.8" fill="#D97706"/>
+
+  <!-- Central Gravitational Core -->
+  <circle cx="50" cy="50" r="11" stroke="#D97706" stroke-width="1.5" opacity="0.25"/>
+  <circle cx="50" cy="50" r="8.5" fill="url(#orbit-core-light-glow)"/>
+</svg>
