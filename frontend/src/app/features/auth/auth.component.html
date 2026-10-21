@@ -1,50 +1,102 @@
 <div class="auth-page-wrapper">
-  <div class="auth-card">
-    <div class="auth-brand-header">
-      <div class="orbit-badge" aria-hidden="true">
-        <img src="brand/orbit-icon.svg" alt="Orbit Logo" class="orbit-brand-mark" width="22" height="22" />
+  <!-- Desktop Left Hero Panel (Hidden on screens < 1024px) -->
+  <aside class="auth-hero-panel" aria-label="Orbit Platform Highlights">
+    <div class="hero-brand-section">
+      <div class="hero-logo-wrapper" aria-hidden="true">
+        <img src="brand/orbit-app-icon.svg" alt="Orbit Logo" class="hero-brand-icon" width="64" height="64" />
       </div>
       <h1 class="auth-title">Orbit</h1>
-    </div>
-    <p class="auth-subtitle">
-      {{ mode() === 'login' ? 'Welcome back! Sign in to continue.' : 'Create an account to join Orbit.' }}
-    </p>
-
-    <div class="tab-header" role="tablist">
-      <button
-        type="button"
-        role="tab"
-        (click)="setMode('login')"
-        [class.active]="mode() === 'login'"
-        [attr.aria-selected]="mode() === 'login'"
-        class="tab-button"
-      >
-        Sign in
-      </button>
-      <button
-        type="button"
-        role="tab"
-        (click)="setMode('register')"
-        [class.active]="mode() === 'register'"
-        [attr.aria-selected]="mode() === 'register'"
-        class="tab-button"
-      >
-        Register
-      </button>
+      <p class="hero-tagline">
+        The real-time collaboration workspace for builders, career switchers, and learners.
+      </p>
     </div>
 
-    @if (mode() === 'login') {
-      <app-login-form
-        [isLoading]="isSubmitting()"
-        [error]="formError()"
-        (formSubmit)="handleLogin($event)"
-      />
-    } @else {
-      <app-register-form
-        [isLoading]="isSubmitting()"
-        [error]="formError()"
-        (formSubmit)="handleRegister($event)"
-      />
-    }
-  </div>
+    <ul class="hero-feature-list" role="list">
+      <li class="hero-feature-item">
+        <span class="feature-dot" aria-hidden="true"></span>
+        <span class="feature-text">Real-time direct &amp; group messaging via persistent WebSockets</span>
+      </li>
+      <li class="hero-feature-item">
+        <span class="feature-dot" aria-hidden="true"></span>
+        <span class="feature-text">Topic-based community spaces &amp; public group discovery</span>
+      </li>
+      <li class="hero-feature-item">
+        <span class="feature-dot" aria-hidden="true"></span>
+        <span class="feature-text">Live online presence indicators &amp; delivered/seen read receipts</span>
+      </li>
+      <li class="hero-feature-item">
+        <span class="feature-dot" aria-hidden="true"></span>
+        <span class="feature-text">High-contrast Carbon &amp; Warm Amber theme engineered for zero eye fatigue</span>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- Form Container (Centered on desktop, full viewport on mobile) -->
+  <main class="auth-form-container">
+    <!-- Mobile Brand Header (Visible only on screens < 1024px) -->
+    <div class="mobile-brand-header">
+      <div class="mobile-badge" aria-hidden="true">
+        <img src="brand/orbit-app-icon.svg" alt="Orbit Logo" width="52" height="52" />
+      </div>
+      <span class="mobile-brand-title">Orbit</span>
+    </div>
+
+    <div class="auth-card">
+      <header class="card-header">
+        <h2 class="card-title">
+          {{ mode() === 'login' ? 'Welcome to Orbit' : 'Create an account' }}
+        </h2>
+        <p class="auth-subtitle">
+          {{ mode() === 'login' ? 'Welcome back! Sign in to continue.' : 'Create an account to join Orbit.' }}
+        </p>
+      </header>
+
+      <div class="tab-header" role="tablist" aria-label="Authentication mode">
+        <button
+          type="button"
+          role="tab"
+          (click)="setMode('login')"
+          [class.active]="mode() === 'login'"
+          [attr.aria-selected]="mode() === 'login'"
+          class="tab-button"
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          role="tab"
+          (click)="setMode('register')"
+          [class.active]="mode() === 'register'"
+          [attr.aria-selected]="mode() === 'register'"
+          class="tab-button"
+        >
+          Register
+        </button>
+      </div>
+
+      @if (mode() === 'login') {
+        <app-login-form
+          [isLoading]="isSubmitting()"
+          [error]="formError()"
+          (formSubmit)="handleLogin($event)"
+        />
+      } @else {
+        <app-register-form
+          [isLoading]="isSubmitting()"
+          [error]="formError()"
+          (formSubmit)="handleRegister($event)"
+        />
+      }
+
+      <div class="auth-switch-footer">
+        @if (mode() === 'login') {
+          <span>Don't have an account yet?</span>
+          <button type="button" class="switch-link" (click)="setMode('register')">Register here</button>
+        } @else {
+          <span>Already have an account?</span>
+          <button type="button" class="switch-link" (click)="setMode('login')">Sign in here</button>
+        }
+      </div>
+    </div>
+  </main>
 </div>
