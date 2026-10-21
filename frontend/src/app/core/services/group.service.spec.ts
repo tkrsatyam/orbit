@@ -177,4 +177,58 @@ describe('GroupService', () => {
     expect(req.request.body).toEqual({ name: 'Updated Name', topicTag: '#updated' });
     req.flush(updatedGroup);
   });
+
+  it('getGroupMembers should fetch group members roster', () => {
+    const mockMemberList = {
+      content: [
+        {
+          userId: 'user-1',
+          displayName: 'Admin User',
+          avatarUrl: null,
+          role: 'ADMIN' as const,
+          online: true,
+          joinedAt: '2026-10-21T10:00:00Z'
+        },
+        {
+          userId: 'user-2',
+          displayName: 'Member User',
+          avatarUrl: null,
+          role: 'MEMBER' as const,
+          online: false,
+          joinedAt: '2026-10-21T11:00:00Z'
+        }
+      ]
+    };
+
+    service.getGroupMembers('group-1').subscribe((res) => {
+      expect(res.content.length).toBe(2);
+      expect(res.content[0].displayName).toBe('Admin User');
+      expect(res.content[1].role).toBe('MEMBER');
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1/members`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockMemberList);
+  });
+
+  it('updateMemberRole should send PATCH to update member role', () => {
+    const mockUpdatedMember = {
+      userId: 'user-2',
+      displayName: 'Member User',
+      avatarUrl: null,
+      role: 'ADMIN' as const,
+      online: false,
+      joinedAt: '2026-10-21T11:00:00Z'
+    };
+
+    service.updateMemberRole('group-1', 'user-2', { role: 'ADMIN' }).subscribe((res) => {
+      expect(res.role).toBe('ADMIN');
+      expect(res.userId).toBe('user-2');
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1/members/user-2/role`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ role: 'ADMIN' });
+    req.flush(mockUpdatedMember);
+  });
 });

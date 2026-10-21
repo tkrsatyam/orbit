@@ -37,6 +37,21 @@
       </div>
 
       <div class="header-actions">
+        <button
+          type="button"
+          class="btn-action btn-members"
+          (click)="toggleMembersDrawer()"
+          data-testid="members-toggle-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>Members</span>
+        </button>
+
         @if (isAdmin()) {
           <button
             type="button"
@@ -68,41 +83,137 @@
     }
   </header>
 
-  <!-- Main Canvas Area -->
-  <main class="group-main-canvas">
-    @if (loading()) {
-      <div class="state-container" data-testid="group-loading-state">
-        <div class="spinner" aria-hidden="true"></div>
-        <p>Loading space details...</p>
-      </div>
-    } @else if (errorMessage()) {
-      <div class="state-container error-state" data-testid="group-error-state">
-        <h2>Space Unavailable</h2>
-        <p>{{ errorMessage() }}</p>
-        <a routerLink="/" class="btn-return">Return to Orbit</a>
-      </div>
-    } @else if (group()) {
-      <!-- Description Banner -->
-      @if (group()!.description) {
-        <div class="description-banner" data-testid="group-view-desc">
-          <p>{{ group()!.description }}</p>
+  <!-- Workstation Body (Canvas + Members Drawer) -->
+  <div class="group-body">
+    <!-- Main Canvas Area -->
+    <main class="group-main-canvas">
+      @if (loading()) {
+        <div class="state-container" data-testid="group-loading-state">
+          <div class="spinner" aria-hidden="true"></div>
+          <p>Loading space details...</p>
+        </div>
+      } @else if (errorMessage()) {
+        <div class="state-container error-state" data-testid="group-error-state">
+          <h2>Space Unavailable</h2>
+          <p>{{ errorMessage() }}</p>
+          <a routerLink="/" class="btn-return">Return to Orbit</a>
+        </div>
+      } @else if (group()) {
+        <!-- Description Banner -->
+        @if (group()!.description) {
+          <div class="description-banner" data-testid="group-view-desc">
+            <p>{{ group()!.description }}</p>
+          </div>
+        }
+
+        <!-- Placeholder Chat Feed (Phase 2 Ready) -->
+        <div class="chat-placeholder-feed" data-testid="chat-placeholder-feed">
+          <div class="feed-welcome">
+            <div class="welcome-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+            </div>
+            <h3>Welcome to {{ group()!.name }}</h3>
+            <p>This is the start of the {{ group()!.name }} group discussion.</p>
+          </div>
         </div>
       }
+    </main>
 
-      <!-- Placeholder Chat Feed (Phase 2 Ready) -->
-      <div class="chat-placeholder-feed" data-testid="chat-placeholder-feed">
-        <div class="feed-welcome">
-          <div class="welcome-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
+    <!-- Members Drawer -->
+    @if (isMembersDrawerOpen()) {
+      <aside class="members-drawer" data-testid="members-drawer">
+        <header class="drawer-header">
+          <div class="drawer-header-left">
+            <h3>Members</h3>
+            <span class="member-count-badge" data-testid="drawer-member-count">{{ members().length }}</span>
           </div>
-          <h3>Welcome to {{ group()!.name }}</h3>
-          <p>This is the start of the {{ group()!.name }} group discussion.</p>
-        </div>
-      </div>
+          <button
+            type="button"
+            class="btn-close-drawer"
+            (click)="toggleMembersDrawer()"
+            data-testid="close-members-drawer-btn"
+            aria-label="Close members drawer"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </header>
+
+        @if (memberActionError()) {
+          <div class="drawer-error-banner" data-testid="member-action-error">
+            <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            <span>{{ memberActionError() }}</span>
+          </div>
+        }
+
+        @if (loadingMembers()) {
+          <div class="drawer-loading" data-testid="loading-members">
+            <div class="spinner" aria-hidden="true"></div>
+            <span>Loading members...</span>
+          </div>
+        } @else {
+          <div class="members-list" data-testid="members-list">
+            @for (m of members(); track m.userId) {
+              <div class="member-item" [attr.data-user-id]="m.userId" data-testid="member-item">
+                <div class="member-avatar-wrap">
+                  <div class="member-avatar" aria-hidden="true">
+                    <span>{{ m.displayName.charAt(0).toUpperCase() }}</span>
+                  </div>
+                  @if (m.online) {
+                    <span class="online-indicator" title="Online" data-testid="online-indicator"></span>
+                  }
+                </div>
+
+                <div class="member-info">
+                  <div class="member-primary-line">
+                    <span class="member-name" data-testid="member-display-name">{{ m.displayName }}</span>
+                    @if (m.userId === currentUserId()) {
+                      <span class="you-tag">(You)</span>
+                    }
+                  </div>
+                  <span class="member-joined">Joined {{ m.joinedAt | date:'mediumDate' }}</span>
+                </div>
+
+                <div class="member-actions">
+                  <span class="role-badge" [attr.data-role]="m.role">{{ m.role }}</span>
+
+                  @if (isAdmin() && m.userId !== currentUserId()) {
+                    <button
+                      type="button"
+                      class="btn-role-action"
+                      [class.btn-demote]="m.role === 'ADMIN'"
+                      [class.btn-promote]="m.role === 'MEMBER'"
+                      (click)="toggleMemberRole(m)"
+                      [disabled]="updatingMemberId() === m.userId"
+                      data-testid="toggle-role-btn"
+                    >
+                      @if (updatingMemberId() === m.userId) {
+                        <span>Updating...</span>
+                      } @else if (m.role === 'ADMIN') {
+                        <span>Demote</span>
+                      } @else {
+                        <span>Make Admin</span>
+                      }
+                    </button>
+                  }
+                </div>
+              </div>
+            } @empty {
+              <div class="no-members">No members found.</div>
+            }
+          </div>
+        }
+      </aside>
     }
-  </main>
+  </div>
 
   <!-- Edit Group Modal -->
   @if (isEditModalOpen()) {

@@ -3,9 +3,12 @@ package com.orbit.group;
 import com.orbit.common.dto.ErrorResponse;
 import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
+import com.orbit.group.dto.GroupMemberListResponse;
+import com.orbit.group.dto.GroupMemberResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
+import com.orbit.group.dto.UpdateMemberRoleRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -235,6 +238,82 @@ public class GroupController {
             @Valid @RequestBody UpdateGroupRequest request) {
         String userId = resolveUserId(principalUserId, authentication);
         return groupService.updateGroup(userId, groupId, request);
+    }
+
+    @Operation(summary = "Get group member list", description = "Retrieves all members of a group with their roles. Caller must be a member.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Member list retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = GroupMemberListResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller is not a member of the group",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping("/{groupId}/members")
+    public GroupMemberListResponse getGroupMembers(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.getGroupMembers(userId, groupId);
+    }
+
+    @Operation(summary = "Update member role", description = "Promote or demote a group member. Admin-only operation. Cannot demote sole admin.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Member role updated successfully",
+                    content = @Content(schema = @Schema(implementation = GroupMemberResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Validation failure",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller is not an admin",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group or member not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Cannot demote the sole admin",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PatchMapping("/{groupId}/members/{targetUserId}/role")
+    public GroupMemberResponse updateMemberRole(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId,
+            @PathVariable String targetUserId,
+            @Valid @RequestBody UpdateMemberRoleRequest request) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.updateMemberRole(userId, groupId, targetUserId, request);
     }
 
     private String resolveUserId(String principalUserId, Authentication authentication) {

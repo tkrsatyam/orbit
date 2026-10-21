@@ -405,4 +405,123 @@ class GroupEndpointIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Group name is already taken"));
     }
+
+    @Test
+    void getGroupMembers_Member_Returns200WithMembers() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Member Roster Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(get(GROUPS_PATH + "/" + group.getId() + "/members")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].displayName").value(adminUser.getDisplayName()))
+                .andExpect(jsonPath("$.content[0].role").value("ADMIN"))
+                .andExpect(jsonPath("$.content[1].displayName").value(regularUser.getDisplayName()))
+                .andExpect(jsonPath("$.content[1].role").value("MEMBER"));
+    }
+
+    @Test
+    void getGroupMembers_NonMember_Returns403() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Exclusive Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build()
+                )))
+                .build());
+
+        mockMvc.perform(get(GROUPS_PATH + "/" + group.getId() + "/members")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Must be a group member to view the member list"));
+    }
+
+    @Test
+    void updateMemberRole_AdminPromotesMemberToAdmin_Returns200() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Leadership Guild")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(patch(GROUPS_PATH + "/" + group.getId() + "/members/" + regularUser.getId() + "/role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "ADMIN"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(regularUser.getId()))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+
+        Group updated = groupRepository.findById(group.getId()).orElseThrow();
+        GroupMember promoted = updated.getMembers().stream()
+                .filter(m -> m.getUserId().equals(regularUser.getId()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(promoted.getRole()).isEqualTo(GroupRole.ADMIN);
+    }
+
+    @Test
+    void updateMemberRole_NonAdmin_Returns403() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Strict Guild")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(patch(GROUPS_PATH + "/" + group.getId() + "/members/" + adminUser.getId() + "/role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "MEMBER"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can manage member roles"));
+    }
+
+    @Test
+    void updateMemberRole_DemoteSoleAdmin_Returns409() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Solo Admin Guild")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(patch(GROUPS_PATH + "/" + group.getId() + "/members/" + adminUser.getId() + "/role")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "MEMBER"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Cannot demote the sole admin of the group"));
+    }
 }

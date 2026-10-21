@@ -44,6 +44,23 @@ export interface GroupJoinResponse {
   role: GroupRole;
 }
 
+export interface GroupMemberResponse {
+  userId: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: GroupRole;
+  online: boolean;
+  joinedAt: string;
+}
+
+export interface GroupMemberListResponse {
+  content: GroupMemberResponse[];
+}
+
+export interface UpdateMemberRolePayload {
+  role: GroupRole;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -105,6 +122,27 @@ export class GroupService {
           list.map((g) => (g.id === updatedGroup.id ? updatedGroup : g))
         );
       })
+    );
+  }
+
+  /**
+   * Retrieves the member roster for a given group.
+   */
+  getGroupMembers(groupId: string): Observable<GroupMemberListResponse> {
+    return this.http.get<GroupMemberListResponse>(`${this.baseUrl}/${groupId}/members`);
+  }
+
+  /**
+   * Updates a group member's role (Admin-only).
+   */
+  updateMemberRole(
+    groupId: string,
+    targetUserId: string,
+    payload: UpdateMemberRolePayload
+  ): Observable<GroupMemberResponse> {
+    return this.http.patch<GroupMemberResponse>(
+      `${this.baseUrl}/${groupId}/members/${targetUserId}/role`,
+      payload
     );
   }
 }

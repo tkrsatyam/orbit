@@ -2,7 +2,7 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { GroupResponse, GroupService } from '../../core/services/group.service';
+import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
 
 @Component({
@@ -29,6 +29,14 @@ export class GroupComponent implements OnInit {
 
   readonly inviteLink = signal<string | null>(null);
   readonly inviteCopied = signal<boolean>(false);
+
+  // Member roster state
+  readonly isMembersDrawerOpen = signal<boolean>(false);
+  readonly members = signal<GroupMemberResponse[]>([]);
+  readonly loadingMembers = signal<boolean>(false);
+  readonly memberActionError = signal<string | null>(null);
+  readonly updatingMemberId = signal<string | null>(null);
+  readonly currentUserId = computed(() => this.authService.currentUser()?.id);
 
   readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -139,6 +147,56 @@ export class GroupComponent implements OnInit {
       error: (err) => {
         const msg = err.error?.message || 'Failed to generate invite';
         this.errorMessage.set(msg);
+      }
+    });
+  }
+
+  toggleMembersDrawer(): void {
+    const nextState = !this.isMembersDrawerOpen();
+    this.isMembersDrawerOpen.set(nextState);
+    if (nextState) {
+      this.loadMembers();
+    }
+  }
+
+  loadMembers(): void {
+    const gid = this.groupId();
+    if (!gid) return;
+
+    this.loadingMembers.set(true);
+    this.memberActionError.set(null);
+    this.groupService.getGroupMembers(gid).subscribe({
+      next: (res) => {
+        this.members.set(res.content);
+        this.loadingMembers.set(false);
+      },
+      error: (err) => {
+        this.loadingMembers.set(false);
+        const msg = err.error?.message || 'Failed to load group members';
+        this.memberActionError.set(msg);
+      }
+    });
+  }
+
+  toggleMemberRole(targetMember: GroupMemberResponse): void {
+    const gid = this.groupId();
+    if (!gid || this.updatingMemberId()) return;
+
+    const newRole = targetMember.role === 'ADMIN' ? 'MEMBER' : 'ADMIN';
+    this.updatingMemberId.set(targetMember.userId);
+    this.memberActionError.set(null);
+
+    this.groupService.updateMemberRole(gid, targetMember.userId, { role: newRole }).subscribe({
+      next: (updatedMember) => {
+        this.members.update((list) =>
+          list.map((m) => (m.userId === updatedMember.userId ? updatedMember : m))
+        );
+        this.updatingMemberId.set(null);
+      },
+      error: (err) => {
+        this.updatingMemberId.set(null);
+        const msg = err.error?.message || 'Failed to update member role';
+        this.memberActionError.set(msg);
       }
     });
   }
