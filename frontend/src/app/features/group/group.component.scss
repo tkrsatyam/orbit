@@ -1,0 +1,21 @@
+.group-container {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 24px;
+  text-align: left;
+}
+
+.group-header {
+  margin-bottom: 24px;
+}
+
+.group-subtitle {
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.back-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 15px;
+}

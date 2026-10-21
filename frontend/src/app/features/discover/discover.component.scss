@@ -1,0 +1,98 @@
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 50vh;
+  color: var(--text);
+}
+
+.discover-container {
+  max-width: 720px;
+  margin: 48px auto;
+  padding: 24px;
+  text-align: left;
+}
+
+.discover-header {
+  margin-bottom: 24px;
+}
+
+.discover-subtitle {
+  color: var(--text);
+  margin-top: 4px;
+}
+
+.groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.group-card {
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.group-card h3 {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 18px;
+}
+
+.group-description {
+  margin: 8px 0 16px;
+  color: var(--text);
+  font-size: 15px;
+}
+
+.join-button {
+  padding: 9px 18px;
+  background: var(--orbit-accent);
+  color: #121214;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.register-link {
+  display: inline-block;
+  padding: 9px 18px;
+  background: var(--orbit-accent);
+  color: #121214;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+.discover-footer {
+  margin-top: 32px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.back-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 15px;
+}
+
+.member-tag {
+  font-size: 14px;
+  color: var(--text);
+}

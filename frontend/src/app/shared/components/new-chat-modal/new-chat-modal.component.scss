@@ -1,0 +1,324 @@
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.new-chat-card {
+  width: 100%;
+  max-width: 580px;
+  background: var(--orbit-surface, #18181b);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.55);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.card-accent-strip {
+  height: 3px;
+  background: var(--orbit-accent, #f59e0b);
+  width: 100%;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 24px 24px 16px 24px;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--orbit-text-primary, #ededef);
+  letter-spacing: -0.02em;
+}
+
+.card-subtitle {
+  margin: 4px 0 0 0;
+  font-size: 0.875rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  line-height: 1.4;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: var(--orbit-text-muted, #a1a1aa);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.close-button:hover {
+  color: var(--orbit-text-primary, #ededef);
+  background: var(--orbit-elevated, #27272a);
+}
+
+.close-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.search-section {
+  padding: 0 24px 16px 24px;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  border-radius: 8px;
+  padding: 4px 6px 4px 12px;
+  transition: border-color 0.15s ease;
+}
+
+.search-input-wrapper:focus-within {
+  border-color: var(--orbit-accent, #f59e0b);
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: var(--orbit-text-muted, #a1a1aa);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 0.875rem;
+  color: var(--orbit-text-primary, #ededef);
+  padding: 6px 0;
+}
+
+.search-input::placeholder {
+  color: var(--orbit-text-muted, #a1a1aa);
+}
+
+.direct-connect-btn {
+  background: var(--orbit-accent, #f59e0b);
+  color: #121214;
+  border: none;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.15s ease;
+  white-space: nowrap;
+}
+
+.direct-connect-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.direct-connect-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.alert-banner {
+  margin: 0 24px 16px 24px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+
+.alert-error {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid var(--orbit-danger, #f43f5e);
+  color: #fda4af;
+}
+
+.alert-success {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid var(--orbit-presence-online, #22c55e);
+  color: #86efac;
+}
+
+.discover-section {
+  padding: 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.section-label {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--orbit-text-muted, #a1a1aa);
+  text-transform: uppercase;
+}
+
+.people-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.person-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  border-radius: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.avatar-badge {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #2a2015;
+  border: 1px solid var(--orbit-accent, #f59e0b);
+  color: var(--orbit-accent, #f59e0b);
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.person-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.person-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--orbit-text-primary, #ededef);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.person-bio {
+  font-size: 0.75rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+
+.btn-connect {
+  background: transparent;
+  border: 1px solid var(--orbit-accent, #f59e0b);
+  color: var(--orbit-accent, #f59e0b);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-connect:hover:not(:disabled) {
+  background: var(--orbit-accent, #f59e0b);
+  color: #121214;
+}
+
+.btn-connect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-status-pending {
+  background: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  color: var(--orbit-text-muted, #a1a1aa);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+
+.status-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.card-footer {
+  padding: 16px 24px 20px 24px;
+  border-top: 1px solid var(--orbit-border, #2e2e33);
+  margin-top: 16px;
+}
+
+.footer-notice {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Mobile Sheet Alignment (390px) */
+@media (max-width: 640px) {
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .new-chat-card {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+  }
+}

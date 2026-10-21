@@ -1,0 +1,169 @@
+@if (isOpen) {
+  <div
+    class="modal-backdrop"
+    (click)="onBackdropClick($event)"
+    data-testid="new-chat-modal-backdrop"
+  >
+    <div
+      class="new-chat-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-title"
+      (click)="$event.stopPropagation()"
+      data-testid="new-chat-modal-card"
+    >
+      <!-- Accent Strip -->
+      <div class="card-accent-strip"></div>
+
+      <!-- Header -->
+      <header class="card-header">
+        <div>
+          <h2 id="modal-title" class="card-title">New Conversation</h2>
+          <p class="card-subtitle">
+            Connect with builders, alumni, and interview study partners.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="close-button"
+          (click)="closeModal.emit()"
+          aria-label="Close"
+          data-testid="close-new-chat-modal-btn"
+        >
+          <svg
+            class="close-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </header>
+
+      <!-- Direct User ID Connect Input -->
+      <div class="search-section">
+        <div class="search-input-wrapper">
+          <svg
+            class="search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Enter user ID to connect..."
+            [(ngModel)]="directTargetUserId"
+            (keydown.enter)="connectDirect()"
+            data-testid="target-user-id-input"
+          />
+          <button
+            type="button"
+            class="direct-connect-btn"
+            (click)="connectDirect()"
+            [disabled]="isConnecting() || !directTargetUserId().trim()"
+            data-testid="direct-connect-submit-btn"
+          >
+            @if (isConnecting() && activeTargetId() === directTargetUserId().trim()) {
+              <span class="btn-spinner"></span>
+            } @else {
+              + Connect
+            }
+          </button>
+        </div>
+      </div>
+
+      <!-- Alert Feedback -->
+      @if (errorMessage()) {
+        <div class="alert-banner alert-error" role="alert" data-testid="new-chat-error-alert">
+          {{ errorMessage() }}
+        </div>
+      }
+      @if (successMessage()) {
+        <div class="alert-banner alert-success" role="status" data-testid="new-chat-success-alert">
+          {{ successMessage() }}
+        </div>
+      }
+
+      <!-- Suggested Community Builders List -->
+      <div class="discover-section">
+        <h3 class="section-label">DISCOVER PEOPLE IN YOUR GROUPS</h3>
+
+        <div class="people-list">
+          @for (user of suggestedUsers; track user.id) {
+            <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
+              <div class="avatar-badge" aria-hidden="true">
+                {{ user.initials }}
+              </div>
+
+              <div class="person-info">
+                <span class="person-name">{{ user.displayName }}</span>
+                <span class="person-bio">{{ user.bio }}</span>
+              </div>
+
+              <div class="person-action">
+                @if (isRequestPending(user.id)) {
+                  <button
+                    type="button"
+                    class="btn-status-pending"
+                    disabled
+                    [attr.data-testid]="'pending-btn-' + user.id"
+                  >
+                    <svg
+                      class="status-icon"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <circle cx="12" cy="12" r="10" />
+                      <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Pending...
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn-connect"
+                    (click)="connectToUser(user)"
+                    [disabled]="isConnecting() && activeTargetId() === user.id"
+                    [attr.data-testid]="'connect-btn-' + user.id"
+                  >
+                    @if (isConnecting() && activeTargetId() === user.id) {
+                      <span class="btn-spinner"></span>
+                    } @else {
+                      + Connect
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Bottom Notice -->
+      <footer class="card-footer">
+        <p class="footer-notice">
+          Connections allow direct messaging and real-time presence visibility.
+        </p>
+      </footer>
+    </div>
+  </div>
+}

@@ -37,6 +37,31 @@ describe('LoginFormComponent', () => {
     expect(component.loginForm.valid).toBe(true);
   });
 
+  it('should show required error when email is touched and empty', () => {
+    component.emailControl.markAsTouched();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.field-error')?.textContent).toContain('Email is required.');
+  });
+
+  it('should show invalid format error when email is touched and malformed', () => {
+    component.emailControl.setValue('invalid-email-format');
+    component.emailControl.markAsTouched();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.field-error')?.textContent).toContain('Please enter a valid email address.');
+  });
+
+  it('should show required error when password is touched and empty', () => {
+    component.passwordControl.markAsTouched();
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.field-error')?.textContent).toContain('Password is required.');
+  });
+
   it('should emit formSubmit when valid form is submitted', () => {
     let emittedPayload: unknown = null;
     component.formSubmit.subscribe((val) => (emittedPayload = val));
@@ -68,5 +93,18 @@ describe('LoginFormComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.form-error')?.textContent).toContain('Invalid credentials');
+  });
+
+  it('should disable submit button and change text when isLoading is true', () => {
+    component.loginForm.setValue({
+      email: 'user@example.com',
+      password: 'Password123!'
+    });
+    fixture.componentRef.setInput('isLoading', true);
+    fixture.detectChanges();
+
+    const submitBtn = fixture.nativeElement.querySelector('.submit-button') as HTMLButtonElement;
+    expect(submitBtn.disabled).toBe(true);
+    expect(submitBtn.textContent?.trim()).toBe('Signing in...');
   });
 });

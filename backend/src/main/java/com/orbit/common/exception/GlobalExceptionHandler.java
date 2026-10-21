@@ -92,11 +92,19 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), request.getRequestURI());
     }
 
-    @ExceptionHandler(ConflictException.class)
-    public ResponseEntity<ErrorResponse> handleConflict(
-            ConflictException ex, HttpServletRequest request) {
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalArgument(
+            IllegalArgumentException ex, HttpServletRequest request) {
 
-        return buildResponse(HttpStatus.CONFLICT, ex.getMessage(), request.getRequestURI());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), request.getRequestURI());
+    }
+
+    @ExceptionHandler({ConflictException.class, org.springframework.dao.DuplicateKeyException.class})
+    public ResponseEntity<ErrorResponse> handleConflict(
+            Exception ex, HttpServletRequest request) {
+
+        String message = ex instanceof ConflictException ? ex.getMessage() : "A duplicate resource already exists";
+        return buildResponse(HttpStatus.CONFLICT, message, request.getRequestURI());
     }
 
     @ExceptionHandler(RateLimitException.class)
