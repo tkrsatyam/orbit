@@ -29,6 +29,8 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -398,5 +400,36 @@ class GroupControllerTest {
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Cannot demote the sole admin of the group"));
+    }
+
+    @Test
+    void leaveGroup_Success_Returns204() throws Exception {
+        mockMvc.perform(post("/api/v1/groups/group-1/leave")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isNoContent());
+
+        verify(groupService).leaveGroup("user-1", "group-1");
+    }
+
+    @Test
+    void leaveGroup_NotMember_Returns403() throws Exception {
+        doThrow(new ForbiddenException("You are not a member of this group"))
+                .when(groupService).leaveGroup("user-1", "group-1");
+
+        mockMvc.perform(post("/api/v1/groups/group-1/leave")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("You are not a member of this group"));
+    }
+
+    @Test
+    void leaveGroup_NotFound_Returns404() throws Exception {
+        doThrow(new ResourceNotFoundException("Group not found with id: group-1"))
+                .when(groupService).leaveGroup("user-1", "group-1");
+
+        mockMvc.perform(post("/api/v1/groups/group-1/leave")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Group not found with id: group-1"));
     }
 }

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, provideRouter } from '@angular/router';
+import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { GroupComponent } from './group.component';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
@@ -16,6 +16,7 @@ describe('GroupComponent', () => {
     myGroups: ReturnType<typeof vi.fn>;
     getGroupMembers: ReturnType<typeof vi.fn>;
     updateMemberRole: ReturnType<typeof vi.fn>;
+    leaveGroup: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof vi.fn>;
@@ -69,7 +70,8 @@ describe('GroupComponent', () => {
         role: 'ADMIN',
         online: false,
         joinedAt: '2026-10-21T11:00:00Z'
-      }))
+      })),
+      leaveGroup: vi.fn().mockReturnValue(of(void 0))
     };
 
     mockAuthService = {
@@ -232,5 +234,50 @@ describe('GroupComponent', () => {
     expect(compiled.querySelector('[data-testid="member-action-error"]')?.textContent).toContain(
       'Cannot demote the sole admin of the group'
     );
+  });
+
+  it('should open and close leave space modal', async () => {
+    await setupComponent();
+    expect(component.isLeaveModalOpen()).toBe(false);
+
+    component.openLeaveModal();
+    fixture.detectChanges();
+    expect(component.isLeaveModalOpen()).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="leave-group-modal-card"]')).not.toBeNull();
+
+    component.closeLeaveModal();
+    fixture.detectChanges();
+    expect(component.isLeaveModalOpen()).toBe(false);
+  });
+
+  it('should leave group and navigate to / on confirmation', async () => {
+    await setupComponent();
+    const router = TestBed.inject(Router);
+    const navSpy = vi.spyOn(router, 'navigate');
+
+    component.openLeaveModal();
+    component.confirmLeaveGroup();
+    fixture.detectChanges();
+
+    expect(mockGroupService.leaveGroup).toHaveBeenCalledWith('group-101');
+    expect(navSpy).toHaveBeenCalledWith(['/']);
+    expect(component.isLeaveModalOpen()).toBe(false);
+  });
+
+  it('should display error if leaveGroup fails', async () => {
+    await setupComponent();
+    mockGroupService.leaveGroup.mockReturnValue(throwError(() => ({
+      error: { message: 'Failed to depart space' }
+    })));
+
+    component.openLeaveModal();
+    component.confirmLeaveGroup();
+    fixture.detectChanges();
+
+    expect(component.leaveError()).toBe('Failed to depart space');
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="leave-group-error"]')?.textContent).toContain('Failed to depart space');
   });
 });

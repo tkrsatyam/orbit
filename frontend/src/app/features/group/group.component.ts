@@ -38,6 +38,11 @@ export class GroupComponent implements OnInit {
   readonly updatingMemberId = signal<string | null>(null);
   readonly currentUserId = computed(() => this.authService.currentUser()?.id);
 
+  // Leave space state
+  readonly isLeaveModalOpen = signal<boolean>(false);
+  readonly isLeaving = signal<boolean>(false);
+  readonly leaveError = signal<string | null>(null);
+
   readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
     topicTag: ['', [Validators.maxLength(50)]],
@@ -197,6 +202,37 @@ export class GroupComponent implements OnInit {
         this.updatingMemberId.set(null);
         const msg = err.error?.message || 'Failed to update member role';
         this.memberActionError.set(msg);
+      }
+    });
+  }
+
+  openLeaveModal(): void {
+    this.leaveError.set(null);
+    this.isLeaveModalOpen.set(true);
+  }
+
+  closeLeaveModal(): void {
+    this.isLeaveModalOpen.set(false);
+    this.leaveError.set(null);
+  }
+
+  confirmLeaveGroup(): void {
+    const gid = this.groupId();
+    if (!gid || this.isLeaving()) return;
+
+    this.isLeaving.set(true);
+    this.leaveError.set(null);
+
+    this.groupService.leaveGroup(gid).subscribe({
+      next: () => {
+        this.isLeaving.set(false);
+        this.closeLeaveModal();
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        this.isLeaving.set(false);
+        const msg = err.error?.message || 'Failed to leave space';
+        this.leaveError.set(msg);
       }
     });
   }

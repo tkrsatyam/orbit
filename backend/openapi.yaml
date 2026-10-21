@@ -380,6 +380,42 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+  /api/v1/groups/{groupId}/leave:
+    post:
+      tags:
+      - Groups
+      summary: Leave a group
+      description: Leaves a group. If last member, tears down group. If sole admin, promotes oldest member.
+      operationId: leaveGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Successfully left the group
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not a member of the group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/groups/join-via-invite/{inviteToken}:
     post:
       tags:

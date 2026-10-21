@@ -524,4 +524,81 @@ class GroupEndpointIntegrationTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("Cannot demote the sole admin of the group"));
     }
+
+    @Test
+    void leaveGroup_SoleAdminWithOtherMembers_PromotesOldestMember_Returns204() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.GROUP)
+                .participantIds(new ArrayList<>(List.of(adminUser.getId(), regularUser.getId())))
+                .mutedBy(new ArrayList<>())
+                .build());
+
+        Instant now = Instant.now();
+        Group group = groupRepository.save(Group.builder()
+                .name("Auto Promote Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId(conv.getId())
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).joinedAt(now).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).joinedAt(now.minusSeconds(3600)).build()
+                )))
+                .build());
+
+        mockMvc.perform(post(GROUPS_PATH + "/" + group.getId() + "/leave")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        Group updated = groupRepository.findById(group.getId()).orElseThrow();
+        assertThat(updated.getMemberCount()).isEqualTo(1);
+        assertThat(updated.getMembers()).hasSize(1);
+        assertThat(updated.getMembers().get(0).getUserId()).isEqualTo(regularUser.getId());
+        assertThat(updated.getMembers().get(0).getRole()).isEqualTo(GroupRole.ADMIN);
+
+        Conversation updatedConv = conversationRepository.findById(conv.getId()).orElseThrow();
+        assertThat(updatedConv.getParticipantIds()).containsExactly(regularUser.getId());
+    }
+
+    @Test
+    void leaveGroup_LastMember_DeletesGroupAndConversation_Returns204() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.GROUP)
+                .participantIds(new ArrayList<>(List.of(adminUser.getId())))
+                .mutedBy(new ArrayList<>())
+                .build());
+
+        Group group = groupRepository.save(Group.builder()
+                .name("Vanishing Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId(conv.getId())
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).joinedAt(Instant.now()).build()
+                )))
+                .build());
+
+        mockMvc.perform(post(GROUPS_PATH + "/" + group.getId() + "/leave")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        assertThat(groupRepository.findById(group.getId())).isEmpty();
+        assertThat(conversationRepository.findById(conv.getId())).isEmpty();
+    }
+
+    @Test
+    void leaveGroup_NotMember_Returns403() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Exclusive Club")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).joinedAt(Instant.now()).build()
+                )))
+                .build());
+
+        mockMvc.perform(post(GROUPS_PATH + "/" + group.getId() + "/leave")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("You are not a member of this group"));
+    }
 }

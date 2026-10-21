@@ -170,6 +170,18 @@
       background-color: rgba(245, 158, 11, 0.2);
     }
   }
+
+  &.btn-leave {
+    background-color: var(--orbit-elevated, #27272a);
+    border: 1px solid var(--orbit-border, #2e2e33);
+    color: var(--orbit-text-muted, #a1a1aa);
+
+    &:hover {
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+      background-color: rgba(239, 68, 68, 0.08);
+    }
+  }
 }
 
 // ----------------------------------------------------
@@ -751,4 +763,92 @@
   text-align: center;
   color: var(--orbit-text-muted, #a1a1aa);
   font-size: 0.8125rem;
+}
+
+.drawer-footer {
+  padding: 0.875rem 1rem;
+  border-top: 1px solid var(--orbit-border, #2e2e33);
+  background-color: var(--orbit-surface, #18181b);
+}
+
+.btn-drawer-leave {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  background-color: transparent;
+  border: 1px solid var(--orbit-border, #2e2e33);
+  color: var(--orbit-text-muted, #a1a1aa);
+  transition: all 0.15s ease;
+
+  svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  &:hover {
+    border-color: rgba(239, 68, 68, 0.4);
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.08);
+  }
+}
+
+// ----------------------------------------------------
+// 6. Danger Leave Modal
+// ----------------------------------------------------
+.modal-card-danger {
+  max-width: 440px;
+}
+
+.modal-accent-bar.danger {
+  background: linear-gradient(90deg, #ef4444 0%, #f43f5e 100%);
+}
+
+.modal-body-content {
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--orbit-text-primary, #ededef);
+
+    &.text-secondary {
+      font-size: 0.8125rem;
+      color: var(--orbit-text-muted, #a1a1aa);
+    }
+  }
+}
+
+.btn-danger-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  background-color: #ef4444;
+  border: none;
+  color: #ffffff;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
