@@ -3,6 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { UserService } from '../../core/services/user.service';
 import { NewChatModalComponent } from '../../shared/components/new-chat-modal/new-chat-modal.component';
 import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
 
@@ -17,6 +18,7 @@ export class ConversationsComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
+  private readonly userService = inject(UserService);
   readonly contactService = inject(ContactService);
 
   readonly isMenuOpen = signal<boolean>(false);
@@ -24,7 +26,7 @@ export class ConversationsComponent implements OnInit {
   readonly isNewChatOpen = signal<boolean>(false);
 
   readonly activeProcessingId = signal<string | null>(null);
-  readonly activeAction = signal<'ACCEPT' | 'DECLINE' | null>(null);
+  readonly activeAction = signal<'ACCEPT' | 'DECLINE' | 'BLOCK' | null>(null);
 
   readonly currentUser = computed(() => this.authService.currentUser());
 
@@ -84,6 +86,23 @@ export class ConversationsComponent implements OnInit {
       next: () => {
         this.activeProcessingId.set(null);
         this.activeAction.set(null);
+      },
+      error: () => {
+        this.activeProcessingId.set(null);
+        this.activeAction.set(null);
+      }
+    });
+  }
+
+  handleBlockRequest(request: IncomingRequest): void {
+    this.activeProcessingId.set(request.id);
+    this.activeAction.set('BLOCK');
+
+    this.userService.blockUser(request.fromUser.id).subscribe({
+      next: () => {
+        this.activeProcessingId.set(null);
+        this.activeAction.set(null);
+        this.contactService.loadIncomingRequests().subscribe();
       },
       error: () => {
         this.activeProcessingId.set(null);

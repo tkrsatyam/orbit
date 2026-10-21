@@ -328,4 +328,78 @@ public class ContactService {
 
         contactRepository.delete(contact);
     }
+
+    /**
+     * Blocks a target user, establishing a one-directional block relationship per ADR 007 and ADR 013.
+     * Works whether or not an existing Contact relationship (PENDING or CONNECTED) exists.
+     * If an existing Contact exists in either direction, its status is updated to BLOCKED and blockedBy is set.
+     * If no relationship exists, a new Contact document is created directly with status BLOCKED.
+     *
+     * @param blockerId the ID of the authenticated user initiating the block
+     * @param targetUserId the ID of the user to block
+     * @throws ResourceNotFoundException if target user does not exist
+     * @throws IllegalArgumentException if blockerId is identical to targetUserId or IDs are missing
+     */
+    public void blockUser(String blockerId, String targetUserId) {
+        if (blockerId == null || targetUserId == null || blockerId.isBlank() || targetUserId.isBlank()) {
+            throw new IllegalArgumentException("Blocker ID and target user ID are required");
+        }
+
+        if (blockerId.equals(targetUserId)) {
+            throw new IllegalArgumentException("Cannot block yourself");
+        }
+
+        if (!userRepository.existsById(targetUserId)) {
+            throw new ResourceNotFoundException("Target user not found: " + targetUserId);
+        }
+
+        Optional<Contact> existingOpt = contactRepository.findBetweenUsers(blockerId, targetUserId);
+        if (existingOpt.isPresent()) {
+            Contact contact = existingOpt.get();
+            contact.setStatus(ContactStatus.BLOCKED);
+            contact.setBlockedBy(blockerId);
+            contactRepository.save(contact);
+        } else {
+            Contact contact = Contact.builder()
+                    .requesterId(blockerId)
+                    .receiverId(targetUserId)
+                    .status(ContactStatus.BLOCKED)
+                    .blockedBy(blockerId)
+                    .build();
+            contactRepository.save(contact);
+        }
+    }
+
+    /**
+     * Unblocks a target user, permanently hard-deleting the Contact document per ADR 006 and ADR 013.
+     * The relationship resets to NONE. If the two users wish to reconnect later, a fresh connection
+     * request is required. Conversation documents and message histories are preserved.
+     * Operation is idempotent: returns cleanly if no block exists.
+     *
+     * @param unblockerId the ID of the authenticated user initiating the unblock
+     * @param targetUserId the ID of the user to unblock
+     * @throws ResourceNotFoundException if target user does not exist
+     * @throws IllegalArgumentException if unblockerId is identical to targetUserId or IDs are missing
+     */
+    public void unblockUser(String unblockerId, String targetUserId) {
+        if (unblockerId == null || targetUserId == null || unblockerId.isBlank() || targetUserId.isBlank()) {
+            throw new IllegalArgumentException("Unblocker ID and target user ID are required");
+        }
+
+        if (unblockerId.equals(targetUserId)) {
+            throw new IllegalArgumentException("Cannot unblock yourself");
+        }
+
+        if (!userRepository.existsById(targetUserId)) {
+            throw new ResourceNotFoundException("Target user not found: " + targetUserId);
+        }
+
+        Optional<Contact> existingOpt = contactRepository.findBetweenUsers(unblockerId, targetUserId);
+        if (existingOpt.isPresent()) {
+            Contact contact = existingOpt.get();
+            if (contact.getStatus() == ContactStatus.BLOCKED && unblockerId.equals(contact.getBlockedBy())) {
+                contactRepository.delete(contact);
+            }
+        }
+    }
 }

@@ -28,6 +28,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -627,6 +629,175 @@ class ContactServiceTest {
         assertThatThrownBy(() -> contactService.removeContact("   ", "contact-1"))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> contactService.removeContact("user-1", "   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void blockUserCreatesNewBlockedContactWhenNoRelationshipExists() {
+        String blockerId = "user-1";
+        String targetUserId = "stranger-2";
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(blockerId, targetUserId)).thenReturn(Optional.empty());
+
+        contactService.blockUser(blockerId, targetUserId);
+
+        verify(contactRepository).save(argThat(c ->
+                blockerId.equals(c.getRequesterId())
+                        && targetUserId.equals(c.getReceiverId())
+                        && ContactStatus.BLOCKED.equals(c.getStatus())
+                        && blockerId.equals(c.getBlockedBy())
+        ));
+    }
+
+    @Test
+    void blockUserUpdatesExistingConnectedContactToBlocked() {
+        String blockerId = "user-1";
+        String targetUserId = "friend-2";
+        Contact existing = Contact.builder()
+                .id("contact-10")
+                .requesterId(targetUserId)
+                .receiverId(blockerId)
+                .status(ContactStatus.CONNECTED)
+                .conversationId("conv-10")
+                .build();
+
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(blockerId, targetUserId)).thenReturn(Optional.of(existing));
+
+        contactService.blockUser(blockerId, targetUserId);
+
+        assertThat(existing.getStatus()).isEqualTo(ContactStatus.BLOCKED);
+        assertThat(existing.getBlockedBy()).isEqualTo(blockerId);
+        verify(contactRepository).save(existing);
+    }
+
+    @Test
+    void blockUserUpdatesExistingPendingContactToBlocked() {
+        String blockerId = "user-1";
+        String targetUserId = "requester-3";
+        Contact existing = Contact.builder()
+                .id("contact-20")
+                .requesterId(targetUserId)
+                .receiverId(blockerId)
+                .status(ContactStatus.PENDING)
+                .build();
+
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(blockerId, targetUserId)).thenReturn(Optional.of(existing));
+
+        contactService.blockUser(blockerId, targetUserId);
+
+        assertThat(existing.getStatus()).isEqualTo(ContactStatus.BLOCKED);
+        assertThat(existing.getBlockedBy()).isEqualTo(blockerId);
+        verify(contactRepository).save(existing);
+    }
+
+    @Test
+    void blockUserThrowsNotFoundWhenTargetUserDoesNotExist() {
+        when(userRepository.existsById("missing-user")).thenReturn(false);
+
+        assertThatThrownBy(() -> contactService.blockUser("user-1", "missing-user"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Target user not found");
+    }
+
+    @Test
+    void blockUserThrowsIllegalArgumentOnSelfBlock() {
+        assertThatThrownBy(() -> contactService.blockUser("user-1", "user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot block yourself");
+    }
+
+    @Test
+    void blockUserThrowsIllegalArgumentOnNullOrBlankArguments() {
+        assertThatThrownBy(() -> contactService.blockUser(null, "user-2"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.blockUser("user-1", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.blockUser("   ", "user-2"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.blockUser("user-1", "   "))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void unblockUserDeletesContactWhenBlockedByRequester() {
+        String unblockerId = "user-1";
+        String targetUserId = "blocked-user-2";
+        Contact blocked = Contact.builder()
+                .id("contact-99")
+                .requesterId(unblockerId)
+                .receiverId(targetUserId)
+                .status(ContactStatus.BLOCKED)
+                .blockedBy(unblockerId)
+                .build();
+
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(unblockerId, targetUserId)).thenReturn(Optional.of(blocked));
+
+        contactService.unblockUser(unblockerId, targetUserId);
+
+        verify(contactRepository).delete(blocked);
+    }
+
+    @Test
+    void unblockUserDoesNothingWhenBlockedByOtherUser() {
+        String unblockerId = "user-1";
+        String targetUserId = "blocker-user-2";
+        Contact blocked = Contact.builder()
+                .id("contact-99")
+                .requesterId(targetUserId)
+                .receiverId(unblockerId)
+                .status(ContactStatus.BLOCKED)
+                .blockedBy(targetUserId) // Target user blocked unblocker
+                .build();
+
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(unblockerId, targetUserId)).thenReturn(Optional.of(blocked));
+
+        contactService.unblockUser(unblockerId, targetUserId);
+
+        verify(contactRepository, never()).delete(any());
+    }
+
+    @Test
+    void unblockUserDoesNothingWhenNoRelationshipExists() {
+        String unblockerId = "user-1";
+        String targetUserId = "stranger-user-2";
+
+        when(userRepository.existsById(targetUserId)).thenReturn(true);
+        when(contactRepository.findBetweenUsers(unblockerId, targetUserId)).thenReturn(Optional.empty());
+
+        contactService.unblockUser(unblockerId, targetUserId);
+
+        verify(contactRepository, never()).delete(any());
+    }
+
+    @Test
+    void unblockUserThrowsNotFoundWhenTargetUserDoesNotExist() {
+        when(userRepository.existsById("missing-user")).thenReturn(false);
+
+        assertThatThrownBy(() -> contactService.unblockUser("user-1", "missing-user"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Target user not found");
+    }
+
+    @Test
+    void unblockUserThrowsIllegalArgumentOnSelfUnblock() {
+        assertThatThrownBy(() -> contactService.unblockUser("user-1", "user-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot unblock yourself");
+    }
+
+    @Test
+    void unblockUserThrowsIllegalArgumentOnNullOrBlankArguments() {
+        assertThatThrownBy(() -> contactService.unblockUser(null, "user-2"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.unblockUser("user-1", null))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.unblockUser("   ", "user-2"))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> contactService.unblockUser("user-1", "   "))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 }

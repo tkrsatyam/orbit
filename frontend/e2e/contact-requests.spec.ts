@@ -256,4 +256,183 @@ test.describe('Accept and Decline Connection Requests Flow (ORDM-34)', () => {
     const listData = await listRes.json();
     expect(listData.content).toHaveLength(0);
   });
+
+  test('user blocks an incoming connection request, verifying blocking and profile degradation (ORDM-36 block user)', async ({
+    page,
+    request
+  }) => {
+    const timestamp = Date.now() + 4;
+    const userAEmail = `user_block_a_${timestamp}@example.com`;
+    const userBEmail = `user_block_b_${timestamp}@example.com`;
+    const password = 'Password123!';
+    const userAName = 'Block Initiator';
+    const userBName = 'Blocked Requester';
+
+    // 1. Create User A
+    const userARes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userAEmail, password, displayName: userAName }
+    });
+    expect(userARes.ok()).toBeTruthy();
+    const userAData = await userARes.json();
+    const userAToken = userAData.accessToken;
+    const userAId = userAData.user.id;
+
+    // 2. Create User B
+    const userBRes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userBEmail, password, displayName: userBName }
+    });
+    expect(userBRes.ok()).toBeTruthy();
+    const userBData = await userBRes.json();
+    const userBToken = userBData.accessToken;
+    const userBId = userBData.user.id;
+
+    // 3. User B sends connection request to User A
+    const sendReqRes = await request.post(`${backendBase}/api/v1/contacts/requests`, {
+      headers: { Authorization: `Bearer ${userBToken}` },
+      data: { targetUserId: userAId }
+    });
+    expect(sendReqRes.status()).toBe(201);
+    const reqData = await sendReqRes.json();
+    const requestId = reqData.id;
+
+    // 4. User A logs in via Frontend UI
+    await page.goto('/login');
+    await page.fill('#login-email', userAEmail);
+    await page.fill('#login-password', password);
+    await page.click('button[type="submit"]');
+
+    await expect(page).toHaveURL('http://localhost:4200/');
+
+    // 5. Verify incoming request card is visible
+    const requestCard = page.locator(`[data-testid="incoming-request-card-${requestId}"]`);
+    await expect(requestCard).toBeVisible();
+
+    // 6. Click Block button on the incoming request card
+    const blockBtn = page.locator(`[data-testid="block-request-btn-${requestId}"]`);
+    await expect(blockBtn).toBeVisible();
+    await blockBtn.click();
+
+    // 7. Request card disappears upon blocking
+    await expect(requestCard).not.toBeVisible();
+
+    // 8. Backend verification: User B sees User A's profile degraded to { id, available: false }
+    const profileResB = await request.get(`${backendBase}/api/v1/users/${userAId}`, {
+      headers: { Authorization: `Bearer ${userBToken}` }
+    });
+    expect(profileResB.status()).toBe(200);
+    const profileDataB = await profileResB.json();
+    expect(profileDataB.id).toBe(userAId);
+    expect(profileDataB.available).toBe(false);
+    expect(profileDataB.displayName).toBeUndefined();
+
+    // 9. User B tries to send connection request again -> 409 Conflict
+    const reRequestRes = await request.post(`${backendBase}/api/v1/contacts/requests`, {
+      headers: { Authorization: `Bearer ${userBToken}` },
+      data: { targetUserId: userAId }
+    });
+    expect(reRequestRes.status()).toBe(409);
+
+    // 10. User A unblocks User B via API
+    const unblockRes = await request.delete(`${backendBase}/api/v1/users/${userBId}/block`, {
+      headers: { Authorization: `Bearer ${userAToken}` }
+    });
+    expect(unblockRes.status()).toBe(204);
+
+    // 11. User B's profile view is restored to normal with NONE status
+    const restoredProfileRes = await request.get(`${backendBase}/api/v1/users/${userAId}`, {
+      headers: { Authorization: `Bearer ${userBToken}` }
+    });
+    expect(restoredProfileRes.status()).toBe(200);
+    const restoredData = await restoredProfileRes.json();
+    expect(restoredData.displayName).toBe(userAName);
+    expect(restoredData.connectionStatus).toBe('NONE');
+    expect(restoredData.available).toBeUndefined();
+  });
+
+  test('user blocks connected contact from modal, verifying list removal and unblock (ORDM-36 block contact)', async ({
+    page,
+    request
+  }) => {
+    const timestamp = Date.now() + 5;
+    const userAEmail = `user_blk_modal_a_${timestamp}@example.com`;
+    const userBEmail = `user_blk_modal_b_${timestamp}@example.com`;
+    const password = 'Password123!';
+    const userAName = 'Blocker User';
+    const userBName = 'Friend To Block';
+
+    // 1. Create User A
+    const userARes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userAEmail, password, displayName: userAName }
+    });
+    expect(userARes.ok()).toBeTruthy();
+    const userAData = await userARes.json();
+    const userAToken = userAData.accessToken;
+    const userAId = userAData.user.id;
+
+    // 2. Create User B
+    const userBRes = await request.post(`${backendBase}/api/v1/auth/register`, {
+      data: { email: userBEmail, password, displayName: userBName }
+    });
+    expect(userBRes.ok()).toBeTruthy();
+    const userBData = await userBRes.json();
+    const userBToken = userBData.accessToken;
+    const userBId = userBData.user.id;
+
+    // 3. User B sends connection request to User A
+    const sendReqRes = await request.post(`${backendBase}/api/v1/contacts/requests`, {
+      headers: { Authorization: `Bearer ${userBToken}` },
+      data: { targetUserId: userAId }
+    });
+    expect(sendReqRes.status()).toBe(201);
+    const reqData = await sendReqRes.json();
+
+    // 4. User A accepts connection request
+    const acceptRes = await request.patch(`${backendBase}/api/v1/contacts/requests/${reqData.id}`, {
+      headers: { Authorization: `Bearer ${userAToken}` },
+      data: { action: 'ACCEPT' }
+    });
+    expect(acceptRes.status()).toBe(200);
+
+    // 5. User A logs in via Frontend UI
+    await page.goto('/login');
+    await page.fill('#login-email', userAEmail);
+    await page.fill('#login-password', password);
+    await page.click('button[type="submit"]');
+
+    await expect(page).toHaveURL('http://localhost:4200/');
+
+    // 6. Open New Chat modal
+    await page.click('[data-testid="new-chat-trigger-btn"]');
+    const modal = page.locator('[data-testid="new-chat-modal-card"]');
+    await expect(modal).toBeVisible();
+
+    // 7. Verify contact card is present in Direct Message tab
+    const contactCard = page.locator('[data-testid^="contact-card-"]');
+    await expect(contactCard).toBeVisible();
+    await expect(contactCard).toContainText(userBName);
+
+    // 8. Click Block icon button
+    const blockBtn = page.locator('[data-testid^="block-contact-btn-"]');
+    await expect(blockBtn).toBeVisible();
+    await blockBtn.click();
+
+    // 9. Confirm block dialog
+    const blockConfirmBox = page.locator('[data-testid="block-confirm-box"]');
+    await expect(blockConfirmBox).toBeVisible();
+    await page.locator('[data-testid^="confirm-block-btn-"]').click();
+
+    // 10. Success alert appears and empty state displays
+    await expect(page.locator('[data-testid="new-chat-success-alert"]')).toContainText(
+      `Blocked ${userBName}.`
+    );
+    await expect(page.locator('[data-testid="no-contacts-empty-state"]')).toBeVisible();
+
+    // 11. Backend check: Contact document status is BLOCKED and blockedBy is User A
+    const listRes = await request.get(`${backendBase}/api/v1/contacts`, {
+      headers: { Authorization: `Bearer ${userAToken}` }
+    });
+    expect(listRes.status()).toBe(200);
+    const listData = await listRes.json();
+    expect(listData.content).toHaveLength(0);
+  });
 });

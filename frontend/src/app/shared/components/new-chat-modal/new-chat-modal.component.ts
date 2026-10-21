@@ -1,6 +1,6 @@
 import { Component, EventEmitter, HostListener, inject, Input, OnChanges, OnInit, Output, SimpleChanges, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ContactResponse } from '../../../core/models/contact.model';
+import { ContactResponse, IncomingRequest } from '../../../core/models/contact.model';
 import { ContactService } from '../../../core/services/contact.service';
 import { UserService } from '../../../core/services/user.service';
 import { SuggestedUser } from '../../../core/models/user.model';
@@ -29,6 +29,8 @@ export class NewChatModalComponent implements OnInit, OnChanges {
   activeRespondingId = signal<string | null>(null);
   confirmingRemoveId = signal<string | null>(null);
   isRemovingContact = signal<boolean>(false);
+  confirmingBlockId = signal<string | null>(null);
+  isBlockingUser = signal<boolean>(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
 
@@ -118,11 +120,63 @@ export class NewChatModalComponent implements OnInit, OnChanges {
   }
 
   promptRemoveContact(contactId: string): void {
+    this.confirmingBlockId.set(null);
     this.confirmingRemoveId.set(contactId);
   }
 
   cancelRemoveContact(): void {
     this.confirmingRemoveId.set(null);
+  }
+
+  promptBlockContact(contactId: string): void {
+    this.confirmingRemoveId.set(null);
+    this.confirmingBlockId.set(contactId);
+  }
+
+  cancelBlockContact(): void {
+    this.confirmingBlockId.set(null);
+  }
+
+  confirmBlockContact(contact: ContactResponse): void {
+    this.isBlockingUser.set(true);
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    this.userService.blockUser(contact.userId).subscribe({
+      next: () => {
+        this.isBlockingUser.set(false);
+        this.confirmingBlockId.set(null);
+        this.successMessage.set(`Blocked ${contact.displayName}.`);
+        this.contactService.loadContacts().subscribe();
+        this.loadSuggestedUsers();
+      },
+      error: (err) => {
+        this.isBlockingUser.set(false);
+        this.confirmingBlockId.set(null);
+        const msg = err.error?.message || 'Failed to block user.';
+        this.errorMessage.set(msg);
+      }
+    });
+  }
+
+  blockIncomingRequester(request: IncomingRequest): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+    this.activeRespondingId.set(request.id);
+
+    this.userService.blockUser(request.fromUser.id).subscribe({
+      next: () => {
+        this.activeRespondingId.set(null);
+        this.successMessage.set(`Blocked ${request.fromUser.displayName}.`);
+        this.contactService.loadIncomingRequests().subscribe();
+        this.loadSuggestedUsers();
+      },
+      error: (err) => {
+        this.activeRespondingId.set(null);
+        const msg = err.error?.message || 'Failed to block user.';
+        this.errorMessage.set(msg);
+      }
+    });
   }
 
   confirmRemoveContact(contact: ContactResponse): void {

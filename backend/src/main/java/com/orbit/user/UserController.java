@@ -13,8 +13,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -118,5 +120,81 @@ public class UserController {
         String requesterId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
         UserProfileResponse profile = userService.getUserProfile(targetUserId, requesterId);
         return ResponseEntity.ok(profile);
+    }
+
+    @Operation(summary = "Block a user", description = "Blocks a user by their userId, establishing a one-directional block relationship per ADR 007 and ADR 013")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "User blocked successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request or attempt to block self",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Target user account not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PostMapping("/{userId}/block")
+    public ResponseEntity<Void> blockUser(
+            @PathVariable("userId") String targetUserId,
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication) {
+
+        String currentUserId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
+        userService.blockUser(currentUserId, targetUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Unblock a user", description = "Unblocks a user by their userId, hard-deleting the contact relationship per ADR 006 and ADR 013")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "User unblocked successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request or attempt to unblock self",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing, invalid, expired, or blacklisted access token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Target user account not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Rate limit exceeded",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{userId}/block")
+    public ResponseEntity<Void> unblockUser(
+            @PathVariable("userId") String targetUserId,
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication) {
+
+        String currentUserId = principalUserId != null ? principalUserId : (authentication != null ? authentication.getName() : null);
+        userService.unblockUser(currentUserId, targetUserId);
+        return ResponseEntity.noContent().build();
     }
 }

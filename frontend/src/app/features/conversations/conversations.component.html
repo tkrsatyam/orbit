@@ -176,6 +176,19 @@
                   Decline
                 }
               </button>
+              <button
+                type="button"
+                class="btn-block"
+                (click)="handleBlockRequest(req)"
+                [disabled]="isProcessingRequest(req.id)"
+                [attr.data-testid]="'block-request-btn-' + req.id"
+              >
+                @if (isProcessingRequest(req.id) && activeAction() === 'BLOCK') {
+                  <span class="btn-spinner"></span>
+                } @else {
+                  Block
+                }
+              </button>
             </div>
           </div>
         </div>

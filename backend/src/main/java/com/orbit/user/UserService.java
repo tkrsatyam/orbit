@@ -94,4 +94,26 @@ public class UserService {
                 .map(SuggestedUserResponse::from)
                 .toList();
     }
+
+    /**
+     * Blocks a target user, establishing a one-directional block relationship per ADR 007 and ADR 013.
+     * Thin delegation to ContactService which owns the Contact document lifecycle.
+     *
+     * @param currentUserId ID of the authenticated user initiating the block
+     * @param targetUserId ID of the target user to block
+     */
+    public void blockUser(String currentUserId, String targetUserId) {
+        contactService.blockUser(currentUserId, targetUserId);
+    }
+
+    /**
+     * Unblocks a target user, permanently hard-deleting the Contact document per ADR 006 and ADR 013.
+     * Thin delegation to ContactService which owns the Contact document lifecycle.
+     *
+     * @param currentUserId ID of the authenticated user initiating the unblock
+     * @param targetUserId ID of the target user to unblock
+     */
+    public void unblockUser(String currentUserId, String targetUserId) {
+        contactService.unblockUser(currentUserId, targetUserId);
+    }
 }
