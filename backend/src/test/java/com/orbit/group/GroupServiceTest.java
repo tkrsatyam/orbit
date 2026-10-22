@@ -11,6 +11,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
+import com.orbit.group.dto.UpdateGroupRequest;
 import com.orbit.group.model.Group;
 import com.orbit.group.model.GroupMember;
 import com.orbit.group.model.GroupRole;
@@ -251,5 +252,107 @@ class GroupServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).role()).isEqualTo(GroupRole.ADMIN);
         assertThat(result.get(1).role()).isEqualTo(GroupRole.MEMBER);
+    }
+
+    @Test
+    void getGroupDetails_PublicGroup_ReturnsDetailsForAnyUser() {
+        Group publicGroup = Group.builder()
+                .id("grp-pub")
+                .name("Public Hub")
+                .visibility(GroupVisibility.PUBLIC)
+                .members(List.of(GroupMember.builder().userId("u-creator").role(GroupRole.ADMIN).build()))
+                .build();
+        when(groupRepository.findById("grp-pub")).thenReturn(Optional.of(publicGroup));
+
+        GroupResponse response = groupService.getGroupDetails("u-other", "grp-pub");
+
+        assertThat(response.id()).isEqualTo("grp-pub");
+        assertThat(response.name()).isEqualTo("Public Hub");
+        assertThat(response.role()).isNull();
+    }
+
+    @Test
+    void getGroupDetails_PrivateGroup_Member_ReturnsDetails() {
+        Group privateGroup = Group.builder()
+                .id("grp-priv")
+                .name("Private Hub")
+                .visibility(GroupVisibility.PRIVATE)
+                .members(List.of(GroupMember.builder().userId("u-member").role(GroupRole.MEMBER).build()))
+                .build();
+        when(groupRepository.findById("grp-priv")).thenReturn(Optional.of(privateGroup));
+
+        GroupResponse response = groupService.getGroupDetails("u-member", "grp-priv");
+
+        assertThat(response.id()).isEqualTo("grp-priv");
+        assertThat(response.role()).isEqualTo(GroupRole.MEMBER);
+    }
+
+    @Test
+    void getGroupDetails_PrivateGroup_NonMember_ThrowsResourceNotFound() {
+        Group privateGroup = Group.builder()
+                .id("grp-priv")
+                .name("Private Hub")
+                .visibility(GroupVisibility.PRIVATE)
+                .members(List.of(GroupMember.builder().userId("u-member").role(GroupRole.MEMBER).build()))
+                .build();
+        when(groupRepository.findById("grp-priv")).thenReturn(Optional.of(privateGroup));
+
+        assertThatThrownBy(() -> groupService.getGroupDetails("u-stranger", "grp-priv"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Group not found");
+    }
+
+    @Test
+    void updateGroup_Admin_UpdatesFieldsSuccessfully() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Original Name")
+                .description("Old Desc")
+                .topicTag("#old")
+                .members(List.of(GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build()))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+        when(groupRepository.existsByNameIgnoreCaseAndIdNot("New Name", "grp-1")).thenReturn(false);
+        when(groupRepository.save(any(Group.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UpdateGroupRequest request = new UpdateGroupRequest("New Name", "New Description", "new-tag");
+        GroupResponse response = groupService.updateGroup("admin-1", "grp-1", request);
+
+        assertThat(response.name()).isEqualTo("New Name");
+        assertThat(response.description()).isEqualTo("New Description");
+        assertThat(response.topicTag()).isEqualTo("#new-tag");
+    }
+
+    @Test
+    void updateGroup_NonAdmin_ThrowsForbidden() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Original Name")
+                .members(List.of(GroupMember.builder().userId("member-1").role(GroupRole.MEMBER).build()))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        UpdateGroupRequest request = new UpdateGroupRequest("New Name", null, null);
+
+        assertThatThrownBy(() -> groupService.updateGroup("member-1", "grp-1", request))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Only group admins can update group details");
+    }
+
+    @Test
+    void updateGroup_DuplicateName_ThrowsConflict() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Original Name")
+                .members(List.of(GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build()))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+        when(groupRepository.existsByNameIgnoreCaseAndIdNot("Taken Name", "grp-1")).thenReturn(true);
+
+        UpdateGroupRequest request = new UpdateGroupRequest("Taken Name", null, null);
+
+        assertThatThrownBy(() -> groupService.updateGroup("admin-1", "grp-1", request))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Group name is already taken");
     }
 }

@@ -8,6 +8,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
+import com.orbit.group.dto.UpdateGroupRequest;
 import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -197,5 +199,121 @@ class GroupControllerTest {
                         .principal(new UsernamePasswordAuthenticationToken("user-member", null, List.of())))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("User is already a member of this group"));
+    }
+
+    @Test
+    void getGroupDetails_Success_Returns200() throws Exception {
+        GroupResponse response = new GroupResponse(
+                "group-1",
+                "FAANG Prep",
+                "Interview group",
+                "interview",
+                GroupVisibility.PUBLIC,
+                null,
+                null,
+                10,
+                "conv-1",
+                Instant.now(),
+                GroupRole.MEMBER
+        );
+        when(groupService.getGroupDetails("user-1", "group-1")).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("group-1"))
+                .andExpect(jsonPath("$.name").value("FAANG Prep"))
+                .andExpect(jsonPath("$.role").value("MEMBER"));
+    }
+
+    @Test
+    void getGroupDetails_NotFoundOrPrivate_Returns404() throws Exception {
+        when(groupService.getGroupDetails("user-1", "group-1"))
+                .thenThrow(new ResourceNotFoundException("Group not found"));
+
+        mockMvc.perform(get("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Group not found"));
+    }
+
+    @Test
+    void updateGroup_Success_Returns200() throws Exception {
+        GroupResponse response = new GroupResponse(
+                "group-1",
+                "Updated Name",
+                "Updated Desc",
+                "#updated",
+                GroupVisibility.PUBLIC,
+                null,
+                null,
+                5,
+                "conv-1",
+                Instant.now(),
+                GroupRole.ADMIN
+        );
+        when(groupService.updateGroup(eq("admin-1"), eq("group-1"), any(UpdateGroupRequest.class))).thenReturn(response);
+
+        mockMvc.perform(patch("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Updated Name",
+                                  "description": "Updated Desc",
+                                  "topicTag": "#updated"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated Name"))
+                .andExpect(jsonPath("$.topicTag").value("#updated"));
+    }
+
+    @Test
+    void updateGroup_NonAdmin_Returns403() throws Exception {
+        when(groupService.updateGroup(eq("member-1"), eq("group-1"), any(UpdateGroupRequest.class)))
+                .thenThrow(new ForbiddenException("Only group admins can update group details"));
+
+        mockMvc.perform(patch("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("member-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Updated Name"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can update group details"));
+    }
+
+    @Test
+    void updateGroup_DuplicateName_Returns409() throws Exception {
+        when(groupService.updateGroup(eq("admin-1"), eq("group-1"), any(UpdateGroupRequest.class)))
+                .thenThrow(new ConflictException("Group name is already taken"));
+
+        mockMvc.perform(patch("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Existing Group"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Group name is already taken"));
+    }
+
+    @Test
+    void updateGroup_NameTooShort_Returns400() throws Exception {
+        mockMvc.perform(patch("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "ab"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("name: Group name must be between 3 and 100 characters"));
     }
 }

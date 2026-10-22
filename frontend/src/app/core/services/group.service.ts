@@ -13,6 +13,12 @@ export interface CreateGroupPayload {
   visibility: GroupVisibility;
 }
 
+export interface UpdateGroupPayload {
+  name?: string;
+  description?: string | null;
+  topicTag?: string | null;
+}
+
 export interface GroupResponse {
   id: string;
   name: string;
@@ -80,5 +86,25 @@ export class GroupService {
    */
   joinViaInvite(token: string): Observable<GroupJoinResponse> {
     return this.http.post<GroupJoinResponse>(`${this.baseUrl}/join-via-invite/${token}`, {});
+  }
+
+  /**
+   * Retrieves group details for a given group ID.
+   */
+  getGroupDetails(groupId: string): Observable<GroupResponse> {
+    return this.http.get<GroupResponse>(`${this.baseUrl}/${groupId}`);
+  }
+
+  /**
+   * Updates group metadata. Admin-only operation.
+   */
+  updateGroup(groupId: string, payload: UpdateGroupPayload): Observable<GroupResponse> {
+    return this.http.patch<GroupResponse>(`${this.baseUrl}/${groupId}`, payload).pipe(
+      tap((updatedGroup) => {
+        this.myGroups.update((list) =>
+          list.map((g) => (g.id === updatedGroup.id ? updatedGroup : g))
+        );
+      })
+    );
   }
 }

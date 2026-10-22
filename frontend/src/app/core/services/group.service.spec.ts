@@ -119,4 +119,62 @@ describe('GroupService', () => {
     expect(req.request.method).toBe('POST');
     req.flush(mockJoin);
   });
+
+  it('getGroupDetails should fetch group details', () => {
+    const mockDetails: GroupResponse = {
+      id: 'group-1',
+      name: 'System Design Club',
+      description: 'Distributed systems',
+      topicTag: '#systems',
+      visibility: 'PUBLIC',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 8,
+      conversationId: 'conv-1',
+      createdAt: '2026-10-21T10:00:00Z',
+      role: 'ADMIN'
+    };
+
+    service.getGroupDetails('group-1').subscribe((res) => {
+      expect(res).toEqual(mockDetails);
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1`);
+    expect(req.request.method).toBe('GET');
+    req.flush(mockDetails);
+  });
+
+  it('updateGroup should dispatch PATCH and update matching group in myGroups signal', () => {
+    const originalGroup: GroupResponse = {
+      id: 'group-1',
+      name: 'Original Name',
+      description: 'Original Desc',
+      topicTag: '#original',
+      visibility: 'PUBLIC',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 5,
+      conversationId: 'conv-1',
+      createdAt: '2026-10-21T10:00:00Z',
+      role: 'ADMIN'
+    };
+    service.myGroups.set([originalGroup]);
+
+    const updatedGroup: GroupResponse = {
+      ...originalGroup,
+      name: 'Updated Name',
+      topicTag: '#updated'
+    };
+
+    service.updateGroup('group-1', { name: 'Updated Name', topicTag: '#updated' }).subscribe((res) => {
+      expect(res).toEqual(updatedGroup);
+      expect(service.myGroups()[0].name).toBe('Updated Name');
+      expect(service.myGroups()[0].topicTag).toBe('#updated');
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ name: 'Updated Name', topicTag: '#updated' });
+    req.flush(updatedGroup);
+  });
 });

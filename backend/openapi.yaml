@@ -146,6 +146,97 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+  /api/v1/groups/{groupId}:
+    get:
+      tags:
+      - Groups
+      summary: Get group details
+      description: Retrieves group details. Public groups are visible to all users, private groups are member-only.
+      operationId: getGroupDetails
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Group details retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found or private
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+    patch:
+      tags:
+      - Groups
+      summary: Update group details
+      description: Updates group metadata. Admin-only operation.
+      operationId: updateGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupRequest"
+        required: true
+      responses:
+        "200":
+          description: Group updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "400":
+          description: Validation failure
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Only group admins can update group details
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Group name already taken
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/groups/{groupId}/invite:
     post:
       tags:
@@ -761,6 +852,26 @@ components:
       required:
       - name
       - visibility
+    UpdateGroupRequest:
+      type: object
+      description: Request payload for updating group metadata (all fields optional)
+      properties:
+        name:
+          type: string
+          description: Updated group name
+          example: FAANG Interview Prep 2026
+          maxLength: 100
+          minLength: 3
+        description:
+          type: string
+          description: Updated group description
+          example: Updated description
+          maxLength: 500
+        topicTag:
+          type: string
+          description: Updated topic tag
+          example: "#interview-prep"
+          maxLength: 50
     GroupResponse:
       type: object
       description: Group details response

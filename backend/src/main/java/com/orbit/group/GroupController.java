@@ -5,6 +5,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
+import com.orbit.group.dto.UpdateGroupRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,6 +18,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -163,6 +165,76 @@ public class GroupController {
             @PathVariable String inviteToken) {
         String userId = resolveUserId(principalUserId, authentication);
         return groupService.joinViaInvite(userId, inviteToken);
+    }
+
+    @Operation(summary = "Get group details", description = "Retrieves group details. Public groups are visible to all users, private groups are member-only.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Group details retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = GroupResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found or private",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @GetMapping("/{groupId}")
+    public GroupResponse getGroupDetails(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.getGroupDetails(userId, groupId);
+    }
+
+    @Operation(summary = "Update group details", description = "Updates group metadata. Admin-only operation.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Group updated successfully",
+                    content = @Content(schema = @Schema(implementation = GroupResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Validation failure",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Only group admins can update group details",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "Group name already taken",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PatchMapping("/{groupId}")
+    public GroupResponse updateGroup(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId,
+            @Valid @RequestBody UpdateGroupRequest request) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.updateGroup(userId, groupId, request);
     }
 
     private String resolveUserId(String principalUserId, Authentication authentication) {
