@@ -231,4 +231,30 @@ describe('GroupService', () => {
     expect(req.request.body).toEqual({ role: 'ADMIN' });
     req.flush(mockUpdatedMember);
   });
+
+  it('leaveGroup should send POST to /leave and remove group from myGroups', () => {
+    const existingGroup: GroupResponse = {
+      id: 'group-1',
+      name: 'Leaving Space',
+      description: null,
+      topicTag: null,
+      visibility: 'PUBLIC',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 2,
+      conversationId: 'conv-1',
+      createdAt: '2026-10-21T10:00:00Z',
+      role: 'MEMBER'
+    };
+    service.myGroups.set([existingGroup]);
+
+    service.leaveGroup('group-1').subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1/leave`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush(null);
+
+    expect(service.myGroups()).toEqual([]);
+  });
 });

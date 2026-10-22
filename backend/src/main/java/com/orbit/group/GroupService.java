@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -388,5 +389,63 @@ public class GroupService {
                 false,
                 targetMember.getJoinedAt()
         );
+    }
+
+    /**
+     * Handles a member leaving a group.
+     * - If leaving user is the last remaining member: permanently deletes the group and its group conversation.
+     * - If leaving user is the sole admin but other members remain: automatically promotes the oldest member (earliest joinedAt) to ADMIN.
+     * - Removes caller from group members and conversation participants, decrements memberCount.
+     *
+     * @param callerUserId Authenticated user ID of the leaving member
+     * @param groupId Group ID
+     */
+    public void leaveGroup(String callerUserId, String groupId) {
+        if (callerUserId == null || callerUserId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        if (groupId == null || groupId.isBlank()) {
+            throw new IllegalArgumentException("Group ID is required");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found with id: " + groupId));
+
+        GroupMember leaver = group.getMembers().stream()
+                .filter(m -> m.getUserId().equals(callerUserId))
+                .findFirst()
+                .orElseThrow(() -> new ForbiddenException("You are not a member of this group"));
+
+        // Case 1: Last remaining member leaves -> teardown group and associated conversation
+        if (group.getMembers().size() <= 1) {
+            groupRepository.deleteById(groupId);
+            if (group.getConversationId() != null) {
+                conversationService.deleteGroupConversation(group.getConversationId());
+            }
+            return;
+        }
+
+        // Case 2: Sole admin leaves with other members present -> auto-promote oldest remaining member
+        boolean isLeaverAdmin = leaver.getRole() == GroupRole.ADMIN;
+        long adminCount = group.getMembers().stream()
+                .filter(m -> m.getRole() == GroupRole.ADMIN)
+                .count();
+
+        if (isLeaverAdmin && adminCount <= 1) {
+            group.getMembers().stream()
+                    .filter(m -> !m.getUserId().equals(callerUserId))
+                    .min(Comparator.comparing(GroupMember::getJoinedAt))
+                    .ifPresent(oldest -> oldest.setRole(GroupRole.ADMIN));
+        }
+
+        // Remove caller from members list
+        group.getMembers().removeIf(m -> m.getUserId().equals(callerUserId));
+        group.setMemberCount(group.getMembers().size());
+        groupRepository.save(group);
+
+        // Remove caller from conversation participants
+        if (group.getConversationId() != null) {
+            conversationService.removeGroupParticipant(group.getConversationId(), callerUserId);
+        }
     }
 }

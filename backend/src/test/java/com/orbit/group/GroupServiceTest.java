@@ -465,4 +465,97 @@ class GroupServiceTest {
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("Only group admins can manage member roles");
     }
+
+    @Test
+    void leaveGroup_LastRemainingMember_DeletesGroupAndConversation() {
+        GroupMember soleMember = GroupMember.builder().userId("user-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .conversationId("conv-1")
+                .members(new ArrayList<>(List.of(soleMember)))
+                .memberCount(1)
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        groupService.leaveGroup("user-1", "grp-1");
+
+        verify(groupRepository).deleteById("grp-1");
+        verify(conversationService).deleteGroupConversation("conv-1");
+        verify(groupRepository, never()).save(any());
+    }
+
+    @Test
+    void leaveGroup_SoleAdminWithOtherMembers_PromotesOldestMember() {
+        Instant now = Instant.now();
+        GroupMember admin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(now).build();
+        GroupMember oldest = GroupMember.builder().userId("member-oldest").role(GroupRole.MEMBER).joinedAt(now.minusSeconds(7200)).build();
+        GroupMember newer = GroupMember.builder().userId("member-newer").role(GroupRole.MEMBER).joinedAt(now.minusSeconds(3600)).build();
+
+        Group group = Group.builder()
+                .id("grp-1")
+                .conversationId("conv-1")
+                .members(new ArrayList<>(List.of(admin, oldest, newer)))
+                .memberCount(3)
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        groupService.leaveGroup("admin-1", "grp-1");
+
+        assertThat(oldest.getRole()).isEqualTo(GroupRole.ADMIN);
+        assertThat(newer.getRole()).isEqualTo(GroupRole.MEMBER);
+        assertThat(group.getMembers()).extracting(GroupMember::getUserId).doesNotContain("admin-1");
+        assertThat(group.getMemberCount()).isEqualTo(2);
+
+        verify(groupRepository).save(group);
+        verify(conversationService).removeGroupParticipant("conv-1", "admin-1");
+        verify(groupRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void leaveGroup_RegularMember_RemovesMemberAndDecrementsCount() {
+        Instant now = Instant.now();
+        GroupMember admin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(now).build();
+        GroupMember member = GroupMember.builder().userId("member-1").role(GroupRole.MEMBER).joinedAt(now).build();
+
+        Group group = Group.builder()
+                .id("grp-1")
+                .conversationId("conv-1")
+                .members(new ArrayList<>(List.of(admin, member)))
+                .memberCount(2)
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        groupService.leaveGroup("member-1", "grp-1");
+
+        assertThat(group.getMembers()).hasSize(1);
+        assertThat(group.getMembers().get(0).getUserId()).isEqualTo("admin-1");
+        assertThat(group.getMemberCount()).isEqualTo(1);
+
+        verify(groupRepository).save(group);
+        verify(conversationService).removeGroupParticipant("conv-1", "member-1");
+    }
+
+    @Test
+    void leaveGroup_NonMemberCaller_ThrowsForbidden() {
+        GroupMember admin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(admin)))
+                .memberCount(1)
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.leaveGroup("stranger-1", "grp-1"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("You are not a member of this group");
+    }
+
+    @Test
+    void leaveGroup_GroupNotFound_ThrowsResourceNotFound() {
+        when(groupRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> groupService.leaveGroup("user-1", "non-existent"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("Group not found with id: non-existent");
+    }
 }

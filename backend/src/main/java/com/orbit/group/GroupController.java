@@ -316,6 +316,38 @@ public class GroupController {
         return groupService.updateMemberRole(userId, groupId, targetUserId, request);
     }
 
+    @Operation(summary = "Leave a group", description = "Leaves a group. If last member, tears down group. If sole admin, promotes oldest member.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Successfully left the group"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller is not a member of the group",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PostMapping("/{groupId}/leave")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void leaveGroup(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        groupService.leaveGroup(userId, groupId);
+    }
+
     private String resolveUserId(String principalUserId, Authentication authentication) {
         if (principalUserId != null && !principalUserId.isBlank()) {
             return principalUserId;

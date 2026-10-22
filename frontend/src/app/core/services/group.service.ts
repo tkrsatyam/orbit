@@ -145,4 +145,16 @@ export class GroupService {
       payload
     );
   }
+
+  /**
+   * Leaves a group. If the leaving user is the sole admin, another member is auto-promoted.
+   * If the leaving user is the last member, the group is torn down.
+   */
+  leaveGroup(groupId: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${groupId}/leave`, {}).pipe(
+      tap(() => {
+        this.myGroups.update((groups) => groups.filter((g) => g.id !== groupId));
+      })
+    );
+  }
 }
