@@ -80,6 +80,11 @@ test.describe('Admin Remove Member & Delete Group Flow (ORDM-41)', () => {
     await expect(removeMemberBtn).toBeVisible();
     await removeMemberBtn.click();
 
+    // Confirm in remove member modal
+    const confirmRemoveBtn = page.locator('[data-testid="confirm-remove-member-btn"]');
+    await expect(confirmRemoveBtn).toBeVisible();
+    await confirmRemoveBtn.click();
+
     // Verify Member 2 is evicted from roster in UI
     await expect(memberRow).not.toBeVisible();
     await expect(membersDrawer.locator('[data-testid="member-item"]')).toHaveCount(1);

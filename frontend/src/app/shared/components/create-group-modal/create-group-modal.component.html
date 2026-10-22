@@ -84,15 +84,16 @@
 
         <!-- Topic Tag -->
         <div class="form-group">
-          <label for="group-topic" class="field-label">PRIMARY TOPIC TAG *</label>
+          <label for="group-topic" class="field-label">TOPIC TAGS *</label>
           <input
             id="group-topic"
             type="text"
             formControlName="topicTag"
-            placeholder="e.g. #system-design"
+            placeholder="e.g. engineering, consensus"
             class="field-input"
             data-testid="group-topic-input"
           />
+          <span class="field-hint">Comma-separated tags (e.g. engineering, consensus)</span>
           @if (groupForm.get('topicTag')?.touched && groupForm.get('topicTag')?.errors) {
             <span class="field-error">
               @if (groupForm.get('topicTag')?.errors?.['required']) { Primary topic tag is required. }

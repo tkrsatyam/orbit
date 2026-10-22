@@ -316,6 +316,29 @@ describe('GroupComponent', () => {
     expect(component.memberActionError()).toBe('Cannot remove member');
   });
 
+  it('should open and close remove member modal', async () => {
+    await setupComponent();
+    const target = mockMemberList[1];
+    component.openRemoveMemberModal(target);
+    expect(component.isRemoveMemberModalOpen()).toBe(true);
+    expect(component.memberToRemove()).toEqual(target);
+
+    component.closeRemoveMemberModal();
+    expect(component.isRemoveMemberModalOpen()).toBe(false);
+    expect(component.memberToRemove()).toBeNull();
+  });
+
+  it('should remove member on confirmRemoveMember', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    const target = mockMemberList[1];
+    component.openRemoveMemberModal(target);
+    component.confirmRemoveMember();
+
+    expect(mockGroupService.removeMember).toHaveBeenCalledWith('group-101', 'u-2');
+    expect(component.isRemoveMemberModalOpen()).toBe(false);
+  });
+
   it('should open and close delete space modal', async () => {
     await setupComponent();
     expect(component.isDeleteSpaceModalOpen()).toBe(false);

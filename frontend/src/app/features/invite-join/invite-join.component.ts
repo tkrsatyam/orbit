@@ -15,7 +15,8 @@ export class InviteJoinComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly groupService = inject(GroupService);
 
-  readonly status = signal<'LOADING' | 'SUCCESS' | 'ERROR'>('LOADING');
+  readonly token = signal<string>('');
+  readonly status = signal<'PENDING' | 'LOADING' | 'SUCCESS' | 'ERROR'>('PENDING');
   readonly result = signal<GroupJoinResponse | null>(null);
   readonly errorMessage = signal<string | null>(null);
 
@@ -26,11 +27,23 @@ export class InviteJoinComponent implements OnInit {
       this.errorMessage.set('No invite token was provided in the URL.');
       return;
     }
+    this.token.set(token);
+    this.status.set('PENDING');
+  }
 
+  joinSpace(): void {
+    const token = this.token();
+    if (!token) return;
+
+    this.status.set('LOADING');
     this.groupService.joinViaInvite(token).subscribe({
       next: (res) => {
         this.result.set(res);
         this.status.set('SUCCESS');
+        // Reload joined groups so sidebar displays the new space
+        this.groupService.loadMyGroups().subscribe({
+          error: () => {}
+        });
       },
       error: (err) => {
         this.status.set('ERROR');

@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
+import { parseTopicTags } from '../../shared/utils/tag-utils';
 
 @Component({
   selector: 'app-group',
@@ -37,6 +38,8 @@ export class GroupComponent implements OnInit {
   readonly memberActionError = signal<string | null>(null);
   readonly updatingMemberId = signal<string | null>(null);
   readonly removingMemberId = signal<string | null>(null);
+  readonly isRemoveMemberModalOpen = signal<boolean>(false);
+  readonly memberToRemove = signal<GroupMemberResponse | null>(null);
   readonly currentUserId = computed(() => this.authService.currentUser()?.id);
 
   // Leave space state
@@ -55,20 +58,42 @@ export class GroupComponent implements OnInit {
     description: ['', [Validators.maxLength(500)]]
   });
 
-  readonly groupId = computed(() => this.route.snapshot.paramMap.get('id') || '');
+  readonly groupId = signal<string>('');
   readonly isAdmin = computed(() => this.group()?.role === 'ADMIN');
   readonly myGroups = computed(() => this.groupService.myGroups());
+  readonly topicTags = computed(() => parseTopicTags(this.group()?.topicTag));
+
+  readonly leaveWarningMessage = computed(() => {
+    const isAdm = this.isAdmin();
+    const count = this.group()?.memberCount ?? 1;
+
+    if (count <= 1) {
+      return 'You are the last remaining member. If you leave, this space and its entire conversation history will be permanently deleted.';
+    }
+
+    if (isAdm) {
+      return 'As you are departing, admin privileges will automatically be transferred to the longest-standing member. You will lose access to this space.';
+    }
+
+    return 'You will lose access to this space and its messages. To rejoin later, you will need a new invite link from an admin.';
+  });
 
   ngOnInit(): void {
-    const id = this.groupId();
-    if (!id) {
-      this.errorMessage.set('Group ID is missing');
-      this.loading.set(false);
-      return;
-    }
-    this.loadGroupDetails(id);
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.groupId.set(id);
+        this.loadGroupDetails(id);
+      } else {
+        this.errorMessage.set('Group ID is missing');
+        this.loading.set(false);
+      }
+    });
+
     this.groupService.loadMyGroups().subscribe({
-      error: () => {}
+      error: () => {
+        // Silently handle
+      }
     });
   }
 
@@ -241,6 +266,24 @@ export class GroupComponent implements OnInit {
         this.leaveError.set(msg);
       }
     });
+  }
+
+  openRemoveMemberModal(member: GroupMemberResponse): void {
+    this.memberToRemove.set(member);
+    this.isRemoveMemberModalOpen.set(true);
+  }
+
+  closeRemoveMemberModal(): void {
+    this.memberToRemove.set(null);
+    this.isRemoveMemberModalOpen.set(false);
+  }
+
+  confirmRemoveMember(): void {
+    const m = this.memberToRemove();
+    if (m) {
+      this.removeMember(m);
+      this.closeRemoveMemberModal();
+    }
   }
 
   removeMember(targetMember: GroupMemberResponse): void {

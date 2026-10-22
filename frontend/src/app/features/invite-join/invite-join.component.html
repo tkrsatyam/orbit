@@ -6,13 +6,44 @@
       <div class="brand-badge" aria-hidden="true">
         <img src="brand/orbit-icon.svg" alt="Orbit Logo" width="28" height="28" />
       </div>
-      <h2 class="card-title">Orbit Group Invitation</h2>
+      <h2 class="card-title">Orbit Space Invitation</h2>
     </header>
+
+    @if (status() === 'PENDING') {
+      <div class="state-box pending-box" data-testid="invite-pending">
+        <div class="space-icon-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+        </div>
+        <h3 class="box-heading">You're invited to join this Space</h3>
+        <p class="state-message">
+          You have received an invitation to join this private community on Orbit.
+        </p>
+
+        <div class="action-buttons">
+          <button
+            type="button"
+            class="btn-primary"
+            (click)="joinSpace()"
+            data-testid="join-space-btn"
+          >
+            Join Space
+          </button>
+          <a routerLink="/" class="btn-cancel" data-testid="cancel-join-btn">
+            Cancel
+          </a>
+        </div>
+      </div>
+    }
 
     @if (status() === 'LOADING') {
       <div class="state-box loading-box" data-testid="invite-loading">
         <div class="spinner" aria-hidden="true"></div>
-        <p class="state-message">Verifying invite token and joining group...</p>
+        <p class="state-message">Verifying invite token and joining space...</p>
       </div>
     }
 
@@ -25,7 +56,7 @@
         </div>
         <h3 class="box-heading">You're in!</h3>
         <p class="state-message">
-          You have successfully joined the group as a Member.
+          You have successfully joined the space as a Member.
         </p>
 
         <button

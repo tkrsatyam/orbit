@@ -1,7 +1,14 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 .orbit-workstation-layout {
   display: flex;
-  height: 100vh;
-  width: 100vw;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
   background-color: var(--orbit-bg, #121214);
   color: var(--orbit-text-primary, #ededef);
@@ -352,6 +359,11 @@
   &:hover {
     background-color: var(--orbit-elevated, #27272a);
   }
+
+  &.active {
+    background-color: var(--orbit-elevated, #27272a);
+    border-left: 3px solid var(--orbit-accent, #f59e0b);
+  }
 }
 
 .group-item-badge {
@@ -511,111 +523,13 @@
 }
 
 // ----------------------------------------------------
-// 3. Workstation Main Canvas (~760px)
+// 3. Workstation Main Canvas
 // ----------------------------------------------------
 .workstation-main {
   flex: 1;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
   background-color: var(--orbit-bg, #121214);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  overflow-y: auto;
-}
-
-.welcome-canvas {
-  max-width: 500px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.25rem;
-}
-
-.welcome-squircle {
-  width: 80px;
-  height: 80px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.16) 0%, rgba(217, 119, 6, 0.05) 100%);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12px 28px rgba(245, 158, 11, 0.12);
-}
-
-.welcome-heading {
-  margin: 0;
-  font-size: 1.625rem;
-  font-weight: 700;
-  color: var(--orbit-text-primary, #ededef);
-}
-
-.welcome-subtitle {
-  margin: 0;
-  font-size: 0.9375rem;
-  color: var(--orbit-text-muted, #a1a1aa);
-  line-height: 1.5;
-}
-
-.welcome-action-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.625rem;
-  width: 100%;
-  max-width: 320px;
-  margin-top: 0.5rem;
-}
-
-.btn-welcome-primary,
-.btn-welcome-secondary,
-.btn-welcome-outline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.25rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.15s ease;
-
-  svg {
-    width: 18px;
-    height: 18px;
-  }
-}
-
-.btn-welcome-primary {
-  background-color: var(--orbit-accent, #f59e0b);
-  border: none;
-  color: #121214;
-
-  &:hover {
-    opacity: 0.9;
-  }
-}
-
-.btn-welcome-secondary {
-  background-color: var(--orbit-elevated, #27272a);
-  border: 1px solid var(--orbit-border, #2e2e33);
-  color: var(--orbit-text-primary, #ededef);
-
-  &:hover {
-    background-color: rgba(39, 39, 42, 0.8);
-    border-color: rgba(245, 158, 11, 0.3);
-  }
-}
-
-.btn-welcome-outline {
-  background: none;
-  border: 1px dashed var(--orbit-border, #2e2e33);
-  color: var(--orbit-text-muted, #a1a1aa);
-
-  &:hover {
-    color: var(--orbit-text-primary, #ededef);
-    border-color: var(--orbit-text-muted, #a1a1aa);
-  }
 }

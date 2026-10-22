@@ -1,5 +1,6 @@
 import { Component, computed, ElementRef, HostListener, inject, OnInit, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { filter } from 'rxjs';
 import { IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
@@ -8,11 +9,12 @@ import { UserService } from '../../core/services/user.service';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
 import { NewChatModalComponent } from '../../shared/components/new-chat-modal/new-chat-modal.component';
 import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
+import { parseTopicTags } from '../../shared/utils/tag-utils';
 
 @Component({
   selector: 'app-conversations',
   standalone: true,
-  imports: [RouterLink, SelfProfileModalComponent, NewChatModalComponent, CreateGroupModalComponent],
+  imports: [RouterOutlet, SelfProfileModalComponent, NewChatModalComponent, CreateGroupModalComponent],
   templateUrl: './conversations.component.html',
   styleUrl: './conversations.component.scss'
 })
@@ -32,6 +34,7 @@ export class ConversationsComponent implements OnInit {
   // Active navigation rail tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'
   readonly activeNavTab = signal<'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'>('CHATS');
   readonly groupFilter = signal<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
+  readonly activeGroupId = signal<string | null>(null);
 
   readonly activeProcessingId = signal<string | null>(null);
   readonly activeAction = signal<'ACCEPT' | 'DECLINE' | 'BLOCK' | null>(null);
@@ -60,6 +63,14 @@ export class ConversationsComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.syncRouteState();
+
+    this.router.events
+      .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
+      .subscribe(() => {
+        this.syncRouteState();
+      });
+
     this.contactService.loadIncomingRequests().subscribe({
       error: () => {
         // Silently handle initial load failure; retryable via reload
@@ -71,6 +82,27 @@ export class ConversationsComponent implements OnInit {
         // Silently handle initial load failure
       }
     });
+  }
+
+  syncRouteState(): void {
+    const url = this.router.url;
+    if (url.includes('/groups/')) {
+      this.activeNavTab.set('GROUPS');
+      const parts = url.split('/groups/');
+      if (parts[1]) {
+        const id = parts[1].split('?')[0].split('/')[0];
+        this.activeGroupId.set(id);
+      }
+    } else if (url.includes('/invite/')) {
+      this.activeNavTab.set('GROUPS');
+      this.activeGroupId.set(null);
+    } else {
+      this.activeGroupId.set(null);
+    }
+  }
+
+  parseTags(raw: string | null | undefined): string[] {
+    return parseTopicTags(raw);
   }
 
   setNavTab(tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'): void {
