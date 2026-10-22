@@ -237,6 +237,41 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+    delete:
+      tags:
+      - Groups
+      summary: Delete group
+      description: Permanently deletes the group and cascades to its conversation. Admin-only operation.
+      operationId: deleteGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Group deleted successfully
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not an admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/groups/{groupId}/invite:
     post:
       tags:
@@ -374,6 +409,53 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Cannot demote the sole admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/groups/{groupId}/members/{userId}:
+    delete:
+      tags:
+      - Groups
+      summary: Remove member from group
+      description: Evicts a member from the group. Admin-only operation. Cannot remove another admin or self.
+      operationId: removeMember
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Member removed successfully
+        "400":
+          description: Cannot remove self via remove member endpoint
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not an admin or target is an admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group or member not found
           content:
             '*/*':
               schema:

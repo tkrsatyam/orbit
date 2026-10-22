@@ -20,6 +20,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -346,6 +347,76 @@ public class GroupController {
             @PathVariable String groupId) {
         String userId = resolveUserId(principalUserId, authentication);
         groupService.leaveGroup(userId, groupId);
+    }
+
+    @Operation(summary = "Remove member from group", description = "Evicts a member from the group. Admin-only operation. Cannot remove another admin or self.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Member removed successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Cannot remove self via remove member endpoint",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller is not an admin or target is an admin",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group or member not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{groupId}/members/{targetUserId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeMember(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId,
+            @PathVariable String targetUserId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        groupService.removeMember(userId, groupId, targetUserId);
+    }
+
+    @Operation(summary = "Delete group", description = "Permanently deletes the group and cascades to its conversation. Admin-only operation.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "204",
+                    description = "Group deleted successfully"
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Caller is not an admin",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @DeleteMapping("/{groupId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteGroup(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        groupService.deleteGroup(userId, groupId);
     }
 
     private String resolveUserId(String principalUserId, Authentication authentication) {

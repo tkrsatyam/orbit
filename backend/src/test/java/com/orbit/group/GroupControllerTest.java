@@ -32,6 +32,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -431,5 +432,56 @@ class GroupControllerTest {
                         .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.message").value("Group not found with id: group-1"));
+    }
+
+    @Test
+    void removeMember_Success_Returns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/groups/group-1/members/target-user")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of())))
+                .andExpect(status().isNoContent());
+
+        verify(groupService).removeMember("admin-1", "group-1", "target-user");
+    }
+
+    @Test
+    void removeMember_Self_Returns400() throws Exception {
+        doThrow(new IllegalArgumentException("Admins cannot remove themselves; use leave group instead"))
+                .when(groupService).removeMember("admin-1", "group-1", "admin-1");
+
+        mockMvc.perform(delete("/api/v1/groups/group-1/members/admin-1")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Admins cannot remove themselves; use leave group instead"));
+    }
+
+    @Test
+    void removeMember_NotAdmin_Returns403() throws Exception {
+        doThrow(new ForbiddenException("Only group admins can remove members"))
+                .when(groupService).removeMember("user-1", "group-1", "target-user");
+
+        mockMvc.perform(delete("/api/v1/groups/group-1/members/target-user")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can remove members"));
+    }
+
+    @Test
+    void deleteGroup_Success_Returns204() throws Exception {
+        mockMvc.perform(delete("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of())))
+                .andExpect(status().isNoContent());
+
+        verify(groupService).deleteGroup("admin-1", "group-1");
+    }
+
+    @Test
+    void deleteGroup_NotAdmin_Returns403() throws Exception {
+        doThrow(new ForbiddenException("Only group admins can delete the group"))
+                .when(groupService).deleteGroup("user-1", "group-1");
+
+        mockMvc.perform(delete("/api/v1/groups/group-1")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can delete the group"));
     }
 }

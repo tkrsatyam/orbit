@@ -36,12 +36,18 @@ export class GroupComponent implements OnInit {
   readonly loadingMembers = signal<boolean>(false);
   readonly memberActionError = signal<string | null>(null);
   readonly updatingMemberId = signal<string | null>(null);
+  readonly removingMemberId = signal<string | null>(null);
   readonly currentUserId = computed(() => this.authService.currentUser()?.id);
 
   // Leave space state
   readonly isLeaveModalOpen = signal<boolean>(false);
   readonly isLeaving = signal<boolean>(false);
   readonly leaveError = signal<string | null>(null);
+
+  // Delete space state
+  readonly isDeleteSpaceModalOpen = signal<boolean>(false);
+  readonly isDeletingSpace = signal<boolean>(false);
+  readonly deleteSpaceError = signal<string | null>(null);
 
   readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -233,6 +239,58 @@ export class GroupComponent implements OnInit {
         this.isLeaving.set(false);
         const msg = err.error?.message || 'Failed to leave space';
         this.leaveError.set(msg);
+      }
+    });
+  }
+
+  removeMember(targetMember: GroupMemberResponse): void {
+    const gid = this.groupId();
+    if (!gid || this.removingMemberId()) return;
+
+    this.removingMemberId.set(targetMember.userId);
+    this.memberActionError.set(null);
+
+    this.groupService.removeMember(gid, targetMember.userId).subscribe({
+      next: () => {
+        this.members.update((list) => list.filter((m) => m.userId !== targetMember.userId));
+        this.group.update((g) => (g ? { ...g, memberCount: Math.max(0, g.memberCount - 1) } : null));
+        this.removingMemberId.set(null);
+      },
+      error: (err) => {
+        this.removingMemberId.set(null);
+        const msg = err.error?.message || 'Failed to remove member';
+        this.memberActionError.set(msg);
+      }
+    });
+  }
+
+  openDeleteSpaceModal(): void {
+    this.deleteSpaceError.set(null);
+    this.isDeleteSpaceModalOpen.set(true);
+  }
+
+  closeDeleteSpaceModal(): void {
+    this.isDeleteSpaceModalOpen.set(false);
+    this.deleteSpaceError.set(null);
+  }
+
+  confirmDeleteSpace(): void {
+    const gid = this.groupId();
+    if (!gid || this.isDeletingSpace()) return;
+
+    this.isDeletingSpace.set(true);
+    this.deleteSpaceError.set(null);
+
+    this.groupService.deleteGroup(gid).subscribe({
+      next: () => {
+        this.isDeletingSpace.set(false);
+        this.closeDeleteSpaceModal();
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        this.isDeletingSpace.set(false);
+        const msg = err.error?.message || 'Failed to delete space';
+        this.deleteSpaceError.set(msg);
       }
     });
   }

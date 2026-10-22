@@ -558,4 +558,93 @@ class GroupServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Group not found with id: non-existent");
     }
+
+    @Test
+    void removeMember_AdminRemovesMember_Success() {
+        GroupMember admin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build();
+        GroupMember member = GroupMember.builder().userId("member-1").role(GroupRole.MEMBER).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .conversationId("conv-1")
+                .members(new ArrayList<>(List.of(admin, member)))
+                .memberCount(2)
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        groupService.removeMember("admin-1", "grp-1", "member-1");
+
+        assertThat(group.getMembers()).hasSize(1);
+        assertThat(group.getMembers().get(0).getUserId()).isEqualTo("admin-1");
+        assertThat(group.getMemberCount()).isEqualTo(1);
+
+        verify(groupRepository).save(group);
+        verify(conversationService).removeGroupParticipant("conv-1", "member-1");
+    }
+
+    @Test
+    void removeMember_AdminRemovesSelf_ThrowsIllegalArgument() {
+        assertThatThrownBy(() -> groupService.removeMember("admin-1", "grp-1", "admin-1"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Admins cannot remove themselves; use leave group instead");
+    }
+
+    @Test
+    void removeMember_AdminRemovesAnotherAdmin_ThrowsForbidden() {
+        GroupMember admin1 = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build();
+        GroupMember admin2 = GroupMember.builder().userId("admin-2").role(GroupRole.ADMIN).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(admin1, admin2)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.removeMember("admin-1", "grp-1", "admin-2"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Cannot remove another admin from the group");
+    }
+
+    @Test
+    void removeMember_NonAdminCaller_ThrowsForbidden() {
+        GroupMember member1 = GroupMember.builder().userId("member-1").role(GroupRole.MEMBER).build();
+        GroupMember member2 = GroupMember.builder().userId("member-2").role(GroupRole.MEMBER).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(member1, member2)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.removeMember("member-1", "grp-1", "member-2"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Only group admins can remove members");
+    }
+
+    @Test
+    void deleteGroup_AdminDeletes_Success() {
+        GroupMember admin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .conversationId("conv-1")
+                .members(new ArrayList<>(List.of(admin)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        groupService.deleteGroup("admin-1", "grp-1");
+
+        verify(groupRepository).deleteById("grp-1");
+        verify(conversationService).deleteGroupConversation("conv-1");
+    }
+
+    @Test
+    void deleteGroup_NonAdmin_ThrowsForbidden() {
+        GroupMember member = GroupMember.builder().userId("member-1").role(GroupRole.MEMBER).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(member)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.deleteGroup("member-1", "grp-1"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Only group admins can delete the group");
+    }
 }

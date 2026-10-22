@@ -157,4 +157,23 @@ export class GroupService {
       })
     );
   }
+
+  /**
+   * Removes a member from the group. Admin-only operation.
+   */
+  removeMember(groupId: string, targetUserId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${groupId}/members/${targetUserId}`);
+  }
+
+  /**
+   * Permanently deletes a group and cascades deletion to its associated conversation.
+   * Admin-only operation.
+   */
+  deleteGroup(groupId: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${groupId}`).pipe(
+      tap(() => {
+        this.myGroups.update((groups) => groups.filter((g) => g.id !== groupId));
+      })
+    );
+  }
 }

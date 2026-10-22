@@ -28,6 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -600,5 +601,80 @@ class GroupEndpointIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("You are not a member of this group"));
+    }
+
+    @Test
+    void removeMember_AdminRemovesRegularMember_Returns204() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.GROUP)
+                .participantIds(new ArrayList<>(List.of(adminUser.getId(), regularUser.getId())))
+                .mutedBy(new ArrayList<>())
+                .build());
+
+        Group group = groupRepository.save(Group.builder()
+                .name("Eviction Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId(conv.getId())
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(delete(GROUPS_PATH + "/" + group.getId() + "/members/" + regularUser.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        Group updated = groupRepository.findById(group.getId()).orElseThrow();
+        assertThat(updated.getMemberCount()).isEqualTo(1);
+        assertThat(updated.getMembers()).extracting(GroupMember::getUserId).doesNotContain(regularUser.getId());
+
+        Conversation updatedConv = conversationRepository.findById(conv.getId()).orElseThrow();
+        assertThat(updatedConv.getParticipantIds()).containsExactly(adminUser.getId());
+    }
+
+    @Test
+    void deleteGroup_AdminDeletesGroup_Returns204() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.GROUP)
+                .participantIds(new ArrayList<>(List.of(adminUser.getId())))
+                .mutedBy(new ArrayList<>())
+                .build());
+
+        Group group = groupRepository.save(Group.builder()
+                .name("Doomed Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId(conv.getId())
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build()
+                )))
+                .build());
+
+        mockMvc.perform(delete(GROUPS_PATH + "/" + group.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isNoContent());
+
+        assertThat(groupRepository.findById(group.getId())).isEmpty();
+        assertThat(conversationRepository.findById(conv.getId())).isEmpty();
+    }
+
+    @Test
+    void deleteGroup_NonAdmin_Returns403() throws Exception {
+        Group group = groupRepository.save(Group.builder()
+                .name("Shielded Space")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(2)
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(regularUser.getId()).role(GroupRole.MEMBER).build()
+                )))
+                .build());
+
+        mockMvc.perform(delete(GROUPS_PATH + "/" + group.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can delete the group"));
     }
 }
