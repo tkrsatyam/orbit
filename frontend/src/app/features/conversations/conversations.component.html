@@ -304,9 +304,11 @@
                   <span class="group-item-visibility">{{ grp.visibility }}</span>
                 </div>
                 <div class="group-item-bottom">
-                  @for (tag of parseTags(grp.topicTag); track tag) {
-                    <span class="topic-tag-pill">{{ tag }}</span>
-                  }
+                  <div class="group-item-tags">
+                    @for (tag of parseTags(grp.topicTag); track tag) {
+                      <span class="topic-tag-pill">{{ tag }}</span>
+                    }
+                  </div>
                   <span class="members-metric">{{ grp.memberCount }} members</span>
                 </div>
               </div>

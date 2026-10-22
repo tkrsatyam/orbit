@@ -1,7 +1,9 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
@@ -20,7 +22,7 @@ export interface TopicFilter {
   templateUrl: './discover.component.html',
   styleUrl: './discover.component.scss'
 })
-export class DiscoverComponent implements OnInit {
+export class DiscoverComponent implements OnInit, OnDestroy {
   readonly authService = inject(AuthService);
   readonly groupService = inject(GroupService);
   private readonly router = inject(Router);
@@ -28,21 +30,71 @@ export class DiscoverComponent implements OnInit {
   readonly searchQuery = signal<string>('');
   readonly selectedTag = signal<string>('all');
   readonly groups = signal<GroupResponse[]>([]);
+  readonly allDiscoveredGroups = signal<GroupResponse[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly joiningGroupId = signal<string | null>(null);
   readonly isCreateModalOpen = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  readonly topicFilters: TopicFilter[] = [
-    { id: 'all', label: 'All Topics' },
-    { id: 'java-spring', label: '#java-spring', tag: 'java-spring' },
-    { id: 'interview-prep', label: '#interview-prep', tag: 'interview-prep' },
-    { id: 'system-design', label: '#system-design', tag: 'system-design' },
-    { id: 'frontend-angular', label: '#frontend-angular', tag: 'frontend-angular' }
-  ];
+  private readonly searchSubject = new Subject<string>();
+  private searchSubscription?: Subscription;
+
+  // Dynamically computed topic filter chips extracted from all available public spaces
+  readonly topicFilters = computed<TopicFilter[]>(() => {
+    const list = this.allDiscoveredGroups();
+    const tagCountMap = new Map<string, number>();
+
+    for (const group of list) {
+      const tags = parseTopicTags(group.topicTag);
+      for (const t of tags) {
+        const clean = t.trim().replace(/^#/, '').toLowerCase();
+        if (clean) {
+          tagCountMap.set(clean, (tagCountMap.get(clean) || 0) + 1);
+        }
+      }
+    }
+
+    const dynamicTags: TopicFilter[] = Array.from(tagCountMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([cleanTag]) => ({
+        id: cleanTag,
+        label: `#${cleanTag}`,
+        tag: cleanTag
+      }));
+
+    return [{ id: 'all', label: 'All Topics' }, ...dynamicTags];
+  });
 
   ngOnInit(): void {
-    this.loadGroups();
+    this.searchSubscription = this.searchSubject
+      .pipe(debounceTime(300), distinctUntilChanged())
+      .subscribe((query) => {
+        this.searchQuery.set(query);
+        this.loadGroups();
+      });
+
+    this.loadInitialData();
+  }
+
+  ngOnDestroy(): void {
+    this.searchSubscription?.unsubscribe();
+  }
+
+  loadInitialData(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    this.groupService.discoverGroups({ page: 0, size: 100 }).subscribe({
+      next: (response) => {
+        this.allDiscoveredGroups.set(response.content);
+        this.groups.set(response.content);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        this.errorMessage.set(err?.error?.message || 'Failed to load public spaces');
+        this.isLoading.set(false);
+      }
+    });
   }
 
   loadGroups(): void {
@@ -55,6 +107,9 @@ export class DiscoverComponent implements OnInit {
     this.groupService.discoverGroups({ q: query, tag, page: 0, size: 50 }).subscribe({
       next: (response) => {
         this.groups.set(response.content);
+        if (!query && (!tag || tag === 'all')) {
+          this.allDiscoveredGroups.set(response.content);
+        }
         this.isLoading.set(false);
       },
       error: (err) => {
@@ -64,8 +119,8 @@ export class DiscoverComponent implements OnInit {
     });
   }
 
-  onSearchChange(): void {
-    this.loadGroups();
+  onSearchInput(value: string): void {
+    this.searchSubject.next(value);
   }
 
   clearSearch(): void {
@@ -127,7 +182,7 @@ export class DiscoverComponent implements OnInit {
 
   onGroupCreated(created: GroupResponse): void {
     this.isCreateModalOpen.set(false);
-    this.loadGroups();
+    this.loadInitialData();
   }
 
   currentUserName(): string {

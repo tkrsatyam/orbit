@@ -1,9 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { AuthService } from '../../core/services/auth.service';
-import { GroupResponse, GroupService, GroupPageResponse, GroupJoinResponse } from '../../core/services/group.service';
+import { GroupResponse, GroupService, GroupPageResponse } from '../../core/services/group.service';
 import { DiscoverComponent } from './discover.component';
 
 describe('DiscoverComponent', () => {
@@ -42,7 +42,7 @@ describe('DiscoverComponent', () => {
       id: 'grp-2',
       name: 'LeetCode Grinders',
       description: 'Daily mock interviews and algorithm practice',
-      topicTag: 'interview-prep',
+      topicTag: '#interview-prep, #dsa',
       visibility: 'PUBLIC',
       avatarUrl: null,
       coverImageUrl: null,
@@ -93,22 +93,44 @@ describe('DiscoverComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should create and load public groups on initialization', () => {
+  it('should create and dynamically compute topic filters from public groups', () => {
     expect(component).toBeTruthy();
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: '', tag: undefined, page: 0, size: 50 });
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ page: 0, size: 100 });
     expect(component.groups().length).toBe(2);
 
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.hero-title')?.textContent).toContain('Discover Public Spaces');
-    const cards = compiled.querySelectorAll('.space-card');
-    expect(cards.length).toBe(2);
+    // Dynamic filters computed from mockPublicGroups ('java-spring', 'interview-prep', 'dsa')
+    const filters = component.topicFilters();
+    expect(filters.length).toBeGreaterThan(1);
+    expect(filters[0].label).toBe('All Topics');
+    const labels = filters.map(f => f.label);
+    expect(labels).toContain('#java-spring');
+    expect(labels).toContain('#interview-prep');
+    expect(labels).toContain('#dsa');
   });
 
-  it('should filter groups when searching query', () => {
-    component.searchQuery.set('Spring');
-    component.onSearchChange();
+  it('should debounce search input before calling API', () => {
+    vi.useFakeTimers();
+    groupServiceMock.discoverGroups.mockClear();
 
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: 'Spring', tag: undefined, page: 0, size: 50 });
+    // Type 6 letters rapidly
+    component.onSearchInput('D');
+    component.onSearchInput('De');
+    component.onSearchInput('Des');
+    component.onSearchInput('Desi');
+    component.onSearchInput('Desig');
+    component.onSearchInput('Design');
+
+    // Should NOT have called discoverGroups yet before debounce elapsed
+    expect(groupServiceMock.discoverGroups).not.toHaveBeenCalled();
+
+    // Advance virtual clock past debounce timer (300ms)
+    vi.advanceTimersByTime(300);
+
+    // Called only ONCE with the final search query!
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledTimes(1);
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: 'Design', tag: undefined, page: 0, size: 50 });
+
+    vi.useRealTimers();
   });
 
   it('should filter groups when selecting topic tag chip', () => {
@@ -118,7 +140,7 @@ describe('DiscoverComponent', () => {
     expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: '', tag: 'interview-prep', page: 0, size: 50 });
   });
 
-  it('should clear search input and reload groups', () => {
+  it('should clear search input and reload groups immediately', () => {
     component.searchQuery.set('Something');
     component.clearSearch();
 
@@ -130,7 +152,6 @@ describe('DiscoverComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const cards = compiled.querySelectorAll('.space-card');
 
-    // First card has role: 'ADMIN' -> Open Space button
     const openBtn = cards[0].querySelector('.btn-card-joined') as HTMLButtonElement;
     expect(openBtn).not.toBeNull();
     expect(openBtn.textContent).toContain('Open Space');
@@ -143,7 +164,6 @@ describe('DiscoverComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     const cards = compiled.querySelectorAll('.space-card');
 
-    // Second card has no role -> Join Space button
     const joinBtn = cards[1].querySelector('.btn-card-join') as HTMLButtonElement;
     expect(joinBtn).not.toBeNull();
     expect(joinBtn.textContent).toContain('Join Space');
@@ -151,7 +171,6 @@ describe('DiscoverComponent', () => {
     joinBtn.click();
     expect(groupServiceMock.joinPublicGroup).toHaveBeenCalledWith('grp-2');
 
-    // After join, group should have role MEMBER and incremented member count
     const updated = component.groups().find(g => g.id === 'grp-2');
     expect(updated?.role).toBe('MEMBER');
     expect(updated?.memberCount).toBe(16);

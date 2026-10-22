@@ -6,13 +6,6 @@
         <span class="orbit-logo">⬡</span>
         <span class="brand-name">Orbit</span>
       </a>
-      <a routerLink="/" class="back-link">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="19" y1="12" x2="5" y2="12"></line>
-          <polyline points="12 19 5 12 12 5"></polyline>
-        </svg>
-        <span>Back to Conversations</span>
-      </a>
     </div>
 
     <div class="nav-center">
@@ -23,8 +16,8 @@
         </svg>
         <input
           type="text"
-          [(ngModel)]="searchQuery"
-          (ngModelChange)="onSearchChange()"
+          [ngModel]="searchQuery()"
+          (ngModelChange)="onSearchInput($event)"
           placeholder="Search spaces by name, topic, or keyword..."
           aria-label="Search public spaces"
         />
@@ -66,21 +59,23 @@
       </p>
     </div>
 
-    <!-- Filter Chips -->
-    <div class="filter-chips" role="tablist">
-      @for (filter of topicFilters; track filter.id) {
-        <button
-          type="button"
-          class="chip"
-          [class.active]="selectedTag() === filter.id"
-          (click)="selectTag(filter.id)"
-          role="tab"
-          [attr.aria-selected]="selectedTag() === filter.id"
-        >
-          {{ filter.label }}
-        </button>
-      }
-    </div>
+    <!-- Filter Chips (Computed from Available Spaces) -->
+    @if (topicFilters().length > 1) {
+      <div class="filter-chips" role="tablist">
+        @for (filter of topicFilters(); track filter.id) {
+          <button
+            type="button"
+            class="chip"
+            [class.active]="selectedTag() === filter.id"
+            (click)="selectTag(filter.id)"
+            role="tab"
+            [attr.aria-selected]="selectedTag() === filter.id"
+          >
+            {{ filter.label }}
+          </button>
+        }
+      </div>
+    }
   </section>
 
   <!-- Error Banner -->

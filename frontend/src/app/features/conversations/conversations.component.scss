@@ -414,8 +414,18 @@
 
 .group-item-bottom {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.group-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 1;
 }
 
 .topic-tag-pill {
@@ -424,11 +434,15 @@
   background-color: var(--orbit-elevated, #27272a);
   color: var(--orbit-text-muted, #a1a1aa);
   border-radius: 4px;
+  white-space: nowrap;
 }
 
 .members-metric {
   font-size: 0.75rem;
   color: var(--orbit-text-muted, #a1a1aa);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 
 // Incoming Request Cards

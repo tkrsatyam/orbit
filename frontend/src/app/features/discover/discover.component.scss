@@ -1,7 +1,9 @@
 .discover-container {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
   background-color: var(--orbit-bg);
   color: var(--orbit-text-primary);
   font-family: var(--sans);
@@ -40,24 +42,6 @@
   .orbit-logo {
     color: var(--orbit-accent);
     font-size: 20px;
-  }
-}
-
-.back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--orbit-text-muted);
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: all 0.15s ease;
-
-  &:hover {
-    color: var(--orbit-text-primary);
-    background-color: var(--orbit-elevated);
   }
 }
 
@@ -343,6 +327,7 @@
     flex-wrap: wrap;
     gap: 6px;
     justify-content: flex-end;
+    max-width: 65%;
 
     .topic-pill {
       font-size: 12px;
@@ -352,6 +337,7 @@
       border: 1px solid rgba(245, 158, 11, 0.2);
       border-radius: 12px;
       padding: 3px 8px;
+      white-space: nowrap;
     }
   }
 }
@@ -398,6 +384,8 @@
     color: var(--orbit-text-muted);
     font-size: 13px;
     font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .card-action .btn-card {
