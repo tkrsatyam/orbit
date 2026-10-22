@@ -108,7 +108,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: #2a2015;
+  background: var(--orbit-accent-subtle);
   border: 2.5px solid var(--orbit-accent);
   display: flex;
   align-items: center;
@@ -153,7 +153,7 @@
 .profile-bio-card {
   margin: 0 24px 14px;
   text-align: left;
-  background: #202024;
+  background: var(--orbit-elevated);
   border: 1px solid var(--orbit-border);
   border-radius: 8px;
   padding: 12px 14px;
@@ -179,7 +179,7 @@
 
 .profile-meta-card {
   margin: 0 24px 28px;
-  background: #202024;
+  background: var(--orbit-elevated);
   border: 1px solid var(--orbit-border);
   border-radius: 8px;
   padding: 12px 14px;
@@ -220,7 +220,7 @@
     display: block;
     width: 40px;
     height: 4px;
-    background: #3f3f46;
+    background: var(--orbit-border);
     border-radius: 2px;
     margin: 10px auto 4px;
   }

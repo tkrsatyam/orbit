@@ -87,10 +87,10 @@
 .error-banner {
   margin: 0 1.75rem 0.5rem;
   padding: 0.75rem 1rem;
-  background-color: rgba(244, 63, 94, 0.12);
+  background-color: var(--orbit-danger-subtle, rgba(244, 63, 94, 0.12));
   border: 1px solid rgba(244, 63, 94, 0.35);
   border-radius: 8px;
-  color: #fda4af;
+  color: var(--orbit-danger);
   font-size: 0.875rem;
   display: flex;
   align-items: center;
@@ -324,7 +324,7 @@
   font-weight: 500;
 
   &:hover {
-    background-color: #323238;
+    background-color: var(--orbit-surface, #18181b);
     border-color: var(--orbit-text-muted, #a1a1aa);
   }
 }

@@ -1,0 +1,127 @@
+:host {
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.orbit-avatar-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: var(--orbit-elevated);
+  border: 1px solid var(--orbit-border);
+  color: var(--orbit-text-primary);
+  font-weight: 600;
+  box-sizing: border-box;
+  user-select: none;
+  overflow: visible;
+
+  &.is-group {
+    border-radius: 12px;
+    background-color: var(--orbit-accent-subtle);
+    border-color: rgba(245, 158, 11, 0.25);
+    color: var(--orbit-accent);
+  }
+
+  .avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    object-fit: cover;
+    display: block;
+  }
+
+  .avatar-initials {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    text-transform: uppercase;
+  }
+
+  // Size Variants
+  &.size-xs {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    &.is-group {
+      border-radius: 6px;
+    }
+  }
+
+  &.size-sm {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+    &.is-group {
+      border-radius: 8px;
+    }
+  }
+
+  &.size-md {
+    width: 40px;
+    height: 40px;
+    font-size: 14px;
+    &.is-group {
+      border-radius: 10px;
+    }
+  }
+
+  &.size-lg {
+    width: 48px;
+    height: 48px;
+    font-size: 17px;
+    &.is-group {
+      border-radius: 12px;
+    }
+  }
+
+  &.size-xl {
+    width: 72px;
+    height: 72px;
+    font-size: 24px;
+    border-width: 2px;
+    &.is-group {
+      border-radius: 18px;
+    }
+  }
+
+  .presence-indicator {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    border-radius: 50%;
+    background-color: var(--orbit-border);
+    border: 2px solid var(--orbit-surface);
+    box-sizing: content-box;
+
+    &.online {
+      background-color: var(--orbit-presence-online);
+    }
+
+    &.offline {
+      background-color: var(--orbit-text-muted);
+    }
+  }
+
+  &.size-xs .presence-indicator,
+  &.size-sm .presence-indicator {
+    width: 7px;
+    height: 7px;
+  }
+
+  &.size-md .presence-indicator {
+    width: 9px;
+    height: 9px;
+  }
+
+  &.size-lg .presence-indicator,
+  &.size-xl .presence-indicator {
+    width: 12px;
+    height: 12px;
+    border-width: 2.5px;
+  }
+}

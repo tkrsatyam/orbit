@@ -1,0 +1,29 @@
+<div
+  class="orbit-avatar-wrapper"
+  [class]="'size-' + size()"
+  [class.is-group]="isGroup()"
+  [attr.aria-label]="name() || (isGroup() ? 'Group Avatar' : 'User Avatar')"
+>
+  @if (hasValidImage()) {
+    <img
+      [src]="imageUrl()"
+      [alt]="name() || 'Avatar'"
+      class="avatar-img"
+      (error)="onImageError()"
+    />
+  } @else {
+    <span class="avatar-initials" data-testid="avatar-initials">
+      {{ initial() }}
+    </span>
+  }
+
+  @if (showPresence()) {
+    <span
+      class="presence-indicator"
+      [class.online]="isOnline()"
+      [class.offline]="!isOnline()"
+      [attr.title]="isOnline() ? 'Online' : 'Offline'"
+      data-testid="avatar-presence"
+    ></span>
+  }
+</div>

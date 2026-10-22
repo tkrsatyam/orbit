@@ -13,6 +13,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
+import { NavigationRailComponent } from '../../shared/components/navigation-rail/navigation-rail.component';
 import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
 
@@ -29,6 +30,7 @@ export interface TopicFilter {
     CommonModule,
     FormsModule,
     RouterLink,
+    NavigationRailComponent,
     CreateGroupModalComponent,
     SelfProfileModalComponent
   ],

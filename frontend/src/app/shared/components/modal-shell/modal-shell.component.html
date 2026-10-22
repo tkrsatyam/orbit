@@ -1,0 +1,53 @@
+@if (isOpen()) {
+  <div
+    class="orbit-modal-backdrop"
+    (click)="onBackdropClick($event)"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="ariaLabelledBy()"
+    data-testid="modal-backdrop"
+  >
+    <div
+      class="orbit-modal-card"
+      [style.max-width]="maxWidth()"
+      (click)="$event.stopPropagation()"
+      data-testid="modal-card"
+    >
+      <div class="drag-handle-mobile" aria-hidden="true"></div>
+
+      @if (showAccentBar()) {
+        <div class="modal-accent-bar" aria-hidden="true"></div>
+      }
+
+      <header class="modal-header">
+        <div class="header-titles">
+          <h2 [id]="ariaLabelledBy()" class="modal-title" data-testid="modal-title">
+            {{ title() }}
+          </h2>
+          @if (subtitle()) {
+            <p class="modal-subtitle" data-testid="modal-subtitle">
+              {{ subtitle() }}
+            </p>
+          }
+        </div>
+
+        <button
+          type="button"
+          class="btn-close"
+          (click)="close.emit()"
+          aria-label="Close modal"
+          data-testid="modal-close-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <div class="modal-body" data-testid="modal-body">
+        <ng-content />
+      </div>
+    </div>
+  </div>
+}
