@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { environment } from '../../../environments/environment';
-import { GroupService, CreateGroupPayload, GroupResponse, InviteResponse, GroupJoinResponse } from './group.service';
+import { GroupService, CreateGroupPayload, GroupResponse, InviteResponse, GroupJoinResponse, GroupPageResponse } from './group.service';
 
 describe('GroupService', () => {
   let service: GroupService;
@@ -289,5 +289,63 @@ describe('GroupService', () => {
     req.flush(null);
 
     expect(service.myGroups()).toEqual([]);
+  });
+
+  it('discoverGroups should send GET with query params', () => {
+    const mockPage: GroupPageResponse = {
+      content: [
+        {
+          id: 'grp-1',
+          name: 'Distributed Systems',
+          description: 'Desc',
+          topicTag: 'system-design',
+          visibility: 'PUBLIC',
+          avatarUrl: null,
+          coverImageUrl: null,
+          memberCount: 10,
+          conversationId: 'conv-1',
+          createdAt: '2026-10-21T10:00:00Z',
+          role: 'MEMBER'
+        }
+      ],
+      page: 0,
+      size: 20,
+      totalElements: 1,
+      totalPages: 1,
+      last: true
+    };
+
+    service.discoverGroups({ q: 'Systems', tag: 'system-design', page: 0, size: 20 }).subscribe((res) => {
+      expect(res.content.length).toBe(1);
+      expect(res.content[0].name).toBe('Distributed Systems');
+    });
+
+    const req = httpTesting.expectOne((r) =>
+      r.url === `${environment.apiBaseUrl}/api/v1/groups` &&
+      r.params.get('q') === 'Systems' &&
+      r.params.get('tag') === 'system-design' &&
+      r.params.get('page') === '0' &&
+      r.params.get('size') === '20'
+    );
+    expect(req.request.method).toBe('GET');
+    req.flush(mockPage);
+  });
+
+  it('joinPublicGroup should send POST to /{groupId}/join', () => {
+    const mockJoinRes: GroupJoinResponse = {
+      groupId: 'grp-1',
+      conversationId: 'conv-1',
+      role: 'MEMBER'
+    };
+
+    service.joinPublicGroup('grp-1').subscribe((res) => {
+      expect(res.groupId).toBe('grp-1');
+      expect(res.role).toBe('MEMBER');
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/grp-1/join`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({});
+    req.flush(mockJoinRes);
   });
 });

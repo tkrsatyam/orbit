@@ -1,44 +1,262 @@
-@if (authService.isLoading()) {
-  <div class="loading-container">
-    <p>Loading...</p>
-  </div>
-} @else {
-  <div class="discover-container">
-    <header class="discover-header">
-      <h2>Discover Groups</h2>
-      <p class="discover-subtitle">
-        Explore public spaces and connect with members on Orbit.
-      </p>
-    </header>
+<div class="discover-container">
+  <!-- Top Navigation Bar -->
+  <header class="top-nav">
+    <div class="nav-left">
+      <a routerLink="/" class="brand-link" title="Return to Orbit">
+        <span class="orbit-logo">⬡</span>
+        <span class="brand-name">Orbit</span>
+      </a>
+      <a routerLink="/" class="back-link">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="12" x2="5" y2="12"></line>
+          <polyline points="12 19 5 12 12 5"></polyline>
+        </svg>
+        <span>Back to Conversations</span>
+      </a>
+    </div>
 
-    <div class="groups-list">
-      <div class="group-card">
-        <h3>Orbit Community</h3>
-        <p class="group-description">
-          General discussions, announcements, and project showcase.
-        </p>
-
-        @if (authService.isAuthenticated()) {
-          <button type="button" class="join-button">
-            Join Group
+    <div class="nav-center">
+      <div class="search-bar">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input
+          type="text"
+          [(ngModel)]="searchQuery"
+          (ngModelChange)="onSearchChange()"
+          placeholder="Search spaces by name, topic, or keyword..."
+          aria-label="Search public spaces"
+        />
+        @if (searchQuery()) {
+          <button type="button" class="clear-btn" (click)="clearSearch()" title="Clear search">
+            ✕
           </button>
-        } @else {
-          <a routerLink="/register" class="register-link">
-            Register to join
-          </a>
         }
       </div>
     </div>
 
-    <div class="discover-footer">
-      <a routerLink="/" class="back-link">
-        &larr; Back to conversations
-      </a>
+    <div class="nav-right">
       @if (authService.isAuthenticated()) {
-        <span class="member-tag">
-          Logged in as {{ currentUserName() }}
-        </span>
+        <button type="button" class="btn btn-create" (click)="openCreateModal()">
+          <svg class="plus-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Create Space</span>
+        </button>
+
+        <div class="user-pill">
+          <span class="user-avatar">{{ currentUserName().charAt(0).toUpperCase() }}</span>
+          <span class="user-name">{{ currentUserName() }}</span>
+        </div>
+      } @else {
+        <a routerLink="/login" class="btn btn-login">Sign In</a>
+        <a routerLink="/register" class="btn btn-register">Get Started</a>
       }
     </div>
-  </div>
-}
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Discover Public Spaces</h1>
+      <p class="hero-subtitle">
+        Join focused engineering communities, mock interview circles, and system design groups across Orbit.
+      </p>
+    </div>
+
+    <!-- Filter Chips -->
+    <div class="filter-chips" role="tablist">
+      @for (filter of topicFilters; track filter.id) {
+        <button
+          type="button"
+          class="chip"
+          [class.active]="selectedTag() === filter.id"
+          (click)="selectTag(filter.id)"
+          role="tab"
+          [attr.aria-selected]="selectedTag() === filter.id"
+        >
+          {{ filter.label }}
+        </button>
+      }
+    </div>
+  </section>
+
+  <!-- Error Banner -->
+  @if (errorMessage()) {
+    <div class="error-banner" role="alert">
+      <span>{{ errorMessage() }}</span>
+      <button type="button" class="error-dismiss" (click)="errorMessage.set(null)">✕</button>
+    </div>
+  }
+
+  <!-- Main Directory Feed -->
+  <main class="feed-container">
+    @if (isLoading()) {
+      <div class="loading-grid">
+        @for (item of [1, 2, 3, 4, 5, 6]; track item) {
+          <div class="skeleton-card">
+            <div class="skeleton-header">
+              <div class="skeleton-badge"></div>
+              <div class="skeleton-tag"></div>
+            </div>
+            <div class="skeleton-line title"></div>
+            <div class="skeleton-line text"></div>
+            <div class="skeleton-line text short"></div>
+            <div class="skeleton-footer">
+              <div class="skeleton-metric"></div>
+              <div class="skeleton-btn"></div>
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (groups().length === 0) {
+      <div class="empty-state">
+        <div class="empty-icon-wrap">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+          </svg>
+        </div>
+        <h3>No spaces found</h3>
+        <p>No public spaces match your search or filter criteria. Be the first to create one!</p>
+        <div class="empty-actions">
+          @if (searchQuery() || selectedTag() !== 'all') {
+            <button type="button" class="btn btn-secondary" (click)="clearSearch(); selectTag('all')">
+              Reset Filters
+            </button>
+          }
+          @if (authService.isAuthenticated()) {
+            <button type="button" class="btn btn-create" (click)="openCreateModal()">
+              Create a Space
+            </button>
+          }
+        </div>
+      </div>
+    } @else {
+      <div class="spaces-grid">
+        @for (group of groups(); track group.id) {
+          <div class="space-card" (click)="group.role ? openSpace(group) : null">
+            <!-- Card Top: Avatar & Topic Tag -->
+            <div class="card-header">
+              @if (group.avatarUrl) {
+                <img [src]="group.avatarUrl" alt="" class="card-avatar" />
+              } @else {
+                <div class="domain-badge domain-badge-{{ getDomainIconType(group) }}">
+                  @switch (getDomainIconType(group)) {
+                    @case ('coffee') {
+                      <!-- Coffee cup for Java / Spring -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M10 2v2"></path><path d="M14 2v2"></path><path d="M18 8h1a4 4 0 0 1 0 8h-1"></path>
+                        <path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path><line x1="6" y1="1" x2="6" y2="4"></line>
+                      </svg>
+                    }
+                    @case ('code') {
+                      <!-- Code brackets for Interview / DSA -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline>
+                      </svg>
+                    }
+                    @case ('layers') {
+                      <!-- Stacked layers for System Design -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                      </svg>
+                    }
+                    @case ('shield') {
+                      <!-- Shield for Frontend / Angular -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                    }
+                    @default {
+                      <!-- Compass fallback -->
+                      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon>
+                      </svg>
+                    }
+                  }
+                </div>
+              }
+
+              <div class="tags-cluster">
+                @for (tag of parseTags(group.topicTag); track tag) {
+                  <span class="topic-pill">{{ tag }}</span>
+                }
+              </div>
+            </div>
+
+            <!-- Card Body: Space Identity -->
+            <div class="card-body">
+              <h3 class="space-name">{{ group.name }}</h3>
+              <p class="space-description">
+                {{ group.description || 'Welcome to ' + group.name + '! Connect with fellow members to collaborate and discuss topics.' }}
+              </p>
+            </div>
+
+            <!-- Card Footer: Member Count & Action -->
+            <div class="card-footer">
+              <div class="member-metric">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                <span>{{ group.memberCount }} {{ group.memberCount === 1 ? 'member' : 'members' }}</span>
+              </div>
+
+              <div class="card-action">
+                @if (!authService.isAuthenticated()) {
+                  <button
+                    type="button"
+                    class="btn-card btn-card-guest"
+                    (click)="joinGroup(group, $event)"
+                  >
+                    Sign In to Join
+                  </button>
+                } @else if (group.role) {
+                  <button
+                    type="button"
+                    class="btn-card btn-card-joined"
+                    (click)="openSpace(group)"
+                  >
+                    <svg class="check-icon" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="20 6 9 17 4 12"></polyline>
+                    </svg>
+                    <span>Open Space</span>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn-card btn-card-join"
+                    [disabled]="joiningGroupId() === group.id"
+                    (click)="joinGroup(group, $event)"
+                  >
+                    @if (joiningGroupId() === group.id) {
+                      <span class="btn-spinner"></span>
+                      <span>Joining...</span>
+                    } @else {
+                      <span>Join Space</span>
+                    }
+                  </button>
+                }
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  <!-- Create Space Modal -->
+  <app-create-group-modal
+    [isOpen]="isCreateModalOpen()"
+    (closeModal)="isCreateModalOpen.set(false)"
+    (groupCreated)="onGroupCreated($event)"
+  ></app-create-group-modal>
+</div>

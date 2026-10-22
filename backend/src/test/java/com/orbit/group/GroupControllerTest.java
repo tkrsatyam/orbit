@@ -8,6 +8,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupMemberListResponse;
 import com.orbit.group.dto.GroupMemberResponse;
+import com.orbit.group.dto.GroupPageResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
@@ -483,5 +484,71 @@ class GroupControllerTest {
                         .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Only group admins can delete the group"));
+    }
+
+    @Test
+    void discoverGroups_Success_Returns200() throws Exception {
+        GroupResponse groupResponse = new GroupResponse(
+                "group-1",
+                "Distributed Systems",
+                "Desc",
+                "system-design",
+                GroupVisibility.PUBLIC,
+                null,
+                null,
+                5,
+                "conv-1",
+                Instant.now(),
+                null
+        );
+        GroupPageResponse pageResponse = new GroupPageResponse(List.of(groupResponse), 0, 20, 1, 1, true);
+        when(groupService.discoverGroups(eq("user-1"), eq("Distributed"), eq("system-design"), eq(0), eq(20)))
+                .thenReturn(pageResponse);
+
+        mockMvc.perform(get("/api/v1/groups")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of()))
+                        .param("q", "Distributed")
+                        .param("tag", "system-design")
+                        .param("page", "0")
+                        .param("size", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("group-1"))
+                .andExpect(jsonPath("$.content[0].name").value("Distributed Systems"))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void joinPublicGroup_Success_Returns200() throws Exception {
+        GroupJoinResponse joinResponse = new GroupJoinResponse("group-1", "conv-1", GroupRole.MEMBER);
+        when(groupService.joinPublicGroup("user-1", "group-1")).thenReturn(joinResponse);
+
+        mockMvc.perform(post("/api/v1/groups/group-1/join")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupId").value("group-1"))
+                .andExpect(jsonPath("$.conversationId").value("conv-1"))
+                .andExpect(jsonPath("$.role").value("MEMBER"));
+    }
+
+    @Test
+    void joinPublicGroup_PrivateGroup_Returns403() throws Exception {
+        when(groupService.joinPublicGroup("user-1", "group-1"))
+                .thenThrow(new ForbiddenException("Cannot join private group without an invitation link"));
+
+        mockMvc.perform(post("/api/v1/groups/group-1/join")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Cannot join private group without an invitation link"));
+    }
+
+    @Test
+    void joinPublicGroup_AlreadyMember_Returns409() throws Exception {
+        when(groupService.joinPublicGroup("user-1", "group-1"))
+                .thenThrow(new ConflictException("User is already a member of this group"));
+
+        mockMvc.perform(post("/api/v1/groups/group-1/join")
+                        .principal(new UsernamePasswordAuthenticationToken("user-1", null, List.of())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("User is already a member of this group"));
     }
 }

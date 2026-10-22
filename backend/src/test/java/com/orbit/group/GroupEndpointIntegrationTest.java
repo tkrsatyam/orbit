@@ -677,4 +677,70 @@ class GroupEndpointIntegrationTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Only group admins can delete the group"));
     }
+
+    @Test
+    void discoverGroups_Unauthenticated_ReturnsPublicGroupsOnly() throws Exception {
+        groupRepository.save(Group.builder()
+                .name("Public Algo Club")
+                .description("DSA practice")
+                .topicTag("interview-prep")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(1)
+                .conversationId("conv-algo")
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build()
+                )))
+                .build());
+
+        groupRepository.save(Group.builder()
+                .name("Secret Project")
+                .visibility(GroupVisibility.PRIVATE)
+                .memberCount(1)
+                .conversationId("conv-sec")
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build()
+                )))
+                .build());
+
+        mockMvc.perform(get(GROUPS_PATH)
+                        .param("q", "Algo")
+                        .param("tag", "interview-prep"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalElements").value(1))
+                .andExpect(jsonPath("$.content[0].name").value("Public Algo Club"))
+                .andExpect(jsonPath("$.content[0].visibility").value("PUBLIC"))
+                .andExpect(jsonPath("$.content[0].role").doesNotExist());
+    }
+
+    @Test
+    void joinPublicGroup_Authenticated_SuccessfullyJoinsAndUpdatesConversation() throws Exception {
+        Conversation conv = conversationRepository.save(Conversation.builder()
+                .type(ConversationType.GROUP)
+                .participantIds(new ArrayList<>(List.of(adminUser.getId())))
+                .build());
+
+        Group group = groupRepository.save(Group.builder()
+                .name("Architecture Weekly")
+                .visibility(GroupVisibility.PUBLIC)
+                .memberCount(1)
+                .conversationId(conv.getId())
+                .members(new ArrayList<>(List.of(
+                        GroupMember.builder().userId(adminUser.getId()).role(GroupRole.ADMIN).build()
+                )))
+                .build());
+
+        mockMvc.perform(post(GROUPS_PATH + "/" + group.getId() + "/join")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + regularToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.groupId").value(group.getId()))
+                .andExpect(jsonPath("$.conversationId").value(conv.getId()))
+                .andExpect(jsonPath("$.role").value("MEMBER"));
+
+        Group updatedGroup = groupRepository.findById(group.getId()).orElseThrow();
+        assertThat(updatedGroup.getMemberCount()).isEqualTo(2);
+        assertThat(updatedGroup.getMembers()).anyMatch(m -> m.getUserId().equals(regularUser.getId()) && m.getRole() == GroupRole.MEMBER);
+
+        Conversation updatedConv = conversationRepository.findById(conv.getId()).orElseThrow();
+        assertThat(updatedConv.getParticipantIds()).contains(regularUser.getId());
+    }
 }

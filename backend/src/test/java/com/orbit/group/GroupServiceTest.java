@@ -11,6 +11,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupMemberListResponse;
 import com.orbit.group.dto.GroupMemberResponse;
+import com.orbit.group.dto.GroupPageResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
@@ -27,6 +28,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -54,6 +57,9 @@ class GroupServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private MongoTemplate mongoTemplate;
+
     private OrbitProperties orbitProperties;
     private GroupService groupService;
 
@@ -64,7 +70,7 @@ class GroupServiceTest {
                 new OrbitProperties.Cors("http://localhost:4200"),
                 new OrbitProperties.Cookie(true, "None")
         );
-        groupService = new GroupService(groupRepository, conversationService, orbitProperties, userRepository);
+        groupService = new GroupService(groupRepository, conversationService, orbitProperties, userRepository, mongoTemplate);
     }
 
     @Test
@@ -646,5 +652,91 @@ class GroupServiceTest {
         assertThatThrownBy(() -> groupService.deleteGroup("member-1", "grp-1"))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("Only group admins can delete the group");
+    }
+
+    @Test
+    void discoverGroups_WithSearchAndTag_ReturnsPaginatedResult() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Spring Boot Ninjas")
+                .description("All things Spring")
+                .topicTag("java-spring")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId("conv-1")
+                .memberCount(1)
+                .members(List.of(GroupMember.builder().userId("user-1").role(GroupRole.ADMIN).build()))
+                .createdAt(Instant.now())
+                .build();
+
+        when(mongoTemplate.count(any(Query.class), eq(Group.class))).thenReturn(1L);
+        when(mongoTemplate.find(any(Query.class), eq(Group.class))).thenReturn(List.of(group));
+
+        GroupPageResponse response = groupService.discoverGroups("user-1", "Spring", "java-spring", 0, 10);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).name()).isEqualTo("Spring Boot Ninjas");
+        assertThat(response.content().get(0).role()).isEqualTo(GroupRole.ADMIN);
+        assertThat(response.totalElements()).isEqualTo(1L);
+        assertThat(response.totalPages()).isEqualTo(1);
+    }
+
+    @Test
+    void joinPublicGroup_Success() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Open Systems")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId("conv-1")
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build())))
+                .build();
+
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        GroupJoinResponse response = groupService.joinPublicGroup("user-2", "grp-1");
+
+        assertThat(response.groupId()).isEqualTo("grp-1");
+        assertThat(response.conversationId()).isEqualTo("conv-1");
+        assertThat(response.role()).isEqualTo(GroupRole.MEMBER);
+        assertThat(group.getMemberCount()).isEqualTo(2);
+        assertThat(group.getMembers()).hasSize(2);
+        verify(groupRepository).save(group);
+        verify(conversationService).addGroupParticipant("conv-1", "user-2");
+    }
+
+    @Test
+    void joinPublicGroup_PrivateGroup_ThrowsForbidden() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Secret Club")
+                .visibility(GroupVisibility.PRIVATE)
+                .conversationId("conv-1")
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).build())))
+                .build();
+
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.joinPublicGroup("user-2", "grp-1"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Cannot join private group without an invitation link");
+    }
+
+    @Test
+    void joinPublicGroup_AlreadyMember_ThrowsConflict() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .name("Public Club")
+                .visibility(GroupVisibility.PUBLIC)
+                .conversationId("conv-1")
+                .memberCount(1)
+                .members(new ArrayList<>(List.of(GroupMember.builder().userId("user-2").role(GroupRole.MEMBER).build())))
+                .build();
+
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.joinPublicGroup("user-2", "grp-1"))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("User is already a member of this group");
     }
 }
