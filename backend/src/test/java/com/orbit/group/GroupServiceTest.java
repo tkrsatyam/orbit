@@ -9,13 +9,18 @@ import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
 import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
+import com.orbit.group.dto.GroupMemberListResponse;
+import com.orbit.group.dto.GroupMemberResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
+import com.orbit.group.dto.UpdateMemberRoleRequest;
 import com.orbit.group.model.Group;
 import com.orbit.group.model.GroupMember;
 import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
+import com.orbit.user.UserRepository;
+import com.orbit.user.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +51,9 @@ class GroupServiceTest {
     @Mock
     private ConversationService conversationService;
 
+    @Mock
+    private UserRepository userRepository;
+
     private OrbitProperties orbitProperties;
     private GroupService groupService;
 
@@ -56,7 +64,7 @@ class GroupServiceTest {
                 new OrbitProperties.Cors("http://localhost:4200"),
                 new OrbitProperties.Cookie(true, "None")
         );
-        groupService = new GroupService(groupRepository, conversationService, orbitProperties);
+        groupService = new GroupService(groupRepository, conversationService, orbitProperties, userRepository);
     }
 
     @Test
@@ -354,5 +362,107 @@ class GroupServiceTest {
         assertThatThrownBy(() -> groupService.updateGroup("admin-1", "grp-1", request))
                 .isInstanceOf(ConflictException.class)
                 .hasMessage("Group name is already taken");
+    }
+
+    @Test
+    void getGroupMembers_Member_ReturnsMemberListWithUserDetails() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(List.of(
+                        GroupMember.builder().userId("u-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build(),
+                        GroupMember.builder().userId("u-2").role(GroupRole.MEMBER).joinedAt(Instant.now()).build()
+                ))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        User user1 = User.builder().id("u-1").displayName("Alice Admin").avatarUrl("http://avatar1").build();
+        User user2 = User.builder().id("u-2").displayName("Bob Member").avatarUrl(null).build();
+        when(userRepository.findAllById(List.of("u-1", "u-2"))).thenReturn(List.of(user1, user2));
+
+        GroupMemberListResponse response = groupService.getGroupMembers("u-2", "grp-1");
+
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.content().get(0).displayName()).isEqualTo("Alice Admin");
+        assertThat(response.content().get(0).role()).isEqualTo(GroupRole.ADMIN);
+        assertThat(response.content().get(1).displayName()).isEqualTo("Bob Member");
+        assertThat(response.content().get(1).role()).isEqualTo(GroupRole.MEMBER);
+    }
+
+    @Test
+    void getGroupMembers_NonMember_ThrowsForbidden() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(List.of(GroupMember.builder().userId("u-1").role(GroupRole.ADMIN).build()))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.getGroupMembers("u-outsider", "grp-1"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Must be a group member to view the member list");
+    }
+
+    @Test
+    void updateMemberRole_AdminPromotesMemberToAdmin_Success() {
+        GroupMember adminMember = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        GroupMember targetMember = GroupMember.builder().userId("user-2").role(GroupRole.MEMBER).joinedAt(Instant.now()).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(adminMember, targetMember)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+        when(userRepository.findById("user-2")).thenReturn(Optional.of(User.builder().id("user-2").displayName("User Two").build()));
+
+        GroupMemberResponse response = groupService.updateMemberRole("admin-1", "grp-1", "user-2", new UpdateMemberRoleRequest(GroupRole.ADMIN));
+
+        assertThat(response.role()).isEqualTo(GroupRole.ADMIN);
+        assertThat(targetMember.getRole()).isEqualTo(GroupRole.ADMIN);
+        verify(groupRepository).save(group);
+    }
+
+    @Test
+    void updateMemberRole_AdminDemotesAdminToMember_WhenMultipleAdmins_Success() {
+        GroupMember admin1 = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        GroupMember admin2 = GroupMember.builder().userId("admin-2").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(admin1, admin2)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+        when(userRepository.findById("admin-2")).thenReturn(Optional.of(User.builder().id("admin-2").displayName("Admin Two").build()));
+
+        GroupMemberResponse response = groupService.updateMemberRole("admin-1", "grp-1", "admin-2", new UpdateMemberRoleRequest(GroupRole.MEMBER));
+
+        assertThat(response.role()).isEqualTo(GroupRole.MEMBER);
+        assertThat(admin2.getRole()).isEqualTo(GroupRole.MEMBER);
+        verify(groupRepository).save(group);
+    }
+
+    @Test
+    void updateMemberRole_AdminDemotesSoleAdmin_ThrowsConflict() {
+        GroupMember soleAdmin = GroupMember.builder().userId("admin-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build();
+        GroupMember regular = GroupMember.builder().userId("user-2").role(GroupRole.MEMBER).joinedAt(Instant.now()).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(soleAdmin, regular)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.updateMemberRole("admin-1", "grp-1", "admin-1", new UpdateMemberRoleRequest(GroupRole.MEMBER)))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("Cannot demote the sole admin of the group");
+    }
+
+    @Test
+    void updateMemberRole_NonAdminCaller_ThrowsForbidden() {
+        GroupMember regular = GroupMember.builder().userId("user-1").role(GroupRole.MEMBER).build();
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(new ArrayList<>(List.of(regular)))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        assertThatThrownBy(() -> groupService.updateMemberRole("user-1", "grp-1", "user-1", new UpdateMemberRoleRequest(GroupRole.ADMIN)))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("Only group admins can manage member roles");
     }
 }

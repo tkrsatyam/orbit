@@ -6,9 +6,12 @@ import com.orbit.common.exception.GlobalExceptionHandler;
 import com.orbit.common.exception.ResourceNotFoundException;
 import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
+import com.orbit.group.dto.GroupMemberListResponse;
+import com.orbit.group.dto.GroupMemberResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
+import com.orbit.group.dto.UpdateMemberRoleRequest;
 import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
 import org.junit.jupiter.api.BeforeEach;
@@ -315,5 +318,85 @@ class GroupControllerTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("name: Group name must be between 3 and 100 characters"));
+    }
+
+    @Test
+    void getGroupMembers_Success_Returns200() throws Exception {
+        GroupMemberListResponse response = new GroupMemberListResponse(List.of(
+                new GroupMemberResponse("u-1", "Satyam", null, GroupRole.ADMIN, true, Instant.now()),
+                new GroupMemberResponse("u-2", "Priya", null, GroupRole.MEMBER, false, Instant.now())
+        ));
+        when(groupService.getGroupMembers("u-1", "group-1")).thenReturn(response);
+
+        mockMvc.perform(get("/api/v1/groups/group-1/members")
+                        .principal(new UsernamePasswordAuthenticationToken("u-1", null, List.of())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.content[0].displayName").value("Satyam"))
+                .andExpect(jsonPath("$.content[0].role").value("ADMIN"));
+    }
+
+    @Test
+    void getGroupMembers_NonMember_Returns403() throws Exception {
+        when(groupService.getGroupMembers("u-outsider", "group-1"))
+                .thenThrow(new ForbiddenException("Must be a group member to view the member list"));
+
+        mockMvc.perform(get("/api/v1/groups/group-1/members")
+                        .principal(new UsernamePasswordAuthenticationToken("u-outsider", null, List.of())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Must be a group member to view the member list"));
+    }
+
+    @Test
+    void updateMemberRole_Success_Returns200() throws Exception {
+        GroupMemberResponse response = new GroupMemberResponse("u-2", "Priya", null, GroupRole.ADMIN, false, Instant.now());
+        when(groupService.updateMemberRole(eq("admin-1"), eq("group-1"), eq("u-2"), any(UpdateMemberRoleRequest.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(patch("/api/v1/groups/group-1/members/u-2/role")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "ADMIN"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value("u-2"))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void updateMemberRole_NonAdmin_Returns403() throws Exception {
+        when(groupService.updateMemberRole(eq("member-1"), eq("group-1"), eq("u-2"), any(UpdateMemberRoleRequest.class)))
+                .thenThrow(new ForbiddenException("Only group admins can manage member roles"));
+
+        mockMvc.perform(patch("/api/v1/groups/group-1/members/u-2/role")
+                        .principal(new UsernamePasswordAuthenticationToken("member-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "ADMIN"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("Only group admins can manage member roles"));
+    }
+
+    @Test
+    void updateMemberRole_DemoteSoleAdmin_Returns409() throws Exception {
+        when(groupService.updateMemberRole(eq("admin-1"), eq("group-1"), eq("admin-1"), any(UpdateMemberRoleRequest.class)))
+                .thenThrow(new ConflictException("Cannot demote the sole admin of the group"));
+
+        mockMvc.perform(patch("/api/v1/groups/group-1/members/admin-1/role")
+                        .principal(new UsernamePasswordAuthenticationToken("admin-1", null, List.of()))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "MEMBER"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Cannot demote the sole admin of the group"));
     }
 }

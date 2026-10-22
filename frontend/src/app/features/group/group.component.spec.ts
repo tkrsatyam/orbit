@@ -14,6 +14,8 @@ describe('GroupComponent', () => {
     generateInvite: ReturnType<typeof vi.fn>;
     loadMyGroups: ReturnType<typeof vi.fn>;
     myGroups: ReturnType<typeof vi.fn>;
+    getGroupMembers: ReturnType<typeof vi.fn>;
+    updateMemberRole: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof vi.fn>;
@@ -39,7 +41,35 @@ describe('GroupComponent', () => {
       updateGroup: vi.fn().mockReturnValue(of({ ...groupToReturn, name: 'Renamed Space' })),
       generateInvite: vi.fn().mockReturnValue(of({ inviteLink: 'http://localhost/invite/tok-999', expiresAt: '2026-10-28T00:00:00Z' })),
       loadMyGroups: vi.fn().mockReturnValue(of([groupToReturn])),
-      myGroups: vi.fn().mockReturnValue([groupToReturn])
+      myGroups: vi.fn().mockReturnValue([groupToReturn]),
+      getGroupMembers: vi.fn().mockReturnValue(of({
+        content: [
+          {
+            userId: 'u-1',
+            displayName: 'Lead Admin',
+            avatarUrl: null,
+            role: 'ADMIN',
+            online: true,
+            joinedAt: '2026-10-21T10:00:00Z'
+          },
+          {
+            userId: 'u-2',
+            displayName: 'Dev Contributor',
+            avatarUrl: null,
+            role: 'MEMBER',
+            online: false,
+            joinedAt: '2026-10-21T11:00:00Z'
+          }
+        ]
+      })),
+      updateMemberRole: vi.fn().mockReturnValue(of({
+        userId: 'u-2',
+        displayName: 'Dev Contributor',
+        avatarUrl: null,
+        role: 'ADMIN',
+        online: false,
+        joinedAt: '2026-10-21T11:00:00Z'
+      }))
     };
 
     mockAuthService = {
@@ -148,5 +178,59 @@ describe('GroupComponent', () => {
 
     expect(mockGroupService.generateInvite).toHaveBeenCalledWith('group-101');
     expect(component.inviteLink()).toBe('http://localhost/invite/tok-999');
+  });
+
+  it('should toggle members drawer and fetch member roster', async () => {
+    await setupComponent();
+
+    expect(component.isMembersDrawerOpen()).toBe(false);
+
+    component.toggleMembersDrawer();
+    fixture.detectChanges();
+
+    expect(component.isMembersDrawerOpen()).toBe(true);
+    expect(mockGroupService.getGroupMembers).toHaveBeenCalledWith('group-101');
+    expect(component.members().length).toBe(2);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const drawer = compiled.querySelector('[data-testid="members-drawer"]');
+    expect(drawer).not.toBeNull();
+    const memberItems = compiled.querySelectorAll('[data-testid="member-item"]');
+    expect(memberItems.length).toBe(2);
+    expect(memberItems[0].textContent).toContain('Lead Admin');
+    expect(memberItems[1].textContent).toContain('Dev Contributor');
+  });
+
+  it('should allow admin to promote member to admin', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    fixture.detectChanges();
+
+    const targetMember = component.members()[1]; // Dev Contributor (MEMBER)
+    component.toggleMemberRole(targetMember);
+    fixture.detectChanges();
+
+    expect(mockGroupService.updateMemberRole).toHaveBeenCalledWith('group-101', 'u-2', { role: 'ADMIN' });
+    expect(component.members()[1].role).toBe('ADMIN');
+  });
+
+  it('should display error when updating member role fails', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    fixture.detectChanges();
+
+    mockGroupService.updateMemberRole.mockReturnValue(throwError(() => ({
+      error: { message: 'Cannot demote the sole admin of the group' }
+    })));
+
+    const adminMember = component.members()[0];
+    component.toggleMemberRole(adminMember);
+    fixture.detectChanges();
+
+    expect(component.memberActionError()).toBe('Cannot demote the sole admin of the group');
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="member-action-error"]')?.textContent).toContain(
+      'Cannot demote the sole admin of the group'
+    );
   });
 });

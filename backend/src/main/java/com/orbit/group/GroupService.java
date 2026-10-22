@@ -8,20 +8,28 @@ import com.orbit.conversation.ConversationService;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
+import com.orbit.group.dto.GroupMemberListResponse;
+import com.orbit.group.dto.GroupMemberResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
+import com.orbit.group.dto.UpdateMemberRoleRequest;
 import com.orbit.group.model.Group;
 import com.orbit.group.model.GroupMember;
 import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
+import com.orbit.user.UserRepository;
+import com.orbit.user.model.User;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Service managing group creation, visibility, invite link generation, and memberships.
@@ -33,13 +41,16 @@ public class GroupService {
     private final GroupRepository groupRepository;
     private final ConversationService conversationService;
     private final OrbitProperties orbitProperties;
+    private final UserRepository userRepository;
 
     public GroupService(GroupRepository groupRepository,
                         ConversationService conversationService,
-                        OrbitProperties orbitProperties) {
+                        OrbitProperties orbitProperties,
+                        UserRepository userRepository) {
         this.groupRepository = groupRepository;
         this.conversationService = conversationService;
         this.orbitProperties = orbitProperties;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -267,5 +278,115 @@ public class GroupService {
         Group savedGroup = groupRepository.save(group);
 
         return GroupResponse.from(savedGroup, GroupRole.ADMIN);
+    }
+
+    /**
+     * Retrieves the member list for a group. Only members can view the member list.
+     *
+     * @param callerUserId Authenticated user ID
+     * @param groupId Target group ID
+     * @return GroupMemberListResponse containing all group members with user details and roles
+     */
+    public GroupMemberListResponse getGroupMembers(String callerUserId, String groupId) {
+        if (callerUserId == null || callerUserId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        boolean isMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(callerUserId));
+
+        if (!isMember) {
+            throw new ForbiddenException("Must be a group member to view the member list");
+        }
+
+        List<String> userIds = group.getMembers().stream()
+                .map(GroupMember::getUserId)
+                .toList();
+
+        Map<String, User> userMap = userRepository.findAllById(userIds).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity(), (a, b) -> a));
+
+        List<GroupMemberResponse> members = group.getMembers().stream()
+                .map(m -> {
+                    User u = userMap.get(m.getUserId());
+                    String displayName = u != null ? u.getDisplayName() : "Unknown User";
+                    String avatarUrl = u != null ? u.getAvatarUrl() : null;
+                    return new GroupMemberResponse(
+                            m.getUserId(),
+                            displayName,
+                            avatarUrl,
+                            m.getRole(),
+                            false,
+                            m.getJoinedAt()
+                    );
+                })
+                .toList();
+
+        return new GroupMemberListResponse(members);
+    }
+
+    /**
+     * Promotes or demotes a group member. Admin-only operation.
+     * Protection: Cannot demote the sole remaining admin of a group.
+     *
+     * @param adminUserId Authenticated user ID (must be group admin)
+     * @param groupId Target group ID
+     * @param targetUserId ID of the member whose role is being changed
+     * @param request UpdateMemberRoleRequest containing the new role
+     * @return Updated GroupMemberResponse
+     */
+    public GroupMemberResponse updateMemberRole(String adminUserId,
+                                                String groupId,
+                                                String targetUserId,
+                                                UpdateMemberRoleRequest request) {
+        if (adminUserId == null || adminUserId.isBlank()) {
+            throw new IllegalArgumentException("Admin user ID is required");
+        }
+        if (targetUserId == null || targetUserId.isBlank()) {
+            throw new IllegalArgumentException("Target user ID is required");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        boolean isAdmin = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(adminUserId) && m.getRole() == GroupRole.ADMIN);
+
+        if (!isAdmin) {
+            throw new ForbiddenException("Only group admins can manage member roles");
+        }
+
+        GroupMember targetMember = group.getMembers().stream()
+                .filter(m -> m.getUserId().equals(targetUserId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in group"));
+
+        // Sole admin protection: cannot demote sole admin to member
+        if (request.role() == GroupRole.MEMBER && targetMember.getRole() == GroupRole.ADMIN) {
+            long adminCount = group.getMembers().stream()
+                    .filter(m -> m.getRole() == GroupRole.ADMIN)
+                    .count();
+            if (adminCount <= 1) {
+                throw new ConflictException("Cannot demote the sole admin of the group");
+            }
+        }
+
+        targetMember.setRole(request.role());
+        groupRepository.save(group);
+
+        User targetUser = userRepository.findById(targetUserId).orElse(null);
+        String displayName = targetUser != null ? targetUser.getDisplayName() : "Unknown User";
+        String avatarUrl = targetUser != null ? targetUser.getAvatarUrl() : null;
+
+        return new GroupMemberResponse(
+                targetMember.getUserId(),
+                displayName,
+                avatarUrl,
+                targetMember.getRole(),
+                false,
+                targetMember.getJoinedAt()
+        );
     }
 }
