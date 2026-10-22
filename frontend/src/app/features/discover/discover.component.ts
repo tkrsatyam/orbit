@@ -1,12 +1,19 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  ElementRef,
+  HostListener,
+  inject,
+  OnInit,
+  signal
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
-import { Subject, Subscription } from 'rxjs';
-import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../core/services/auth.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
+import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
 
 export interface TopicFilter {
@@ -18,26 +25,46 @@ export interface TopicFilter {
 @Component({
   selector: 'app-discover',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, CreateGroupModalComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    CreateGroupModalComponent,
+    SelfProfileModalComponent
+  ],
   templateUrl: './discover.component.html',
   styleUrl: './discover.component.scss'
 })
-export class DiscoverComponent implements OnInit, OnDestroy {
+export class DiscoverComponent implements OnInit {
   readonly authService = inject(AuthService);
   readonly groupService = inject(GroupService);
   private readonly router = inject(Router);
+  private readonly elementRef = inject(ElementRef);
 
-  readonly searchQuery = signal<string>('');
+  readonly searchInputValue = signal<string>('');
+  readonly activeSearchQuery = signal<string>('');
   readonly selectedTag = signal<string>('all');
   readonly groups = signal<GroupResponse[]>([]);
   readonly allDiscoveredGroups = signal<GroupResponse[]>([]);
   readonly isLoading = signal<boolean>(false);
   readonly joiningGroupId = signal<string | null>(null);
   readonly isCreateModalOpen = signal<boolean>(false);
+  readonly isProfileOpen = signal<boolean>(false);
+  readonly isMenuOpen = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
 
-  private readonly searchSubject = new Subject<string>();
-  private searchSubscription?: Subscription;
+  readonly isFiltered = computed(() => this.activeSearchQuery().trim().length > 0);
+
+  readonly currentUser = computed(() => this.authService.currentUser());
+
+  readonly currentUserName = computed(() => {
+    return this.currentUser()?.displayName ?? this.currentUser()?.email ?? 'Anonymous User';
+  });
+
+  readonly userInitial = computed(() => {
+    const name = this.currentUserName();
+    return name.trim().charAt(0).toUpperCase() || 'U';
+  });
 
   // Dynamically computed topic filter chips extracted from all available public spaces
   readonly topicFilters = computed<TopicFilter[]>(() => {
@@ -66,18 +93,7 @@ export class DiscoverComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.searchSubscription = this.searchSubject
-      .pipe(debounceTime(300), distinctUntilChanged())
-      .subscribe((query) => {
-        this.searchQuery.set(query);
-        this.loadGroups();
-      });
-
     this.loadInitialData();
-  }
-
-  ngOnDestroy(): void {
-    this.searchSubscription?.unsubscribe();
   }
 
   loadInitialData(): void {
@@ -101,7 +117,7 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
     this.errorMessage.set(null);
 
-    const query = this.searchQuery().trim();
+    const query = this.activeSearchQuery().trim();
     const tag = this.selectedTag() === 'all' ? undefined : this.selectedTag();
 
     this.groupService.discoverGroups({ q: query, tag, page: 0, size: 50 }).subscribe({
@@ -119,18 +135,60 @@ export class DiscoverComponent implements OnInit, OnDestroy {
     });
   }
 
-  onSearchInput(value: string): void {
-    this.searchSubject.next(value);
+  executeSearch(): void {
+    const query = this.searchInputValue().trim();
+    this.activeSearchQuery.set(query);
+    this.loadGroups();
   }
 
   clearSearch(): void {
-    this.searchQuery.set('');
+    this.searchInputValue.set('');
+    this.activeSearchQuery.set('');
     this.loadGroups();
   }
 
   selectTag(tagId: string): void {
     this.selectedTag.set(tagId);
     this.loadGroups();
+  }
+
+  navigateTab(tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'): void {
+    if (tab === 'DISCOVER') {
+      return;
+    }
+    this.router.navigate(['/'], { queryParams: { tab } });
+  }
+
+  toggleMenu(event: MouseEvent): void {
+    event.stopPropagation();
+    this.isMenuOpen.update((v) => !v);
+  }
+
+  openProfileModal(): void {
+    this.isMenuOpen.set(false);
+    this.isProfileOpen.set(true);
+  }
+
+  handleLogout(): void {
+    this.isMenuOpen.set(false);
+    this.authService.logout().subscribe({
+      next: () => this.router.navigate(['/login']),
+      error: () => this.router.navigate(['/login'])
+    });
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isMenuOpen()) {
+      this.isMenuOpen.set(false);
+    }
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.isMenuOpen() && !this.elementRef.nativeElement.contains(event.target)) {
+      this.isMenuOpen.set(false);
+    }
   }
 
   joinGroup(group: GroupResponse, event?: Event): void {
@@ -183,11 +241,6 @@ export class DiscoverComponent implements OnInit, OnDestroy {
   onGroupCreated(created: GroupResponse): void {
     this.isCreateModalOpen.set(false);
     this.loadInitialData();
-  }
-
-  currentUserName(): string {
-    const user = this.authService.currentUser();
-    return user?.displayName || user?.email || user?.id || '';
   }
 
   parseTags(raw: string | null | undefined): string[] {

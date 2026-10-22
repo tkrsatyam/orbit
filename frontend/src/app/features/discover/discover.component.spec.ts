@@ -15,6 +15,7 @@ describe('DiscoverComponent', () => {
     isLoading: ReturnType<typeof vi.fn>;
     isAuthenticated: ReturnType<typeof vi.fn>;
     currentUser: ReturnType<typeof vi.fn>;
+    logout: ReturnType<typeof vi.fn>;
   };
 
   let groupServiceMock: {
@@ -66,7 +67,8 @@ describe('DiscoverComponent', () => {
     authServiceMock = {
       isLoading: vi.fn().mockReturnValue(false),
       isAuthenticated: vi.fn().mockReturnValue(true),
-      currentUser: vi.fn().mockReturnValue({ displayName: 'Satyam Kumar', email: 'satyam@orbit.local' })
+      currentUser: vi.fn().mockReturnValue({ displayName: 'Satyam Kumar', email: 'satyam@orbit.local' }),
+      logout: vi.fn().mockReturnValue(of(void 0))
     };
 
     groupServiceMock = {
@@ -102,106 +104,162 @@ describe('DiscoverComponent', () => {
     const filters = component.topicFilters();
     expect(filters.length).toBeGreaterThan(1);
     expect(filters[0].label).toBe('All Topics');
-    const labels = filters.map(f => f.label);
+    const labels = filters.map((f) => f.label);
     expect(labels).toContain('#java-spring');
     expect(labels).toContain('#interview-prep');
     expect(labels).toContain('#dsa');
   });
 
-  it('should debounce search input before calling API', () => {
-    vi.useFakeTimers();
+  it('should render navigation rail when user is authenticated with Discover active', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const rail = compiled.querySelector('[data-testid="navigation-rail"]');
+    expect(rail).not.toBeNull();
+
+    const activeTab = compiled.querySelector('[data-testid="nav-tab-discover"]');
+    expect(activeTab?.classList.contains('active')).toBe(true);
+
+    const chatsBtn = compiled.querySelector('[data-testid="nav-tab-chats"]') as HTMLButtonElement;
+    chatsBtn.click();
+    expect(router.navigate).toHaveBeenCalledWith(['/'], { queryParams: { tab: 'CHATS' } });
+  });
+
+  it('should not perform search automatically while typing, but trigger manually on search button click or Enter', () => {
     groupServiceMock.discoverGroups.mockClear();
 
-    // Type 6 letters rapidly
-    component.onSearchInput('D');
-    component.onSearchInput('De');
-    component.onSearchInput('Des');
-    component.onSearchInput('Desi');
-    component.onSearchInput('Desig');
-    component.onSearchInput('Design');
+    // Type in search box without submitting
+    component.searchInputValue.set('Design');
+    fixture.detectChanges();
 
-    // Should NOT have called discoverGroups yet before debounce elapsed
+    // discoverGroups should NOT be called just from typing
     expect(groupServiceMock.discoverGroups).not.toHaveBeenCalled();
 
-    // Advance virtual clock past debounce timer (300ms)
-    vi.advanceTimersByTime(300);
+    // Trigger manual search via Enter or executeSearch()
+    const compiled = fixture.nativeElement as HTMLElement;
+    const searchBtn = compiled.querySelector('[data-testid="search-trigger-btn"]') as HTMLButtonElement;
+    expect(searchBtn).not.toBeNull();
+    searchBtn.click();
 
-    // Called only ONCE with the final search query!
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledTimes(1);
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: 'Design', tag: undefined, page: 0, size: 50 });
+    expect(component.activeSearchQuery()).toBe('Design');
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({
+      q: 'Design',
+      tag: undefined,
+      page: 0,
+      size: 50
+    });
+  });
 
-    vi.useRealTimers();
+  it('should replace search icon with clear icon when filtered, and clear query on click', () => {
+    component.searchInputValue.set('Spring');
+    component.executeSearch();
+    fixture.detectChanges();
+
+    expect(component.isFiltered()).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const clearBtn = compiled.querySelector('[data-testid="search-clear-btn"]') as HTMLButtonElement;
+    expect(clearBtn).not.toBeNull();
+
+    groupServiceMock.discoverGroups.mockClear();
+    clearBtn.click();
+    fixture.detectChanges();
+
+    expect(component.searchInputValue()).toBe('');
+    expect(component.activeSearchQuery()).toBe('');
+    expect(component.isFiltered()).toBe(false);
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({
+      q: '',
+      tag: undefined,
+      page: 0,
+      size: 50
+    });
   });
 
   it('should filter groups when selecting topic tag chip', () => {
     component.selectTag('interview-prep');
 
     expect(component.selectedTag()).toBe('interview-prep');
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: '', tag: 'interview-prep', page: 0, size: 50 });
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({
+      q: '',
+      tag: 'interview-prep',
+      page: 0,
+      size: 50
+    });
   });
 
-  it('should clear search input and reload groups immediately', () => {
-    component.searchQuery.set('Something');
-    component.clearSearch();
-
-    expect(component.searchQuery()).toBe('');
-    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ q: '', tag: undefined, page: 0, size: 50 });
-  });
-
-  it('should render Open Space for joined groups and route to /groups/:id', () => {
+  it('should render Open Group for joined groups and route to /groups/:id', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const cards = compiled.querySelectorAll('.space-card');
+    const cards = compiled.querySelectorAll('[data-testid="group-card"]');
 
-    const openBtn = cards[0].querySelector('.btn-card-joined') as HTMLButtonElement;
+    const openBtn = cards[0].querySelector('[data-testid="btn-open-group"]') as HTMLButtonElement;
     expect(openBtn).not.toBeNull();
-    expect(openBtn.textContent).toContain('Open Space');
+    expect(openBtn.textContent).toContain('Open Group');
 
     openBtn.click();
     expect(router.navigate).toHaveBeenCalledWith(['/groups', 'grp-1']);
   });
 
-  it('should render Join Space for unjoined group and call joinPublicGroup', () => {
+  it('should render Join Group for unjoined group and call joinPublicGroup', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    const cards = compiled.querySelectorAll('.space-card');
+    const cards = compiled.querySelectorAll('[data-testid="group-card"]');
 
-    const joinBtn = cards[1].querySelector('.btn-card-join') as HTMLButtonElement;
+    const joinBtn = cards[1].querySelector('[data-testid="btn-join-group"]') as HTMLButtonElement;
     expect(joinBtn).not.toBeNull();
-    expect(joinBtn.textContent).toContain('Join Space');
+    expect(joinBtn.textContent).toContain('Join Group');
 
     joinBtn.click();
     expect(groupServiceMock.joinPublicGroup).toHaveBeenCalledWith('grp-2');
 
-    const updated = component.groups().find(g => g.id === 'grp-2');
+    const updated = component.groups().find((g) => g.id === 'grp-2');
     expect(updated?.role).toBe('MEMBER');
     expect(updated?.memberCount).toBe(16);
   });
 
-  it('should prompt guests to login when clicking Join Space', () => {
+  it('should prompt guests to login when clicking Join Group', () => {
     authServiceMock.isAuthenticated.mockReturnValue(false);
 
     component.joinGroup(mockPublicGroups[1]);
     expect(router.navigate).toHaveBeenCalledWith(['/login']);
   });
 
-  it('should open Create Space modal when authenticated', () => {
+  it('should open Create Group modal when authenticated', () => {
     component.openCreateModal();
     expect(component.isCreateModalOpen()).toBe(true);
   });
 
+  it('should toggle user dropdown menu and open profile modal', () => {
+    expect(component.isMenuOpen()).toBe(false);
+    component.toggleMenu(new MouseEvent('click'));
+    expect(component.isMenuOpen()).toBe(true);
+
+    component.openProfileModal();
+    expect(component.isMenuOpen()).toBe(false);
+    expect(component.isProfileOpen()).toBe(true);
+  });
+
+  it('should handle logout from dropdown menu', () => {
+    component.handleLogout();
+    expect(authServiceMock.logout).toHaveBeenCalled();
+    expect(router.navigate).toHaveBeenCalledWith(['/login']);
+  });
+
   it('should render empty state when no groups match search', () => {
-    groupServiceMock.discoverGroups.mockReturnValue(of({
-      content: [],
-      page: 0,
-      size: 50,
-      totalElements: 0,
-      totalPages: 0,
-      last: true
-    }));
+    groupServiceMock.discoverGroups.mockReturnValue(
+      of({
+        content: [],
+        page: 0,
+        size: 50,
+        totalElements: 0,
+        totalPages: 0,
+        last: true
+      })
+    );
 
     component.loadGroups();
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.empty-state h3')?.textContent).toContain('No spaces found');
+    expect(compiled.querySelector('[data-testid="empty-state"] h3')?.textContent).toContain(
+      'No groups found'
+    );
   });
 });
