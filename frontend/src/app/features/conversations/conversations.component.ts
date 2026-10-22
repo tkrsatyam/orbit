@@ -3,14 +3,16 @@ import { Router, RouterLink } from '@angular/router';
 import { IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
+import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
 import { NewChatModalComponent } from '../../shared/components/new-chat-modal/new-chat-modal.component';
 import { SelfProfileModalComponent } from '../../shared/components/self-profile-modal/self-profile-modal.component';
 
 @Component({
   selector: 'app-conversations',
   standalone: true,
-  imports: [RouterLink, SelfProfileModalComponent, NewChatModalComponent],
+  imports: [RouterLink, SelfProfileModalComponent, NewChatModalComponent, CreateGroupModalComponent],
   templateUrl: './conversations.component.html',
   styleUrl: './conversations.component.scss'
 })
@@ -20,10 +22,16 @@ export class ConversationsComponent implements OnInit {
   private readonly elementRef = inject(ElementRef);
   private readonly userService = inject(UserService);
   readonly contactService = inject(ContactService);
+  readonly groupService = inject(GroupService);
 
   readonly isMenuOpen = signal<boolean>(false);
   readonly isProfileOpen = signal<boolean>(false);
   readonly isNewChatOpen = signal<boolean>(false);
+  readonly isCreateGroupOpen = signal<boolean>(false);
+
+  // Active navigation rail tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'
+  readonly activeNavTab = signal<'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'>('CHATS');
+  readonly groupFilter = signal<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
 
   readonly activeProcessingId = signal<string | null>(null);
   readonly activeAction = signal<'ACCEPT' | 'DECLINE' | 'BLOCK' | null>(null);
@@ -39,12 +47,46 @@ export class ConversationsComponent implements OnInit {
     return name.trim().charAt(0).toUpperCase() || 'U';
   });
 
+  readonly filteredGroups = computed(() => {
+    const filter = this.groupFilter();
+    const groups = this.groupService.myGroups();
+    if (filter === 'PUBLIC') {
+      return groups.filter(g => g.visibility === 'PUBLIC');
+    }
+    if (filter === 'PRIVATE') {
+      return groups.filter(g => g.visibility === 'PRIVATE');
+    }
+    return groups;
+  });
+
   ngOnInit(): void {
     this.contactService.loadIncomingRequests().subscribe({
       error: () => {
         // Silently handle initial load failure; retryable via reload
       }
     });
+
+    this.groupService.loadMyGroups().subscribe({
+      error: () => {
+        // Silently handle initial load failure
+      }
+    });
+  }
+
+  setNavTab(tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'): void {
+    if (tab === 'DISCOVER') {
+      this.router.navigate(['/discover']);
+      return;
+    }
+    if (tab === 'CONTACTS') {
+      this.openNewChatModal();
+      return;
+    }
+    this.activeNavTab.set(tab);
+  }
+
+  setGroupFilter(filter: 'ALL' | 'PUBLIC' | 'PRIVATE'): void {
+    this.groupFilter.set(filter);
   }
 
   toggleMenu(event: MouseEvent): void {
@@ -60,6 +102,22 @@ export class ConversationsComponent implements OnInit {
   openNewChatModal(): void {
     this.isMenuOpen.set(false);
     this.isNewChatOpen.set(true);
+  }
+
+  openCreateGroupModal(): void {
+    this.isCreateGroupOpen.set(true);
+  }
+
+  closeCreateGroupModal(): void {
+    this.isCreateGroupOpen.set(false);
+  }
+
+  onGroupCreated(group: GroupResponse): void {
+    this.activeNavTab.set('GROUPS');
+  }
+
+  navigateToGroup(groupId: string): void {
+    this.router.navigate(['/groups', groupId]);
   }
 
   handleAcceptRequest(request: IncomingRequest): void {
@@ -127,16 +185,16 @@ export class ConversationsComponent implements OnInit {
     });
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (this.isMenuOpen() && !this.elementRef.nativeElement.contains(event.target)) {
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (this.isMenuOpen()) {
       this.isMenuOpen.set(false);
     }
   }
 
-  @HostListener('document:keydown.escape')
-  onEscapeKey(): void {
-    if (this.isMenuOpen()) {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.isMenuOpen() && !this.elementRef.nativeElement.contains(event.target)) {
       this.isMenuOpen.set(false);
     }
   }

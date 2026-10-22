@@ -12,7 +12,7 @@ test.describe('Token Refresh & Session Lifecycle Flow', () => {
     await page.fill('#register-password', password);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL('http://localhost:4200/');
-    await expect(page.locator('header')).toContainText(displayName);
+    await expect(page.locator('.welcome-heading')).toContainText(displayName);
 
     // Track refresh and me requests during reload
     const refreshRequests: string[] = [];
@@ -30,7 +30,7 @@ test.describe('Token Refresh & Session Lifecycle Flow', () => {
 
     // Verify session restored via refresh + GET /users/me without dropping to login
     await expect(page).toHaveURL('http://localhost:4200/');
-    await expect(page.locator('header')).toContainText(displayName);
+    await expect(page.locator('.welcome-heading')).toContainText(displayName);
     expect(refreshRequests.length).toBe(1);
     expect(meRequests.length).toBe(1);
 

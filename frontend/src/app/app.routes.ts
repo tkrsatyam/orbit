@@ -28,6 +28,10 @@ export const routes: Routes = [
       {
         path: 'groups/:id',
         loadComponent: () => import('./features/group/group.component').then((m) => m.GroupComponent)
+      },
+      {
+        path: 'invite/:token',
+        loadComponent: () => import('./features/invite-join/invite-join.component').then((m) => m.InviteJoinComponent)
       }
     ]
   },

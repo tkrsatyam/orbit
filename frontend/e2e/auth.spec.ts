@@ -28,7 +28,7 @@ test.describe('Authentication & Route Guards Flow', () => {
     // Expect redirect to /
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.locator('h2')).toHaveText('Conversations');
-    await expect(page.locator('header')).toContainText(displayName);
+    await expect(page.locator('.welcome-heading')).toContainText(displayName);
 
     // 4. Page reload: exactly 1 refresh call and session remains intact
     let refreshCalls = 0;
@@ -42,11 +42,11 @@ test.describe('Authentication & Route Guards Flow', () => {
 
     await expect(page).toHaveURL('http://localhost:4200/');
     await expect(page.locator('h2')).toHaveText('Conversations');
-    await expect(page.locator('header')).toContainText(displayName);
+    await expect(page.locator('.welcome-heading')).toContainText(displayName);
     expect(refreshCalls).toBe(1);
 
     // 5. Client-side navigation to /discover as authenticated member
-    await page.click('a:has-text("Discover Groups")');
+    await page.click('a[routerLink="/discover"]');
     await expect(page).toHaveURL('http://localhost:4200/discover');
     await expect(page.locator('button:has-text("Join Group")')).toBeVisible();
     await expect(page.locator('text=Logged in as Playwright Tester')).toBeVisible();

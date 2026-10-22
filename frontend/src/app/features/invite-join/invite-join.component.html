@@ -1,0 +1,60 @@
+<div class="invite-join-container" data-testid="invite-join-page">
+  <div class="invite-card">
+    <div class="card-accent-bar" aria-hidden="true"></div>
+
+    <header class="card-header">
+      <div class="brand-badge" aria-hidden="true">
+        <img src="brand/orbit-icon.svg" alt="Orbit Logo" width="28" height="28" />
+      </div>
+      <h2 class="card-title">Orbit Group Invitation</h2>
+    </header>
+
+    @if (status() === 'LOADING') {
+      <div class="state-box loading-box" data-testid="invite-loading">
+        <div class="spinner" aria-hidden="true"></div>
+        <p class="state-message">Verifying invite token and joining group...</p>
+      </div>
+    }
+
+    @if (status() === 'SUCCESS') {
+      <div class="state-box success-box" data-testid="invite-success">
+        <div class="success-icon-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <h3 class="box-heading">You're in!</h3>
+        <p class="state-message">
+          You have successfully joined the group as a Member.
+        </p>
+
+        <button
+          type="button"
+          class="btn-primary"
+          (click)="navigateToGroup()"
+          data-testid="enter-group-chat-btn"
+        >
+          Enter Group Chat &rarr;
+        </button>
+      </div>
+    }
+
+    @if (status() === 'ERROR') {
+      <div class="state-box error-box" data-testid="invite-error">
+        <div class="error-icon-badge" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h3 class="box-heading">Invite Unavailable</h3>
+        <p class="state-message">{{ errorMessage() }}</p>
+
+        <a routerLink="/" class="btn-secondary" data-testid="return-home-btn">
+          Return to Orbit Home
+        </a>
+      </div>
+    }
+  </div>
+</div>
