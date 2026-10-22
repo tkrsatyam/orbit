@@ -1,0 +1,289 @@
+@if (isOpen()) {
+  <div
+    class="modal-backdrop"
+    (click)="onBackdropClick($event)"
+    (keydown.escape)="closeModal.emit()"
+    tabindex="-1"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="profile-modal-heading"
+  >
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="drag-handle-mobile" aria-hidden="true"></div>
+      <div class="amber-top-stripe" aria-hidden="true"></div>
+
+      <!-- Header -->
+      <header class="modal-header">
+        <h3 id="profile-modal-heading">
+          @if (isLoading()) {
+            User Profile
+          } @else if (!isAvailable()) {
+            Profile Unavailable
+          } @else {
+            User Profile
+          }
+        </h3>
+        <button
+          type="button"
+          class="close-button"
+          aria-label="Close profile modal"
+          (click)="closeModal.emit()"
+          data-testid="close-public-profile-btn"
+        >
+          <svg
+            class="close-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </header>
+
+      <!-- Content Area -->
+      <div class="modal-body">
+        @if (isLoading()) {
+          <div class="loading-state" data-testid="profile-loading-state">
+            <div class="spinner" aria-hidden="true"></div>
+            <p>Loading profile details...</p>
+          </div>
+        } @else if (errorMessage()) {
+          <div class="error-state" data-testid="profile-error-state">
+            <p class="error-text">{{ errorMessage() }}</p>
+            <button
+              type="button"
+              class="btn-secondary"
+              (click)="userId() && loadProfile(userId()!)"
+            >
+              Retry
+            </button>
+          </div>
+        } @else if (!isAvailable()) {
+          <!-- ADR 007 Masked / Unavailable Profile State -->
+          <div class="unavailable-state" data-testid="profile-unavailable-state">
+            <div class="unavailable-icon-wrap" aria-hidden="true">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+            </div>
+            <h4 class="unavailable-title" data-testid="unavailable-title">Profile Unavailable</h4>
+            <p class="unavailable-desc" data-testid="unavailable-desc">
+              This profile cannot be displayed or is no longer available.
+            </p>
+          </div>
+        } @else {
+          <!-- Normal Available Profile State -->
+          <div class="profile-content" data-testid="profile-content">
+            <!-- Avatar -->
+            <div class="avatar-row">
+              <div class="avatar-ring">
+                @if (profile()?.avatarUrl) {
+                  <img
+                    [src]="profile()?.avatarUrl"
+                    [alt]="maskedName()"
+                    class="profile-avatar-img"
+                  />
+                } @else {
+                  <div class="profile-avatar-initials" data-testid="profile-avatar-initials">
+                    {{ avatarInitial() }}
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Identity and Connection Badge -->
+            <div class="identity-section">
+              <div class="name-badge-row">
+                <h4 class="profile-name" data-testid="profile-display-name">
+                  {{ maskedName() }}
+                </h4>
+                @if (isSelf()) {
+                  <span class="status-badge badge-self">(You)</span>
+                } @else {
+                  <span
+                    class="status-badge"
+                    [attr.data-status]="connectionStatus()"
+                    [ngClass]="'badge-' + connectionStatus().toLowerCase()"
+                    data-testid="connection-status-badge"
+                  >
+                    @switch (connectionStatus()) {
+                      @case ('CONNECTED') {
+                        Connected
+                      }
+                      @case ('PENDING_SENT') {
+                        Request Sent
+                      }
+                      @case ('PENDING_RECEIVED') {
+                        Request Received
+                      }
+                      @case ('BLOCKED') {
+                        Blocked
+                      }
+                      @default {
+                        Not Connected
+                      }
+                    }
+                  </span>
+                }
+              </div>
+            </div>
+
+            <!-- Bio -->
+            <div class="profile-bio-card">
+              <span class="section-label">Bio</span>
+              <p class="section-content" data-testid="profile-bio">
+                {{ profile()?.bio || 'No bio provided.' }}
+              </p>
+            </div>
+
+            <!-- Action Status Feedback -->
+            @if (actionMessage()) {
+              <div class="action-feedback" data-testid="action-feedback">
+                <span>{{ actionMessage() }}</span>
+              </div>
+            }
+
+            <!-- Confirmation Prompt Card -->
+            @if (confirmAction()) {
+              <div class="confirm-card" data-testid="confirm-action-card">
+                <p class="confirm-message">
+                  @switch (confirmAction()) {
+                    @case ('BLOCK') {
+                      Are you sure you want to block <strong>{{ maskedName() }}</strong>? You will no longer receive their messages or presence updates.
+                    }
+                    @case ('UNBLOCK') {
+                      Are you sure you want to unblock <strong>{{ maskedName() }}</strong>?
+                    }
+                    @case ('REMOVE') {
+                      Are you sure you want to remove <strong>{{ maskedName() }}</strong> from your contacts?
+                    }
+                  }
+                </p>
+                <div class="confirm-buttons">
+                  <button
+                    type="button"
+                    class="btn-cancel"
+                    (click)="cancelConfirm()"
+                    [disabled]="actionLoading()"
+                    data-testid="confirm-cancel-btn"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-confirm-action"
+                    [class.btn-danger]="confirmAction() === 'BLOCK' || confirmAction() === 'REMOVE'"
+                    [class.btn-amber]="confirmAction() === 'UNBLOCK'"
+                    (click)="executeConfirm()"
+                    [disabled]="actionLoading()"
+                    data-testid="confirm-execute-btn"
+                  >
+                    @if (actionLoading()) {
+                      <span>Processing...</span>
+                    } @else if (confirmAction() === 'BLOCK') {
+                      <span>Block</span>
+                    } @else if (confirmAction() === 'REMOVE') {
+                      <span>Remove</span>
+                    } @else {
+                      <span>Unblock</span>
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+
+            <!-- Action Buttons Footer -->
+            @if (!isSelf() && !confirmAction()) {
+              <div class="action-footer" data-testid="profile-action-footer">
+                @if (connectionStatus() === 'NONE') {
+                  <button
+                    type="button"
+                    class="btn-primary-action"
+                    (click)="sendConnectionRequest()"
+                    [disabled]="actionLoading()"
+                    data-testid="send-contact-request-btn"
+                  >
+                    @if (actionLoading()) {
+                      <span>Sending...</span>
+                    } @else {
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="8.5" cy="7" r="4"></circle>
+                        <line x1="20" y1="8" x2="20" y2="14"></line>
+                        <line x1="23" y1="11" x2="17" y2="11"></line>
+                      </svg>
+                      <span>Add Contact</span>
+                    }
+                  </button>
+                } @else if (connectionStatus() === 'PENDING_SENT') {
+                  <button
+                    type="button"
+                    class="btn-secondary-action"
+                    disabled
+                    data-testid="pending-sent-btn"
+                  >
+                    <span>Request Pending</span>
+                  </button>
+                } @else if (connectionStatus() === 'CONNECTED') {
+                  <button
+                    type="button"
+                    class="btn-secondary-action"
+                    (click)="openConfirm('REMOVE')"
+                    [disabled]="actionLoading()"
+                    data-testid="remove-contact-btn"
+                  >
+                    <span>Remove Contact</span>
+                  </button>
+                }
+
+                @if (connectionStatus() === 'BLOCKED') {
+                  <button
+                    type="button"
+                    class="btn-secondary-action"
+                    (click)="openConfirm('UNBLOCK')"
+                    [disabled]="actionLoading()"
+                    data-testid="unblock-user-btn"
+                  >
+                    <span>Unblock User</span>
+                  </button>
+                } @else {
+                  <button
+                    type="button"
+                    class="btn-danger-outline"
+                    (click)="openConfirm('BLOCK')"
+                    [disabled]="actionLoading()"
+                    data-testid="block-user-btn"
+                  >
+                    <span>Block</span>
+                  </button>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+}

@@ -182,7 +182,15 @@
           <div class="members-list" data-testid="members-list">
             @for (m of members(); track m.userId) {
               <div class="member-item" [attr.data-user-id]="m.userId" data-testid="member-item">
-                <div class="member-avatar-wrap">
+                <div
+                  class="member-avatar-wrap"
+                  (click)="openMemberProfile(m)"
+                  role="button"
+                  tabindex="0"
+                  (keydown.enter)="openMemberProfile(m)"
+                  title="View Profile"
+                  style="cursor: pointer"
+                >
                   <div class="member-avatar" aria-hidden="true">
                     <span>{{ m.displayName.charAt(0).toUpperCase() }}</span>
                   </div>
@@ -191,7 +199,15 @@
                   }
                 </div>
 
-                <div class="member-info">
+                <div
+                  class="member-info"
+                  (click)="openMemberProfile(m)"
+                  role="button"
+                  tabindex="0"
+                  (keydown.enter)="openMemberProfile(m)"
+                  title="View Profile"
+                  style="cursor: pointer"
+                >
                   <div class="member-primary-line">
                     <span class="member-name" data-testid="member-display-name">{{ m.displayName }}</span>
                     @if (m.userId === currentUserId()) {
@@ -635,4 +651,12 @@
       </div>
     </div>
   }
+
+  <!-- Public Profile Viewer Modal -->
+  <app-public-profile-modal
+    [isOpen]="isProfileModalOpen()"
+    [userId]="selectedProfileUserId()"
+    (closeModal)="closeProfileModal()"
+    (connectionChanged)="loadMembers()"
+  />
 </div>

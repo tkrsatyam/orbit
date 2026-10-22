@@ -5,11 +5,12 @@ import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
+import { PublicProfileModalComponent } from '../../shared/components/public-profile-modal/public-profile-modal.component';
 
 @Component({
   selector: 'app-group',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule],
+  imports: [CommonModule, RouterLink, ReactiveFormsModule, PublicProfileModalComponent],
   templateUrl: './group.component.html',
   styleUrl: './group.component.scss'
 })
@@ -51,6 +52,10 @@ export class GroupComponent implements OnInit {
   readonly isDeleteSpaceModalOpen = signal<boolean>(false);
   readonly isDeletingSpace = signal<boolean>(false);
   readonly deleteSpaceError = signal<string | null>(null);
+
+  // Public profile viewer state
+  readonly selectedProfileUserId = signal<string | null>(null);
+  readonly isProfileModalOpen = signal<boolean>(false);
 
   readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
@@ -193,6 +198,16 @@ export class GroupComponent implements OnInit {
     if (nextState) {
       this.loadMembers();
     }
+  }
+
+  openMemberProfile(member: GroupMemberResponse): void {
+    this.selectedProfileUserId.set(member.userId);
+    this.isProfileModalOpen.set(true);
+  }
+
+  closeProfileModal(): void {
+    this.isProfileModalOpen.set(false);
+    this.selectedProfileUserId.set(null);
   }
 
   loadMembers(): void {
