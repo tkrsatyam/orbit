@@ -7,6 +7,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
+import { WebSocketService } from '../../core/services/websocket/websocket.service';
 import { ConversationsComponent } from './conversations.component';
 
 describe('ConversationsComponent', () => {
@@ -37,6 +38,12 @@ describe('ConversationsComponent', () => {
     createGroup: ReturnType<typeof vi.fn>;
     generateInvite: ReturnType<typeof vi.fn>;
     joinViaInvite: ReturnType<typeof vi.fn>;
+  };
+  let webSocketServiceMock: {
+    connect: ReturnType<typeof vi.fn>;
+    disconnect: ReturnType<typeof vi.fn>;
+    showReconnectAlert: ReturnType<typeof signal<boolean>>;
+    status: ReturnType<typeof signal<string>>;
   };
   let router: Router;
 
@@ -101,6 +108,13 @@ describe('ConversationsComponent', () => {
       joinViaInvite: vi.fn().mockReturnValue(of({ groupId: 'grp-1', groupName: 'Engineers Orbit', role: 'MEMBER', joinedAt: '2026-10-21T00:00:00Z' }))
     };
 
+    webSocketServiceMock = {
+      connect: vi.fn(),
+      disconnect: vi.fn(),
+      showReconnectAlert: signal<boolean>(false),
+      status: signal<string>('DISCONNECTED')
+    };
+
     await TestBed.configureTestingModule({
       imports: [ConversationsComponent],
       providers: [
@@ -108,7 +122,8 @@ describe('ConversationsComponent', () => {
         { provide: AuthService, useValue: authServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
         { provide: UserService, useValue: userServiceMock },
-        { provide: GroupService, useValue: groupServiceMock }
+        { provide: GroupService, useValue: groupServiceMock },
+        { provide: WebSocketService, useValue: webSocketServiceMock }
       ]
     }).compileComponents();
 
@@ -340,5 +355,31 @@ describe('ConversationsComponent', () => {
 
     component.setGroupFilter('ALL');
     expect(component.filteredGroups().length).toBe(2);
+  });
+
+  it('should initialize and connect WebSocketService on component init', () => {
+    expect(webSocketServiceMock.connect).toHaveBeenCalled();
+  });
+
+  it('should disconnect WebSocketService on user logout', () => {
+    component.handleLogout();
+    expect(webSocketServiceMock.disconnect).toHaveBeenCalled();
+  });
+
+  it('should render reconnect banner when webSocketService.showReconnectAlert is true', () => {
+    let banner = fixture.nativeElement.querySelector('[data-testid="ws-reconnect-banner"]');
+    expect(banner).toBeNull();
+
+    webSocketServiceMock.showReconnectAlert.set(true);
+    fixture.detectChanges();
+
+    banner = fixture.nativeElement.querySelector('[data-testid="ws-reconnect-banner"]');
+    expect(banner).not.toBeNull();
+    expect(banner.textContent).toContain('Reconnecting to live chat service...');
+
+    const retryBtn = fixture.nativeElement.querySelector('[data-testid="ws-retry-btn"]') as HTMLButtonElement;
+    expect(retryBtn).not.toBeNull();
+    retryBtn.click();
+    expect(webSocketServiceMock.connect).toHaveBeenCalledTimes(2);
   });
 });

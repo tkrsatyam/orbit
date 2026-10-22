@@ -57,6 +57,9 @@
             ],
             "styles": [
               "src/styles.scss"
+            ],
+            "allowedCommonJsDependencies": [
+              "sockjs-client"
             ]
           },
           "configurations": {
