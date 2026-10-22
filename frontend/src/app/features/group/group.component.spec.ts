@@ -4,6 +4,8 @@ import { of, throwError } from 'rxjs';
 import { GroupComponent } from './group.component';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
+import { UserService } from '../../core/services/user.service';
+import { ContactService } from '../../core/services/contact.service';
 
 describe('GroupComponent', () => {
   let component: GroupComponent;
@@ -38,6 +40,32 @@ describe('GroupComponent', () => {
     role: 'ADMIN'
   };
 
+  const mockMemberList: Array<{
+    userId: string;
+    displayName: string;
+    avatarUrl: string | null;
+    role: 'ADMIN' | 'MEMBER';
+    online: boolean;
+    joinedAt: string;
+  }> = [
+    {
+      userId: 'u-1',
+      displayName: 'Lead Admin',
+      avatarUrl: null,
+      role: 'ADMIN',
+      online: true,
+      joinedAt: '2026-10-21T10:00:00Z'
+    },
+    {
+      userId: 'u-2',
+      displayName: 'Dev Contributor',
+      avatarUrl: null,
+      role: 'MEMBER',
+      online: false,
+      joinedAt: '2026-10-21T11:00:00Z'
+    }
+  ];
+
   const setupComponent = async (paramId: string | null = 'group-101', groupToReturn = mockAdminGroup) => {
     mockGroupService = {
       getGroupDetails: vi.fn().mockReturnValue(of(groupToReturn)),
@@ -46,24 +74,7 @@ describe('GroupComponent', () => {
       loadMyGroups: vi.fn().mockReturnValue(of([groupToReturn])),
       myGroups: vi.fn().mockReturnValue([groupToReturn]),
       getGroupMembers: vi.fn().mockReturnValue(of({
-        content: [
-          {
-            userId: 'u-1',
-            displayName: 'Lead Admin',
-            avatarUrl: null,
-            role: 'ADMIN',
-            online: true,
-            joinedAt: '2026-10-21T10:00:00Z'
-          },
-          {
-            userId: 'u-2',
-            displayName: 'Dev Contributor',
-            avatarUrl: null,
-            role: 'MEMBER',
-            online: false,
-            joinedAt: '2026-10-21T11:00:00Z'
-          }
-        ]
+        content: mockMemberList
       })),
       updateMemberRole: vi.fn().mockReturnValue(of({
         userId: 'u-2',
@@ -89,8 +100,31 @@ describe('GroupComponent', () => {
         { provide: GroupService, useValue: mockGroupService },
         { provide: AuthService, useValue: mockAuthService },
         {
+          provide: UserService,
+          useValue: {
+            getUserProfile: vi.fn().mockReturnValue(of({
+              id: 'u-2',
+              displayName: 'Dev Contributor',
+              available: true,
+              connectionStatus: 'NONE'
+            })),
+            blockUser: vi.fn().mockReturnValue(of(undefined)),
+            unblockUser: vi.fn().mockReturnValue(of(undefined))
+          }
+        },
+        {
+          provide: ContactService,
+          useValue: {
+            sendConnectionRequest: vi.fn().mockReturnValue(of({ id: 'r1' })),
+            removeContact: vi.fn().mockReturnValue(of(undefined))
+          }
+        },
+        {
           provide: ActivatedRoute,
           useValue: {
+            paramMap: of({
+              get: (key: string) => (key === 'id' ? paramId : null)
+            }),
             snapshot: {
               paramMap: {
                 get: (key: string) => (key === 'id' ? paramId : null)
@@ -337,6 +371,19 @@ describe('GroupComponent', () => {
 
     expect(mockGroupService.removeMember).toHaveBeenCalledWith('group-101', 'u-2');
     expect(component.isRemoveMemberModalOpen()).toBe(false);
+  });
+
+  it('should open and close member public profile modal', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    const target = mockMemberList[1];
+    component.openMemberProfile(target);
+    expect(component.isProfileModalOpen()).toBe(true);
+    expect(component.selectedProfileUserId()).toBe('u-2');
+
+    component.closeProfileModal();
+    expect(component.isProfileModalOpen()).toBe(false);
+    expect(component.selectedProfileUserId()).toBeNull();
   });
 
   it('should open and close delete space modal', async () => {

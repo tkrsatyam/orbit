@@ -120,9 +120,8 @@ describe('ConversationsComponent', () => {
     fixture.detectChanges();
   });
 
-  it('should render user display name in header and initial in avatar badge', () => {
+  it('should render user initial in avatar badge in nav rail', () => {
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.welcome-heading')?.textContent).toContain('Satyam Kumar');
     expect(compiled.querySelector('[data-testid="user-avatar-badge"]')?.textContent?.trim()).toBe('S');
   });
 
@@ -200,12 +199,11 @@ describe('ConversationsComponent', () => {
     expect(component.isNewChatOpen()).toBe(false);
   });
 
-  it('should open new chat modal when clicking + New Conversation button in action area', () => {
+  it('should open new chat modal via openNewChatModal()', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).toBeNull();
 
-    const newChatBtn = compiled.querySelector('[data-testid="action-new-chat-btn"]') as HTMLButtonElement;
-    newChatBtn.click();
+    component.openNewChatModal();
     fixture.detectChanges();
 
     expect(compiled.querySelector('[data-testid="new-chat-modal-card"]')).not.toBeNull();

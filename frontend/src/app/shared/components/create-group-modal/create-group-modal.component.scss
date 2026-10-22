@@ -298,43 +298,43 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.75rem;
-  margin-top: 0.75rem;
+  margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--orbit-border, #2e2e33);
 }
 
-.btn-cancel {
-  padding: 0.625rem 1.25rem;
-  background: none;
-  border: 1px solid var(--orbit-border, #2e2e33);
-  border-radius: 6px;
-  color: var(--orbit-text-primary, #ededef);
+.btn-cancel,
+.btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 1.25rem;
+  border-radius: 8px;
   font-size: 0.875rem;
-  font-weight: 500;
+  box-sizing: border-box;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.btn-cancel {
+  background-color: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  color: var(--orbit-text-primary, #ededef);
+  font-weight: 500;
 
   &:hover {
-    background-color: var(--orbit-elevated, #27272a);
+    background-color: #323238;
+    border-color: var(--orbit-text-muted, #a1a1aa);
   }
 }
 
 .btn-submit {
-  flex: 1;
-  max-width: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.625rem 1.25rem;
   background-color: var(--orbit-accent, #f59e0b);
-  border: none;
-  border-radius: 6px;
+  border: 1px solid var(--orbit-accent, #f59e0b);
   color: #121214;
-  font-size: 0.875rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: opacity 0.15s ease;
+  gap: 0.5rem;
 
   &:hover:not(:disabled) {
     opacity: 0.9;
@@ -375,5 +375,16 @@
 
   .visibility-cards-row {
     grid-template-columns: 1fr;
+  }
+
+  .modal-footer {
+    display: flex;
+    gap: 0.75rem;
+
+    .btn-cancel,
+    .btn-submit {
+      flex: 1;
+      width: 100%;
+    }
   }
 }
