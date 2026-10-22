@@ -266,13 +266,8 @@
           <div class="groups-grid" data-testid="groups-grid">
             @for (group of groups(); track group.id) {
               <article class="group-card" data-testid="group-card" (click)="openSpace(group)">
-                <div class="card-banner">
-                  <div class="topic-tag-chip">
-                    {{ parseTags(group.topicTag)[0] || '#general' }}
-                  </div>
-                </div>
-
-                <div class="card-body">
+                <!-- Card Header with Domain Avatar and Group Meta -->
+                <div class="card-header">
                   <div class="card-avatar" [attr.aria-label]="group.name">
                     @switch (getDomainIconType(group)) {
                       @case ('coffee') {
@@ -311,46 +306,65 @@
                     }
                   </div>
 
-                  <h2 class="group-name">{{ group.name }}</h2>
-
-                  <div class="group-metrics">
-                    <span class="member-dot"></span>
-                    <span class="member-count">{{ group.memberCount }} members</span>
+                  <div class="card-header-meta">
+                    <h2 class="group-name" [title]="group.name">{{ group.name }}</h2>
+                    <div class="group-metrics">
+                      <span class="member-dot"></span>
+                      <span class="member-count">{{ formatMemberCount(group.memberCount) }}</span>
+                    </div>
                   </div>
+                </div>
 
+                <div class="card-body">
                   <p class="group-desc">
                     {{ group.description || 'Welcome to ' + group.name + '. Join to collaborate and chat.' }}
                   </p>
 
-                  <div class="card-action">
-                    @if (group.role) {
-                      <button
-                        type="button"
-                        class="btn btn-card-joined"
-                        (click)="openSpace(group); $event.stopPropagation()"
-                        data-testid="btn-open-group"
-                      >
-                        Open Group
-                      </button>
-                    } @else {
-                      <button
-                        type="button"
-                        class="btn btn-card-join"
-                        [disabled]="joiningGroupId() === group.id"
-                        (click)="joinGroup(group, $event)"
-                        data-testid="btn-join-group"
-                      >
-                        @if (joiningGroupId() === group.id) {
-                          <span class="spinner-sm"></span>
-                          <span>Joining...</span>
-                        } @else if (!authService.isAuthenticated()) {
-                          <span>Sign In to Join</span>
-                        } @else {
-                          <span>Join Group</span>
-                        }
-                      </button>
-                    }
-                  </div>
+                  <!-- ALL Topic Tags displayed cleanly -->
+                  @if (parseTags(group.topicTag).length > 0) {
+                    <div class="card-tags" data-testid="card-tags">
+                      @for (tag of parseTags(group.topicTag); track tag) {
+                        <button
+                          type="button"
+                          class="tag-badge"
+                          (click)="onCardTagClick(tag, $event)"
+                          [title]="'Filter by ' + tag"
+                        >
+                          {{ tag }}
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+
+                <div class="card-action">
+                  @if (group.role) {
+                    <button
+                      type="button"
+                      class="btn btn-card-joined"
+                      (click)="openSpace(group); $event.stopPropagation()"
+                      data-testid="btn-open-group"
+                    >
+                      Open Group
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="btn btn-card-join"
+                      [disabled]="joiningGroupId() === group.id"
+                      (click)="joinGroup(group, $event)"
+                      data-testid="btn-join-group"
+                    >
+                      @if (joiningGroupId() === group.id) {
+                        <span class="spinner-sm"></span>
+                        <span>Joining...</span>
+                      } @else if (!authService.isAuthenticated()) {
+                        <span>Sign In to Join</span>
+                      } @else {
+                        <span>Join Group</span>
+                      }
+                    </button>
+                  }
                 </div>
               </article>
             }

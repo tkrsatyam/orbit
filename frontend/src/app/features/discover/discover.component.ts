@@ -152,6 +152,21 @@ export class DiscoverComponent implements OnInit {
     this.loadGroups();
   }
 
+  onCardTagClick(tag: string, event: MouseEvent): void {
+    event.stopPropagation();
+    const clean = tag.replace(/^#/, '').trim().toLowerCase();
+    if (clean) {
+      this.selectTag(clean);
+    }
+  }
+
+  formatMemberCount(count: number): string {
+    if (count === 1) {
+      return '1 member';
+    }
+    return `${count} members`;
+  }
+
   navigateTab(tab: 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'): void {
     if (tab === 'DISCOVER') {
       return;

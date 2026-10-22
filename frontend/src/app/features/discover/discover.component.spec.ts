@@ -34,7 +34,7 @@ describe('DiscoverComponent', () => {
       visibility: 'PUBLIC',
       avatarUrl: null,
       coverImageUrl: null,
-      memberCount: 42,
+      memberCount: 1,
       conversationId: 'conv-1',
       createdAt: '2026-10-21T10:00:00Z',
       role: 'ADMIN'
@@ -43,7 +43,7 @@ describe('DiscoverComponent', () => {
       id: 'grp-2',
       name: 'LeetCode Grinders',
       description: 'Daily mock interviews and algorithm practice',
-      topicTag: '#interview-prep, #dsa',
+      topicTag: '#interview-prep, #dsa, #career-switch',
       visibility: 'PUBLIC',
       avatarUrl: null,
       coverImageUrl: null,
@@ -100,7 +100,6 @@ describe('DiscoverComponent', () => {
     expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({ page: 0, size: 100 });
     expect(component.groups().length).toBe(2);
 
-    // Dynamic filters computed from mockPublicGroups ('java-spring', 'interview-prep', 'dsa')
     const filters = component.topicFilters();
     expect(filters.length).toBeGreaterThan(1);
     expect(filters[0].label).toBe('All Topics');
@@ -108,6 +107,7 @@ describe('DiscoverComponent', () => {
     expect(labels).toContain('#java-spring');
     expect(labels).toContain('#interview-prep');
     expect(labels).toContain('#dsa');
+    expect(labels).toContain('#career-switch');
   });
 
   it('should render navigation rail when user is authenticated with Discover active', () => {
@@ -126,14 +126,11 @@ describe('DiscoverComponent', () => {
   it('should not perform search automatically while typing, but trigger manually on search button click or Enter', () => {
     groupServiceMock.discoverGroups.mockClear();
 
-    // Type in search box without submitting
     component.searchInputValue.set('Design');
     fixture.detectChanges();
 
-    // discoverGroups should NOT be called just from typing
     expect(groupServiceMock.discoverGroups).not.toHaveBeenCalled();
 
-    // Trigger manual search via Enter or executeSearch()
     const compiled = fixture.nativeElement as HTMLElement;
     const searchBtn = compiled.querySelector('[data-testid="search-trigger-btn"]') as HTMLButtonElement;
     expect(searchBtn).not.toBeNull();
@@ -184,6 +181,40 @@ describe('DiscoverComponent', () => {
       page: 0,
       size: 50
     });
+  });
+
+  it('should render all topic tags on group cards and allow clicking tag to filter', () => {
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cards = compiled.querySelectorAll('[data-testid="group-card"]');
+
+    // Second group card has 3 tags: #interview-prep, #dsa, #career-switch
+    const card2Tags = cards[1].querySelectorAll('.tag-badge');
+    expect(card2Tags.length).toBe(3);
+    expect(card2Tags[0].textContent?.trim()).toBe('#interview-prep');
+    expect(card2Tags[1].textContent?.trim()).toBe('#dsa');
+    expect(card2Tags[2].textContent?.trim()).toBe('#career-switch');
+
+    // Clicking tag badge filters by that tag
+    groupServiceMock.discoverGroups.mockClear();
+    (card2Tags[1] as HTMLButtonElement).click();
+    expect(component.selectedTag()).toBe('dsa');
+    expect(groupServiceMock.discoverGroups).toHaveBeenCalledWith({
+      q: '',
+      tag: 'dsa',
+      page: 0,
+      size: 50
+    });
+  });
+
+  it('should format singular vs plural member count accurately', () => {
+    expect(component.formatMemberCount(1)).toBe('1 member');
+    expect(component.formatMemberCount(2)).toBe('2 members');
+    expect(component.formatMemberCount(42)).toBe('42 members');
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const cards = compiled.querySelectorAll('[data-testid="group-card"]');
+    expect(cards[0].querySelector('.member-count')?.textContent?.trim()).toBe('1 member');
+    expect(cards[1].querySelector('.member-count')?.textContent?.trim()).toBe('15 members');
   });
 
   it('should render Open Group for joined groups and route to /groups/:id', () => {
