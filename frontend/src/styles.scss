@@ -76,20 +76,30 @@
   background-color: var(--orbit-bg);
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
 body {
   margin: 0;
   padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
   box-sizing: border-box;
   background-color: var(--orbit-bg);
   color: var(--orbit-text-primary);
 }
 
 app-root {
-  display: flex;
-  flex-direction: column;
+  display: block;
   box-sizing: border-box;
   width: 100%;
-  min-height: 100vh;
+  height: 100%;
+  overflow: hidden;
   margin: 0;
   text-align: left;
 }

@@ -17,6 +17,8 @@ describe('GroupComponent', () => {
     getGroupMembers: ReturnType<typeof vi.fn>;
     updateMemberRole: ReturnType<typeof vi.fn>;
     leaveGroup: ReturnType<typeof vi.fn>;
+    removeMember: ReturnType<typeof vi.fn>;
+    deleteGroup: ReturnType<typeof vi.fn>;
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof vi.fn>;
@@ -71,7 +73,9 @@ describe('GroupComponent', () => {
         online: false,
         joinedAt: '2026-10-21T11:00:00Z'
       })),
-      leaveGroup: vi.fn().mockReturnValue(of(void 0))
+      leaveGroup: vi.fn().mockReturnValue(of(void 0)),
+      removeMember: vi.fn().mockReturnValue(of(void 0)),
+      deleteGroup: vi.fn().mockReturnValue(of(void 0))
     };
 
     mockAuthService = {
@@ -279,5 +283,104 @@ describe('GroupComponent', () => {
     expect(component.leaveError()).toBe('Failed to depart space');
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('[data-testid="leave-group-error"]')?.textContent).toContain('Failed to depart space');
+  });
+
+  it('should allow admin to remove a member', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    fixture.detectChanges();
+
+    const target = component.members()[1]; // Dev Contributor
+    component.removeMember(target);
+    fixture.detectChanges();
+
+    expect(mockGroupService.removeMember).toHaveBeenCalledWith('group-101', 'u-2');
+    expect(component.members().length).toBe(1);
+    expect(component.members()[0].userId).toBe('u-1');
+    expect(component.group()?.memberCount).toBe(13);
+  });
+
+  it('should display error when removeMember fails', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    fixture.detectChanges();
+
+    mockGroupService.removeMember.mockReturnValue(throwError(() => ({
+      error: { message: 'Cannot remove member' }
+    })));
+
+    const target = component.members()[1];
+    component.removeMember(target);
+    fixture.detectChanges();
+
+    expect(component.memberActionError()).toBe('Cannot remove member');
+  });
+
+  it('should open and close remove member modal', async () => {
+    await setupComponent();
+    const target = mockMemberList[1];
+    component.openRemoveMemberModal(target);
+    expect(component.isRemoveMemberModalOpen()).toBe(true);
+    expect(component.memberToRemove()).toEqual(target);
+
+    component.closeRemoveMemberModal();
+    expect(component.isRemoveMemberModalOpen()).toBe(false);
+    expect(component.memberToRemove()).toBeNull();
+  });
+
+  it('should remove member on confirmRemoveMember', async () => {
+    await setupComponent();
+    component.toggleMembersDrawer();
+    const target = mockMemberList[1];
+    component.openRemoveMemberModal(target);
+    component.confirmRemoveMember();
+
+    expect(mockGroupService.removeMember).toHaveBeenCalledWith('group-101', 'u-2');
+    expect(component.isRemoveMemberModalOpen()).toBe(false);
+  });
+
+  it('should open and close delete space modal', async () => {
+    await setupComponent();
+    expect(component.isDeleteSpaceModalOpen()).toBe(false);
+
+    component.openDeleteSpaceModal();
+    fixture.detectChanges();
+    expect(component.isDeleteSpaceModalOpen()).toBe(true);
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="delete-space-modal-card"]')).not.toBeNull();
+
+    component.closeDeleteSpaceModal();
+    fixture.detectChanges();
+    expect(component.isDeleteSpaceModalOpen()).toBe(false);
+  });
+
+  it('should delete group and navigate to / on confirmation', async () => {
+    await setupComponent();
+    const router = TestBed.inject(Router);
+    const navSpy = vi.spyOn(router, 'navigate');
+
+    component.openDeleteSpaceModal();
+    component.confirmDeleteSpace();
+    fixture.detectChanges();
+
+    expect(mockGroupService.deleteGroup).toHaveBeenCalledWith('group-101');
+    expect(navSpy).toHaveBeenCalledWith(['/']);
+    expect(component.isDeleteSpaceModalOpen()).toBe(false);
+  });
+
+  it('should display error if deleteGroup fails', async () => {
+    await setupComponent();
+    mockGroupService.deleteGroup.mockReturnValue(throwError(() => ({
+      error: { message: 'Failed to delete space' }
+    })));
+
+    component.openDeleteSpaceModal();
+    component.confirmDeleteSpace();
+    fixture.detectChanges();
+
+    expect(component.deleteSpaceError()).toBe('Failed to delete space');
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('[data-testid="delete-space-error"]')?.textContent).toContain('Failed to delete space');
   });
 });

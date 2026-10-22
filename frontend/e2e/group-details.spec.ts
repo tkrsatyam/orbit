@@ -68,10 +68,7 @@ test.describe('View & Update Group Details Flow (ORDM-38)', () => {
     await expect(page.locator('[data-testid="group-view-topic"]')).toHaveText('#cloud-native');
     await expect(page.locator('[data-testid="group-view-desc"]')).toContainText('Kubernetes, Kafka and event streams');
 
-    // 9. Navigate back to conversations and verify sidebar shows updated name
-    await page.click('[data-testid="back-to-conversations-btn"]');
-    await expect(page).toHaveURL('http://localhost:4200/');
-    await page.click('[data-testid="nav-tab-groups"]');
+    // 9. Verify sidebar shows updated name in 3-pane workstation
     await expect(page.locator('[data-testid="groups-sidebar-list"]')).toContainText(updatedName);
   });
 

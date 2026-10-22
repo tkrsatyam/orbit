@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
+import { parseTopicTags } from '../../shared/utils/tag-utils';
 
 @Component({
   selector: 'app-group',
@@ -36,6 +37,9 @@ export class GroupComponent implements OnInit {
   readonly loadingMembers = signal<boolean>(false);
   readonly memberActionError = signal<string | null>(null);
   readonly updatingMemberId = signal<string | null>(null);
+  readonly removingMemberId = signal<string | null>(null);
+  readonly isRemoveMemberModalOpen = signal<boolean>(false);
+  readonly memberToRemove = signal<GroupMemberResponse | null>(null);
   readonly currentUserId = computed(() => this.authService.currentUser()?.id);
 
   // Leave space state
@@ -43,26 +47,53 @@ export class GroupComponent implements OnInit {
   readonly isLeaving = signal<boolean>(false);
   readonly leaveError = signal<string | null>(null);
 
+  // Delete space state
+  readonly isDeleteSpaceModalOpen = signal<boolean>(false);
+  readonly isDeletingSpace = signal<boolean>(false);
+  readonly deleteSpaceError = signal<string | null>(null);
+
   readonly editForm: FormGroup = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
     topicTag: ['', [Validators.maxLength(50)]],
     description: ['', [Validators.maxLength(500)]]
   });
 
-  readonly groupId = computed(() => this.route.snapshot.paramMap.get('id') || '');
+  readonly groupId = signal<string>('');
   readonly isAdmin = computed(() => this.group()?.role === 'ADMIN');
   readonly myGroups = computed(() => this.groupService.myGroups());
+  readonly topicTags = computed(() => parseTopicTags(this.group()?.topicTag));
+
+  readonly leaveWarningMessage = computed(() => {
+    const isAdm = this.isAdmin();
+    const count = this.group()?.memberCount ?? 1;
+
+    if (count <= 1) {
+      return 'You are the last remaining member. If you leave, this space and its entire conversation history will be permanently deleted.';
+    }
+
+    if (isAdm) {
+      return 'As you are departing, admin privileges will automatically be transferred to the longest-standing member. You will lose access to this space.';
+    }
+
+    return 'You will lose access to this space and its messages. To rejoin later, you will need a new invite link from an admin.';
+  });
 
   ngOnInit(): void {
-    const id = this.groupId();
-    if (!id) {
-      this.errorMessage.set('Group ID is missing');
-      this.loading.set(false);
-      return;
-    }
-    this.loadGroupDetails(id);
+    this.route.paramMap.subscribe(params => {
+      const id = params.get('id');
+      if (id) {
+        this.groupId.set(id);
+        this.loadGroupDetails(id);
+      } else {
+        this.errorMessage.set('Group ID is missing');
+        this.loading.set(false);
+      }
+    });
+
     this.groupService.loadMyGroups().subscribe({
-      error: () => {}
+      error: () => {
+        // Silently handle
+      }
     });
   }
 
@@ -233,6 +264,76 @@ export class GroupComponent implements OnInit {
         this.isLeaving.set(false);
         const msg = err.error?.message || 'Failed to leave space';
         this.leaveError.set(msg);
+      }
+    });
+  }
+
+  openRemoveMemberModal(member: GroupMemberResponse): void {
+    this.memberToRemove.set(member);
+    this.isRemoveMemberModalOpen.set(true);
+  }
+
+  closeRemoveMemberModal(): void {
+    this.memberToRemove.set(null);
+    this.isRemoveMemberModalOpen.set(false);
+  }
+
+  confirmRemoveMember(): void {
+    const m = this.memberToRemove();
+    if (m) {
+      this.removeMember(m);
+      this.closeRemoveMemberModal();
+    }
+  }
+
+  removeMember(targetMember: GroupMemberResponse): void {
+    const gid = this.groupId();
+    if (!gid || this.removingMemberId()) return;
+
+    this.removingMemberId.set(targetMember.userId);
+    this.memberActionError.set(null);
+
+    this.groupService.removeMember(gid, targetMember.userId).subscribe({
+      next: () => {
+        this.members.update((list) => list.filter((m) => m.userId !== targetMember.userId));
+        this.group.update((g) => (g ? { ...g, memberCount: Math.max(0, g.memberCount - 1) } : null));
+        this.removingMemberId.set(null);
+      },
+      error: (err) => {
+        this.removingMemberId.set(null);
+        const msg = err.error?.message || 'Failed to remove member';
+        this.memberActionError.set(msg);
+      }
+    });
+  }
+
+  openDeleteSpaceModal(): void {
+    this.deleteSpaceError.set(null);
+    this.isDeleteSpaceModalOpen.set(true);
+  }
+
+  closeDeleteSpaceModal(): void {
+    this.isDeleteSpaceModalOpen.set(false);
+    this.deleteSpaceError.set(null);
+  }
+
+  confirmDeleteSpace(): void {
+    const gid = this.groupId();
+    if (!gid || this.isDeletingSpace()) return;
+
+    this.isDeletingSpace.set(true);
+    this.deleteSpaceError.set(null);
+
+    this.groupService.deleteGroup(gid).subscribe({
+      next: () => {
+        this.isDeletingSpace.set(false);
+        this.closeDeleteSpaceModal();
+        this.router.navigate(['/']);
+      },
+      error: (err) => {
+        this.isDeletingSpace.set(false);
+        const msg = err.error?.message || 'Failed to delete space';
+        this.deleteSpaceError.set(msg);
       }
     });
   }

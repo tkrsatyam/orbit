@@ -257,4 +257,37 @@ describe('GroupService', () => {
 
     expect(service.myGroups()).toEqual([]);
   });
+
+  it('removeMember should send DELETE to /members/{userId}', () => {
+    service.removeMember('group-1', 'user-2').subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1/members/user-2`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+  });
+
+  it('deleteGroup should send DELETE to /groups/{groupId} and remove from myGroups', () => {
+    const existingGroup: GroupResponse = {
+      id: 'group-1',
+      name: 'Doomed Space',
+      description: null,
+      topicTag: null,
+      visibility: 'PUBLIC',
+      avatarUrl: null,
+      coverImageUrl: null,
+      memberCount: 1,
+      conversationId: 'conv-1',
+      createdAt: '2026-10-21T10:00:00Z',
+      role: 'ADMIN'
+    };
+    service.myGroups.set([existingGroup]);
+
+    service.deleteGroup('group-1').subscribe();
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/groups/group-1`);
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null);
+
+    expect(service.myGroups()).toEqual([]);
+  });
 });

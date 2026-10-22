@@ -7,7 +7,7 @@ import { of, throwError } from 'rxjs';
 describe('InviteJoinComponent', () => {
   let component: InviteJoinComponent;
   let fixture: ComponentFixture<InviteJoinComponent>;
-  let mockGroupService: { joinViaInvite: ReturnType<typeof vi.fn> };
+  let mockGroupService: { joinViaInvite: ReturnType<typeof vi.fn>; loadMyGroups: ReturnType<typeof vi.fn> };
   let mockRouter: { navigate: ReturnType<typeof vi.fn> };
   let mockActivatedRoute: { snapshot: { paramMap: { get: ReturnType<typeof vi.fn> } } };
 
@@ -19,7 +19,8 @@ describe('InviteJoinComponent', () => {
 
   beforeEach(async () => {
     mockGroupService = {
-      joinViaInvite: vi.fn().mockReturnValue(of(mockJoinResponse))
+      joinViaInvite: vi.fn().mockReturnValue(of(mockJoinResponse)),
+      loadMyGroups: vi.fn().mockReturnValue(of([]))
     };
 
     mockRouter = {
@@ -47,8 +48,17 @@ describe('InviteJoinComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('should join group successfully on init when token is valid', () => {
+  it('should initialize in PENDING state when token is valid', () => {
     fixture.detectChanges();
+
+    expect(component.status()).toBe('PENDING');
+    expect(component.token()).toBe('valid-token-123');
+    expect(mockGroupService.joinViaInvite).not.toHaveBeenCalled();
+  });
+
+  it('should join group successfully when joinSpace is clicked', () => {
+    fixture.detectChanges();
+    component.joinSpace();
 
     expect(mockGroupService.joinViaInvite).toHaveBeenCalledWith('valid-token-123');
     expect(component.status()).toBe('SUCCESS');
@@ -69,6 +79,7 @@ describe('InviteJoinComponent', () => {
     })));
 
     fixture.detectChanges();
+    component.joinSpace();
 
     expect(component.status()).toBe('ERROR');
     expect(component.errorMessage()).toBe('Invite link is invalid or has expired');
@@ -76,6 +87,7 @@ describe('InviteJoinComponent', () => {
 
   it('navigateToGroup should route to /groups/:groupId', () => {
     fixture.detectChanges();
+    component.joinSpace();
     component.navigateToGroup();
     expect(mockRouter.navigate).toHaveBeenCalledWith(['/groups', 'group-1']);
   });

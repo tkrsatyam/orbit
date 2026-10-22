@@ -19,11 +19,15 @@ export const routes: Routes = [
   {
     path: '',
     canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/conversations/conversations.component').then((m) => m.ConversationsComponent),
     children: [
       {
         path: '',
         loadComponent: () =>
-          import('./features/conversations/conversations.component').then((m) => m.ConversationsComponent)
+          import('./features/conversations/welcome-canvas/welcome-canvas.component').then(
+            (m) => m.WelcomeCanvasComponent
+          )
       },
       {
         path: 'groups/:id',

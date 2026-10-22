@@ -448,4 +448,85 @@ public class GroupService {
             conversationService.removeGroupParticipant(group.getConversationId(), callerUserId);
         }
     }
+
+    /**
+     * Evicts a member from the group. Admin-only operation.
+     * Cannot remove self (must use leave instead) and cannot remove another admin.
+     *
+     * @param adminUserId Authenticated user ID of the admin caller
+     * @param groupId Group ID
+     * @param targetUserId ID of the member to evict
+     */
+    public void removeMember(String adminUserId, String groupId, String targetUserId) {
+        if (adminUserId == null || adminUserId.isBlank()) {
+            throw new IllegalArgumentException("Admin user ID is required");
+        }
+        if (groupId == null || groupId.isBlank()) {
+            throw new IllegalArgumentException("Group ID is required");
+        }
+        if (targetUserId == null || targetUserId.isBlank()) {
+            throw new IllegalArgumentException("Target user ID is required");
+        }
+
+        if (adminUserId.equals(targetUserId)) {
+            throw new IllegalArgumentException("Admins cannot remove themselves; use leave group instead");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found with id: " + groupId));
+
+        boolean isAdmin = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(adminUserId) && m.getRole() == GroupRole.ADMIN);
+        if (!isAdmin) {
+            throw new ForbiddenException("Only group admins can remove members");
+        }
+
+        GroupMember target = group.getMembers().stream()
+                .filter(m -> m.getUserId().equals(targetUserId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Member not found in group"));
+
+        if (target.getRole() == GroupRole.ADMIN) {
+            throw new ForbiddenException("Cannot remove another admin from the group");
+        }
+
+        group.getMembers().removeIf(m -> m.getUserId().equals(targetUserId));
+        group.setMemberCount(group.getMembers().size());
+        groupRepository.save(group);
+
+        if (group.getConversationId() != null) {
+            conversationService.removeGroupParticipant(group.getConversationId(), targetUserId);
+        }
+    }
+
+    /**
+     * Permanently deletes a group and cascades deletion to its associated conversation.
+     * Admin-only operation.
+     *
+     * @param adminUserId Authenticated user ID of the admin caller
+     * @param groupId Group ID
+     */
+    public void deleteGroup(String adminUserId, String groupId) {
+        if (adminUserId == null || adminUserId.isBlank()) {
+            throw new IllegalArgumentException("Admin user ID is required");
+        }
+        if (groupId == null || groupId.isBlank()) {
+            throw new IllegalArgumentException("Group ID is required");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found with id: " + groupId));
+
+        boolean isAdmin = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(adminUserId) && m.getRole() == GroupRole.ADMIN);
+        if (!isAdmin) {
+            throw new ForbiddenException("Only group admins can delete the group");
+        }
+
+        groupRepository.deleteById(groupId);
+
+        if (group.getConversationId() != null) {
+            conversationService.deleteGroupConversation(group.getConversationId());
+        }
+    }
 }

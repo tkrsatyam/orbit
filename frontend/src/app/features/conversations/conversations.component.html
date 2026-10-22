@@ -291,6 +291,7 @@
           @for (grp of filteredGroups(); track grp.id) {
             <div
               class="group-list-item"
+              [class.active]="activeGroupId() === grp.id"
               (click)="navigateToGroup(grp.id)"
               [attr.data-testid]="'group-item-' + grp.id"
             >
@@ -303,8 +304,8 @@
                   <span class="group-item-visibility">{{ grp.visibility }}</span>
                 </div>
                 <div class="group-item-bottom">
-                  @if (grp.topicTag) {
-                    <span class="topic-tag-pill">{{ grp.topicTag }}</span>
+                  @for (tag of parseTags(grp.topicTag); track tag) {
+                    <span class="topic-tag-pill">{{ tag }}</span>
                   }
                   <span class="members-metric">{{ grp.memberCount }} members</span>
                 </div>
@@ -318,54 +319,7 @@
 
   <!-- Center Main Workstation Canvas (~760px) -->
   <main class="workstation-main" data-testid="workstation-main">
-    <div class="welcome-canvas">
-      <div class="welcome-squircle" aria-hidden="true">
-        <img src="brand/orbit-icon.svg" alt="Orbit Logo" width="56" height="56" />
-      </div>
-
-      <h1 class="welcome-heading">Welcome, {{ currentUserName() }}</h1>
-      <p class="welcome-subtitle">
-        Collaborate in public tech spaces, join group discussions, or connect 1-on-1 with peers.
-      </p>
-
-      <div class="welcome-action-buttons">
-        <button
-          type="button"
-          class="btn-welcome-primary"
-          (click)="openNewChatModal()"
-          data-testid="action-new-chat-btn"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <line x1="12" y1="5" x2="12" y2="19" />
-            <line x1="5" y1="12" x2="19" y2="12" />
-          </svg>
-          <span>New Conversation</span>
-        </button>
-
-        <button
-          type="button"
-          class="btn-welcome-secondary"
-          (click)="openCreateGroupModal()"
-          data-testid="action-create-group-btn"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <line x1="19" y1="11" x2="19" y2="17" />
-            <line x1="22" y1="14" x2="16" y2="14" />
-          </svg>
-          <span>Create Space</span>
-        </button>
-
-        <a routerLink="/discover" class="btn-welcome-outline">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <circle cx="12" cy="12" r="10" />
-            <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-          </svg>
-          <span>Discover Public Spaces</span>
-        </a>
-      </div>
-    </div>
+    <router-outlet />
   </main>
 
   <!-- Modals -->
