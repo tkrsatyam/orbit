@@ -28,12 +28,12 @@ This is the normal path for all text messages sent while the WebSocket connectio
 
 ### Optimistic UI
 
-Before any network call is made, the React SPA appends the message to the conversation immediately, marked with a "sending…" indicator. This is the optimistic UI pattern — the user sees their message appear instantly without waiting for server confirmation. If the server returns an error, the optimistic message is reverted and a "failed to send" state is shown with a retry option.
+Before any network call is made, the Angular SPA appends the message to the conversation immediately, marked with a "sending…" indicator. This is the optimistic UI pattern — the user sees their message appear instantly without waiting for server confirmation. If the server returns an error, the optimistic message is reverted and a "failed to send" state is shown with a retry option.
 
 ### Step-by-Step
 
 **1. STOMP SEND frame**  
-The React SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`. Immediately on arrival, `RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and nothing below is reached.
+The Angular SPA sends a STOMP SEND frame to `/app/conversations/{conversationId}/send` with the message payload. This is routed by the STOMP broker to `MessageController`, which delegates to `MessageService`. Immediately on arrival, `RateLimitFilter` checks the sender's token bucket — 60 messages per minute per user. If exceeded, a STOMP ERROR frame with status 429 is returned immediately and nothing below is reached.
 
 **1a. Block status check**  
 `MessageService` calls `ContactService` to check whether the sender is currently blocked by the conversation's other participant. This check does not affect group messages — it applies only to 1:1 conversations. If blocked, the flow branches: the message is persisted to `blockedMessages` (see Step 2 variant below) instead of `messages`, and steps 4 and 5 (notification upsert, Kafka publish) are skipped entirely. The sender still receives a normal-looking receipt in step 7, with no indication the message was blocked. Full behavioral spec: `docs/discussions/007_blocking_behavior.md`.
@@ -58,7 +58,7 @@ This step runs the same way regardless of whether the recipient has muted the co
 The event is stored on the topic partition and the Upstash broker returns an ack to `KafkaProducerConfig`.
 
 **7. Return receipt to sender**  
-`MessageService` returns the saved message object (with its assigned `_id`) to the sender via a STOMP receipt frame. The React SPA uses this to replace the optimistic message's temporary state with the final confirmed message.
+`MessageService` returns the saved message object (with its assigned `_id`) to the sender via a STOMP receipt frame. The Angular SPA uses this to replace the optimistic message's temporary state with the final confirmed message.
 
 **8. Kafka consumer delivers to recipients**  
 `KafkaConsumerConfig` on every running backend instance consumes the event. Each instance checks its local WebSocket session registry. The instance holding a session for a recipient delivers the message via STOMP to `/topic/conversations/{conversationId}/messages`. Instances with no relevant sessions discard the event silently.
@@ -95,11 +95,11 @@ The presigned R2 URL stored on the message expires after one hour. When a client
 
 ## Flow C — REST Fallback
 
-When the WebSocket connection is not available — either not yet established on initial load, or dropped during a SockJS backoff retry — the React SPA falls back to the REST endpoint `POST /api/v1/conversations/{conversationId}/messages`.
+When the WebSocket connection is not available — either not yet established on initial load, or dropped during a SockJS backoff retry — the Angular SPA falls back to the REST endpoint `POST /api/v1/conversations/{conversationId}/messages`.
 
 The internal processing in `MessageService` is identical to Flow A from step 2 onward — persist, lastMessage update, notification upsert, Kafka publish, WebSocket fan-out. The only difference is the entry point: HTTP request/response instead of STOMP frame.
 
-The REST endpoint returns a 201 with the full message object. The React SPA uses an idempotency key (a client-generated UUID sent in the request) so that duplicate submissions caused by retry logic return the already-persisted message rather than creating a duplicate.
+The REST endpoint returns a 201 with the full message object. The Angular SPA uses an idempotency key (a client-generated UUID sent in the request) so that duplicate submissions caused by retry logic return the already-persisted message rather than creating a duplicate.
 
 ---
 

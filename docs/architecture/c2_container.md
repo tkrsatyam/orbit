@@ -13,26 +13,26 @@
 
 ## What Is a Container
 
-In C4 terminology, a container is any separately runnable or deployable unit — a web application, a mobile app, a server-side API, a database, or a serverless function. It is not a Docker container specifically. Orbit has two containers: the React SPA and the Spring Boot monolith. Everything else shown in the diagram is an external system that Orbit depends on.
+In C4 terminology, a container is any separately runnable or deployable unit — a web application, a mobile app, a server-side API, a database, or a serverless function. It is not a Docker container specifically. Orbit has two containers: the Angular SPA and the Spring Boot monolith. Everything else shown in the diagram is an external system that Orbit depends on.
 
 ---
 
 ## Containers
 
-### React SPA
-**Technology:** React 19, Vite, React Router, Axios, SockJS + STOMP.js  
+### Angular SPA
+**Technology:** Angular 21 (standalone components, Signals), Angular Router, Angular HttpClient, SockJS + STOMP.js  
 **Deployed on:** Vercel (global CDN)  
 **Port:** None — served as static assets, runs in the browser
 
-The React SPA is compiled by Vite into a static bundle of HTML, CSS, and JavaScript and served from Vercel's global CDN. After the initial load, the app runs entirely in the user's browser with no server-side rendering involved.
+The Angular SPA is compiled by the Angular CLI into a static bundle of HTML, CSS, and JavaScript and served from Vercel's global CDN. After the initial load, the app runs entirely in the user's browser with no server-side rendering involved.
 
 **Responsibilities:**
-- Client-side routing and protected route enforcement via React Router
-- JWT access token management — stored in memory (not localStorage) to prevent XSS exposure
-- Refresh token management — stored in an httpOnly, Secure, SameSite=None cookie (frontend and backend are on different origins — Vercel and Render — so SameSite=None + Secure is required for the browser to send it cross-site at all), sent automatically by the browser on every request to the API origin. Axios is configured with `withCredentials: true` so the browser attaches it.
-- REST API calls via Axios with a request interceptor that attaches the Bearer token to every outgoing request and a response interceptor that handles 401 responses by transparently refreshing the token and retrying the original request
+- Client-side routing and protected route enforcement via Angular Router functional guards
+- JWT access token management — stored in memory (not localStorage) via Angular services to prevent XSS exposure
+- Refresh token management — stored in an httpOnly, Secure, SameSite=None cookie (frontend and backend are on different origins — Vercel and Render — so SameSite=None + Secure is required for the browser to send it cross-site at all), sent automatically by the browser on every request to the API origin. Angular HttpClient is configured with `withCredentials: true` so the browser attaches it.
+- REST API calls via Angular HttpClient with a functional HTTP interceptor that attaches the Bearer token to every outgoing request and handles 401 responses by transparently refreshing the token and retrying the original request
 - WebSocket connection management via SockJS + STOMP.js — connects on login, subscribes to conversation and presence topics, reconnects automatically on disconnect
-- Real-time UI updates driven by incoming STOMP frame events — new messages, typing indicators, reactions, read receipts, presence changes
+- Real-time UI updates driven by incoming STOMP frame events and fine-grained Angular Signals — new messages, typing indicators, reactions, read receipts, presence changes
 - Optimistic UI updates for message send — message appears instantly in the UI before server confirmation, rolled back on failure
 
 **Deployment notes:** Vercel's automatic Git deployment is disabled via `vercel.json`. All deployments are triggered exclusively by the GitHub Actions frontend pipeline via a Vercel Deploy Hook after the build passes. This prevents race conditions between Vercel's auto-deploy and the CI pipeline.
@@ -82,11 +82,11 @@ The Spring Boot application is the single backend container for Orbit. It is a m
 
 | From | To | Protocol | Details |
 |---|---|---|---|
-| Browser | React SPA | HTTPS | Static asset delivery from Vercel CDN |
-| Registered User | React SPA | HTTPS + WSS | REST calls and WebSocket for real-time |
-| Guest | React SPA | HTTPS | Read-only group discovery, registration, login |
-| React SPA | Spring Boot | HTTPS `/api/v1/**` | REST — JSON request/response, Bearer token auth |
-| React SPA | Spring Boot | WSS `/ws` | WebSocket — STOMP over SockJS, JWT on connect |
+| Browser | Angular SPA | HTTPS | Static asset delivery from Vercel CDN |
+| Registered User | Angular SPA | HTTPS + WSS | REST calls and WebSocket for real-time |
+| Guest | Angular SPA | HTTPS | Read-only group discovery, registration, login |
+| Angular SPA | Spring Boot | HTTPS `/api/v1/**` | REST — JSON request/response, Bearer token auth |
+| Angular SPA | Spring Boot | WSS `/ws` | WebSocket — STOMP over SockJS, JWT on connect |
 | Spring Boot | MongoDB Atlas | `mongodb+srv://` | TLS enforced by protocol, SCRAM-SHA-256 auth |
 | Spring Boot | Upstash Kafka | Kafka native protocol | SASL/SSL — username and password from Upstash console |
 | Spring Boot | Cloudflare R2 | HTTPS | AWS S3 SDK compatible — upload and presigned URL generation |
@@ -98,7 +98,7 @@ The Spring Boot application is the single backend container for Orbit. It is a m
 
 The WebSocket implementation is the most architecturally significant part of the system and worth understanding at this level.
 
-**Connection flow:** The React SPA connects to `wss://api.orbit.onrender.com/ws?token=<jwt>` via SockJS. The Spring Boot backend validates the JWT on the initial HTTP upgrade handshake. Once connected, the client subscribes to STOMP destinations for each conversation it participates in.
+**Connection flow:** The Angular SPA connects to `wss://api.orbit.onrender.com/ws?token=<jwt>` via SockJS. The Spring Boot backend validates the JWT on the initial HTTP upgrade handshake. Once connected, the client subscribes to STOMP destinations for each conversation it participates in.
 
 **Fan-out via Kafka:** When a message is sent over WebSocket or REST, Spring Boot persists it to MongoDB immediately, then publishes a `chat.messages` event to Upstash Kafka. All running backend instances consume from this topic. Each instance checks whether it holds any WebSocket sessions for the message recipients and delivers accordingly. This means the backend is horizontally scalable — adding more Render instances requires no code changes.
 
@@ -106,19 +106,19 @@ The WebSocket implementation is the most architecturally significant part of the
 - `/topic/conversations/{id}/**` — shared topic, all subscribers in a conversation receive the event
 - `/user/queue/notifications` — private queue, only the authenticated user receives the event via Spring's `convertAndSendToUser`
 
-**Reconnection:** SockJS handles automatic reconnection on dropped connections. The React SPA resubscribes to all previous STOMP destinations after reconnect. If the access token has expired during the disconnect, the SPA refreshes it before reconnecting.
+**Reconnection:** SockJS handles automatic reconnection on dropped connections. The Angular SPA resubscribes to all previous STOMP destinations after reconnect. If the access token has expired during the disconnect, the SPA refreshes it before reconnecting.
 
 ---
 
 ## Data Ownership
 
-All persistent data is owned by the Spring Boot monolith and stored in MongoDB Atlas. The React SPA holds no persistent state — it is stateless between sessions. File binaries are stored in Cloudflare R2 with metadata references held in MongoDB message documents.
+All persistent data is owned by the Spring Boot monolith and stored in MongoDB Atlas. The Angular SPA holds no persistent state — it is stateless between sessions. File binaries are stored in Cloudflare R2 with metadata references held in MongoDB message documents.
 
 ---
 
 ## Security Notes
 
-- JWT access tokens are stored in React memory only — not in localStorage or sessionStorage — to prevent XSS-based token theft
+- JWT access tokens are stored in Angular memory (service Signals) only — not in localStorage or sessionStorage — to prevent XSS-based token theft
 - Refresh tokens are stored in httpOnly, Secure, SameSite=None cookies, inaccessible to JavaScript
 - The backend's CORS configuration must echo back the specific Vercel origin and set `Access-Control-Allow-Credentials: true` — a wildcard (`*`) origin is incompatible with credentialed requests and would silently break the cookie flow
 - Cloudflare R2 files are never publicly accessible by permanent URL — all access is via presigned URLs with a 1-hour expiry

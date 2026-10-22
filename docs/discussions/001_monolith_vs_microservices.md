@@ -88,7 +88,7 @@ com.orbit
 
 Each package owns its own controllers, services, repositories, and models. Cross-package dependencies are minimised and always go through service interfaces, never directly between repositories.  
 
-This project's responsibility is to demonstrate WebSocket architecture, real-time systems, React, and AI integration. Microservices complexity would obscure those demonstrations without adding meaningful value.  
+This project's responsibility is to demonstrate WebSocket architecture, real-time systems, Angular, and AI integration. Microservices complexity would obscure those demonstrations without adding meaningful value.  
 
 The prior project (job application tracker) already demonstrates microservices architecture with Spring Cloud Gateway, Eureka, and Kafka. There is no resume value in repeating the same architectural pattern.  
 

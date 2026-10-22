@@ -28,7 +28,7 @@ The lifecycle has five distinct phases:
 
 ## Phase 1 — Connection
 
-The connection handshake is initiated by SockJS on the React SPA. The JWT access token is passed as a query parameter on the initial HTTP upgrade request:
+The connection handshake is initiated by SockJS on the Angular SPA. The JWT access token is passed as a query parameter on the initial HTTP upgrade request:
 
 ```
 GET wss://api.orbit.onrender.com/ws?token=eyJhbGc...
@@ -51,7 +51,7 @@ GET wss://api.orbit.onrender.com/ws?token=eyJhbGc...
 
 ## Phase 2 — Subscription
 
-Immediately after receiving the STOMP `CONNECTED` frame, the React SPA sends `SUBSCRIBE` frames for every topic it needs to receive events on.
+Immediately after receiving the STOMP `CONNECTED` frame, the Angular SPA sends `SUBSCRIBE` frames for every topic it needs to receive events on.
 
 **Subscriptions sent on connect:**
 
@@ -80,7 +80,7 @@ If no response is received within 2× the heartbeat interval (50 seconds), SockJ
 
 ### Access Token Expiry
 
-The JWT access token has a 15-minute expiry. The React SPA monitors this expiry client-side and proactively calls `POST /api/v1/auth/refresh` via REST before the token expires. This uses refresh token rotation — a new refresh token is issued and the old one is immediately invalidated, per `API_CONTRACTS.md`.
+The JWT access token has a 15-minute expiry. The Angular SPA monitors this expiry client-side and proactively calls `POST /api/v1/auth/refresh` via REST before the token expires. This uses refresh token rotation — a new refresh token is issued and the old one is immediately invalidated, per `API_CONTRACTS.md`.
 
 The WebSocket session is unaffected by this refresh — it remains open throughout. The new access token is stored in memory and used for subsequent REST calls and the next WebSocket reconnection.
 
@@ -102,7 +102,7 @@ SockJS uses an exponential backoff strategy for reconnection attempts:
 | 4 | 800ms |
 | 5+ | Capped at 30 seconds |
 
-After 5 failed attempts, the React SPA should display a visible reconnecting indicator to the user.
+After 5 failed attempts, the Angular SPA should display a visible reconnecting indicator to the user.
 
 ### Reconnection Steps
 
@@ -115,7 +115,7 @@ After 5 failed attempts, the React SPA should display a visible reconnecting ind
 
 ### Missed Messages
 
-Messages sent to a conversation while the client was disconnected are not replayed via WebSocket. Once reconnected, the React SPA calls `GET /api/v1/conversations/{id}/messages` with a `before` cursor to fetch any messages newer than the last received. Unread counts in the notification documents ensure the client knows which conversations have missed messages.
+Messages sent to a conversation while the client was disconnected are not replayed via WebSocket. Once reconnected, the Angular SPA calls `GET /api/v1/conversations/{id}/messages` with a `before` cursor to fetch any messages newer than the last received. Unread counts in the notification documents ensure the client knows which conversations have missed messages.
 
 ---
 
@@ -125,8 +125,8 @@ A clean disconnect is triggered by user logout or by the browser tab closing.
 
 ### Logout Flow
 
-1. React SPA calls `POST /api/v1/auth/logout` via REST — blacklists the access token and deletes the refresh token from MongoDB
-2. React SPA sends a STOMP `DISCONNECT` frame to the server
+1. Angular SPA calls `POST /api/v1/auth/logout` via REST — blacklists the access token and deletes the refresh token from MongoDB
+2. Angular SPA sends a STOMP `DISCONNECT` frame to the server
 3. `WebSocketConfig` deregisters the session from the session registry
 4. `users.online` is set to `false` and `lastSeen` is updated in MongoDB
 5. A presence event is broadcast to `/topic/presence/{userId}` with `online: false` and the `lastSeen` timestamp — all subscribed contacts receive it
@@ -134,7 +134,7 @@ A clean disconnect is triggered by user logout or by the browser tab closing.
 
 ### Tab Close
 
-The browser fires a `beforeunload` event when the tab is closed, which the React SPA uses to send the STOMP `DISCONNECT` frame before the page unloads. This is a best-effort mechanism — if the browser kills the tab before the frame is sent, the server detects the dead session via heartbeat timeout and runs steps 3–5 automatically.
+The browser fires a `beforeunload` event when the tab is closed, which the Angular SPA uses to send the STOMP `DISCONNECT` frame before the page unloads. This is a best-effort mechanism — if the browser kills the tab before the frame is sent, the server detects the dead session via heartbeat timeout and runs steps 3–5 automatically.
 
 ---
 
@@ -157,7 +157,7 @@ On reconnection after a server restart, the client may connect to a different in
 | `KafkaConsumerConfig` | Consumes presence events and delivers to subscribed sessions |
 | `UserRepository` | `online` flag and `lastSeen` updates on connect/disconnect |
 | `AuthService` | Token refresh, logout blacklisting |
-| React SPA (SockJS + STOMP.js) | Connection initiation, subscription management, reconnection, heartbeat |
+| Angular SPA (SockJS + STOMP.js) | Connection initiation, subscription management, reconnection, heartbeat |
 
 ---
 

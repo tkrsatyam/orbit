@@ -49,7 +49,7 @@ Triggered immediately after the WebSocket handshake completes. The full connecti
 5. `KafkaConsumerConfig` on all running instances consumes the event and delivers it to any contact sessions subscribed to `/topic/presence/{userId}`
 6. Subscribed contacts' UIs update — the green dot appears next to the user's name instantly
 
-**What contacts must do to receive presence updates:** Each contact's React SPA must be subscribed to `/topic/presence/{userId}` for this user. This subscription is established immediately after STOMP `CONNECTED` as part of Phase 2 of the WebSocket lifecycle — one subscription per contact in the user's contact list.
+**What contacts must do to receive presence updates:** Each contact's Angular SPA must be subscribed to `/topic/presence/{userId}` for this user. This subscription is established immediately after STOMP `CONNECTED` as part of Phase 2 of the WebSocket lifecycle — one subscription per contact in the user's contact list.
 
 ---
 
@@ -59,14 +59,14 @@ Triggered client-side when the user starts typing in a conversation input field.
 
 **Step-by-step:**
 
-1. React SPA sends a STOMP SEND frame to `/app/conversations/{id}/typing` with `{ typing: true }` every 2 seconds while typing continues
+1. Angular SPA sends a STOMP SEND frame to `/app/conversations/{id}/typing` with `{ typing: true }` every 2 seconds while typing continues
 2. `WebSocketConfig` routes the frame to `PresenceService.handleTyping(conversationId, userId, typing: true)`
 3. `PresenceService` skips any DB call and immediately builds a typing event `{ conversationId, userId, displayName, typing: true }`
 4. `KafkaProducerConfig` publishes to `chat.presence` and receives a broker ack
 5. `KafkaConsumerConfig` delivers to all participants subscribed to `/topic/conversations/{id}/typing`
 6. Other participants' UIs show "Satyam is typing…" instantly
 
-**Stopping the indicator:** When the user stops typing, React SPA sends `{ typing: false }` after a 3-second debounce. The same Kafka publish and WebSocket delivery path runs, and the indicator clears for all participants.
+**Stopping the indicator:** When the user stops typing, Angular SPA sends `{ typing: false }` after a 3-second debounce. The same Kafka publish and WebSocket delivery path runs, and the indicator clears for all participants.
 
 **Self-clearing safety net:** Recipients auto-clear the typing indicator after 5 seconds even if no `{ typing: false }` event arrives. This guards against the case where the typing user disconnects mid-sentence — without this, the indicator would remain indefinitely.
 
@@ -82,7 +82,7 @@ Triggered by the user logging out or closing the browser tab. The full logout se
 
 **Step-by-step:**
 
-1. React SPA sends a STOMP `DISCONNECT` frame (via `beforeunload` on tab close)
+1. Angular SPA sends a STOMP `DISCONNECT` frame (via `beforeunload` on tab close)
 2. `WebSocketConfig` fires a `SessionDisconnectEvent` to `PresenceService.handleDisconnect(userId)` and deregisters the session from the session registry
 3. `PresenceService` calls `UserRepository` to set `users.online = false` and `lastSeen = now`
 4. `PresenceService` builds a presence event `{ userId, online: false, lastSeen }` and calls `KafkaProducerConfig`
@@ -136,7 +136,7 @@ This prevents contacts from seeing a user flicker between online and offline whe
 | Typing indicator disappears | `{ typing: false }` event or 5-second auto-clear |
 | Nothing (if blocked by the contact) | `PresenceService` suppresses both presence and typing events one-directionally toward a user who has been blocked — see `discussions/007_blocking_behavior.md`. Suppression applies even inside a shared group's member list for presence specifically; typing suppression is 1:1-only. |
 
-Contacts who are offline when a presence event fires miss it entirely. When they reconnect, their React SPA calls `GET /api/v1/contacts` which returns each contact's current `online` status and `lastSeen` from the `users` collection — providing an accurate snapshot without needing replayed events.
+Contacts who are offline when a presence event fires miss it entirely. When they reconnect, their Angular SPA calls `GET /api/v1/contacts` which returns each contact's current `online` status and `lastSeen` from the `users` collection — providing an accurate snapshot without needing replayed events.
 
 ---
 

@@ -23,7 +23,7 @@ Kafka + Zookeeper (Docker :9092)          Upstash Kafka (serverless)
 | Tool           | Version              | Purpose                                 |
 |----------------|----------------------|-----------------------------------------|
 | Java           | 25 (LTS)             | Spring Boot runtime                     |
-| Node.js        | 20+                  | React dev server and build              |
+| Node.js        | 22+                  | Angular dev server and build            |
 | Docker Desktop | Latest stable        | MongoDB + Kafka locally                 |
 | Maven          | Bundled via `./mvnw` | Backend build — no local install needed |
 | Git            | Any recent           | Source control                          |
@@ -39,11 +39,10 @@ orbit/
 │   ├── pom.xml
 │   ├── .env.example          template for required environment variables
 │   └── docker-compose.yml    local MongoDB + Kafka
-├── frontend/                 React application
+├── frontend/                 Angular application
 │   ├── src/
 │   ├── package.json
-│   ├── vite.config.js
-│   └── .env.example          template for required environment variables
+│   └── angular.json
 └── docs/                     all architecture documentation
 ```
 
@@ -153,17 +152,17 @@ Expected response: `{"groups":["liveness","readiness"],"status":"UP"}`
 
 ### Step 5 — Configure frontend environment
 
-```bash
-cd ../frontend
-cp .env.example .env
+Local environment configuration is defined in `frontend/src/environments/environment.ts`. By default, it targets the local backend:
+
+```typescript
+export const environment = {
+  production: false,
+  apiBaseUrl: 'http://localhost:8080',
+  wsUrl: 'ws://localhost:8080/ws'
+};
 ```
 
-Open `.env` and fill in:
-
-```env
-VITE_API_BASE_URL=http://localhost:8080
-VITE_WS_URL=ws://localhost:8080/ws
-```
+No additional configuration is required for standard local development.
 
 ### Step 6 — Run the frontend
 
@@ -197,12 +196,13 @@ Frontend starts on `http://localhost:4200`.
 
 ### Frontend — full reference
 
-| Variable            | Required | Description                |
-|---------------------|----------|----------------------------|
-| `VITE_API_BASE_URL` | Yes      | Backend REST API base URL  |
-| `VITE_WS_URL`       | Yes      | Backend WebSocket endpoint |
+Frontend build configurations are declared in TypeScript within `src/environments/environment.ts` and replaced with `src/environments/environment.production.ts` for production builds via `angular.json` file replacements:
 
-All frontend environment variables must be prefixed with `VITE_` to be exposed to the Vite build.
+| Property     | Dev Default             | Production Default | Description                 |
+|--------------|-------------------------|--------------------|-----------------------------|
+| `production` | `false`                 | `true`             | Enables production flags    |
+| `apiBaseUrl` | `http://localhost:8080` | `""`               | Backend REST API base URL   |
+| `wsUrl`      | `ws://localhost:8080/ws`| `"/ws"`            | Backend WebSocket endpoint  |
 
 ---
 
@@ -277,7 +277,7 @@ Kafka topics are auto-created on first publish. In production, Upstash Kafka req
 
 | Service        | Purpose                     | Free Tier Limits                                              |
 |----------------|-----------------------------|---------------------------------------------------------------|
-| Vercel         | React frontend hosting      | Unlimited deployments, 100GB bandwidth/month                  |
+| Vercel         | Angular frontend hosting    | Unlimited deployments, 100GB bandwidth/month                  |
 | Render         | Spring Boot backend hosting | 750 hours/month, 512MB RAM, spins down after 15min inactivity |
 | MongoDB Atlas  | Managed MongoDB             | M0: 512MB storage, shared cluster                             |
 | Upstash Kafka  | Managed Kafka               | 10,000 messages/day, 100MB storage                            |
@@ -352,10 +352,10 @@ The CSRF decision for this cookie is recorded in `API_CONTRACTS.md` (POST /api/v
 2. New Project → Import Git repository → select `orbit`
 3. Configure:
    - **Root Directory:** `frontend`
-   - **Framework Preset:** Vite
+   - **Framework Preset:** Angular
    - **Build Command:** `npm run build`
-   - **Output Directory:** `dist`
-4. Under **Environment Variables**, add `VITE_API_BASE_URL` and `VITE_WS_URL` using production values
+   - **Output Directory:** `dist/frontend/browser`
+4. Under **Environment Variables**, verify any custom build-time overrides if applicable (or rely on `environment.production.ts`)
 5. **Critical:** Disable Vercel's automatic Git deployment by adding a `vercel.json` file to the `frontend/` directory:
 
 ```json
@@ -468,9 +468,6 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
-        env:
-          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
-          VITE_WS_URL: ${{ secrets.VITE_WS_URL }}
 
       - name: Deploy to Vercel via Deploy Hook
         run: curl -X POST "${{ secrets.VERCEL_DEPLOY_HOOK_URL }}"
@@ -529,14 +526,17 @@ lsof -i :8080
 # Install dependencies
 npm ci
 
-# Start dev server
+# Start dev server (http://localhost:4200)
 npm run dev
 
 # Production build
 npm run build
 
-# Preview production build locally
-npm run preview
+# Run unit tests
+npm test
+
+# Run Playwright E2E tests
+npm run test:e2e
 ```
 
 ### Docker
@@ -591,7 +591,7 @@ Same cause — Kafka container not running or still initialising. Kafka takes 10
 Zookeeper still holds the previous broker registration and expires it after about 18 seconds. The Kafka service restarts automatically, so this usually resolves itself. If not, wait 20 seconds and run `docker compose up -d` again. Running `docker compose down` before shutting down your machine avoids it.
 
 **WebSocket connections failing locally**
-Confirm the backend is running on port 8080 and `VITE_WS_URL` in `frontend/.env` matches exactly: `ws://localhost:8080/ws`. HTTPS/WSS is not required locally.
+Confirm the backend is running on port 8080 and `wsUrl` in `frontend/src/environments/environment.ts` matches exactly: `ws://localhost:8080/ws`. HTTPS/WSS is not required locally.
 
 **Render deployment succeeds but app returns 503**
 Render free tier instances spin down after 15 minutes of inactivity. The first request after spin-down triggers a cold start that takes 30–60 seconds. Subsequent requests are fast. Use UptimeRobot to keep the instance warm during demos.

@@ -15,7 +15,7 @@
 
 Orbit is a real-time chat platform for people who connect over shared professional goals — career switchers, interview preppers, learners, and builders. It provides 1:1 direct messaging, interest-based group chats with public discovery, and AI-powered group intelligence features planned for Phase 4.
 
-The system consists of a React SPA frontend deployed on Vercel and a modular monolithic Spring Boot backend deployed on Render. All real-time communication runs over WebSockets using the STOMP protocol, with Kafka handling message fan-out across backend instances for horizontal scalability.
+The system consists of an Angular SPA frontend deployed on Vercel and a modular monolithic Spring Boot backend deployed on Render. All real-time communication runs over WebSockets using the STOMP protocol, with Kafka handling message fan-out across backend instances for horizontal scalability.
 
 ---
 
@@ -45,7 +45,7 @@ S3-compatible object storage used for all binary content — user avatars, group
 Large language model API used exclusively for Phase 4 AI features. The backend makes stateless HTTPS calls to the API, passing message context as input and receiving responses to display as bot messages in conversations. Features include `/summary` catch-up, `@ask` group assistant, smart reply suggestions, message translation, and tone checking. Not used in Phases 1–3. Server-side access to message content is required for all AI features, which is the reason end-to-end encryption is not implemented — see `discussions/004_e2ee_vs_ai_features.md`.
 
 ### Vercel
-Frontend hosting platform. Serves the compiled React SPA as a global CDN-backed static deployment. Automatic Git deployment is disabled — deployments are triggered exclusively via a Vercel Deploy Hook called from the GitHub Actions frontend pipeline. This prevents race conditions between Vercel's auto-deploy and the CI pipeline.
+Frontend hosting platform. Serves the compiled Angular SPA as a global CDN-backed static deployment. Automatic Git deployment is disabled — deployments are triggered exclusively via a Vercel Deploy Hook called from the GitHub Actions frontend pipeline. This prevents race conditions between Vercel's auto-deploy and the CI pipeline.
 
 ### Render
 Backend hosting platform. Runs the Spring Boot JAR as a web service on the free tier. Provides 512MB RAM and 750 hours per month. The instance spins down after 15 minutes of inactivity — a known free tier behaviour documented in `DEPLOYMENT.md`. Deployments are triggered via the Render API from the GitHub Actions backend pipeline.
@@ -65,7 +65,7 @@ CI/CD pipeline runner hosted by GitHub. Two independent workflows exist — one 
 | Orbit           | Upstash Kafka | Kafka protocol (SASL/SSL) | Publish and consume WebSocket fan-out events                |
 | Orbit           | Cloudflare R2 | HTTPS (AWS S3 SDK)        | Upload files, generate presigned download URLs              |
 | Orbit           | Claude API    | HTTPS                     | AI feature requests (Phase 4 only)                          |
-| Orbit           | Vercel        | CDN delivery              | Serves the React SPA to browsers                            |
+| Orbit           | Vercel        | CDN delivery              | Serves the Angular SPA to browsers                          |
 | Orbit           | Render        | Runtime host              | Runs the Spring Boot backend process                        |
 | GitHub Actions  | Vercel        | HTTPS deploy hook         | Trigger frontend deployment after CI passes                 |
 | GitHub Actions  | Render        | HTTPS Render API          | Trigger backend deployment after CI passes                  |
@@ -84,6 +84,6 @@ The Claude API receives message content as part of AI feature requests. This is 
 
 The C1 diagram intentionally omits internal implementation details. The following are covered in subsequent C4 levels:
 
-- How the React frontend and Spring Boot backend are structured internally → `c2_container.md`
+- How the Angular frontend and Spring Boot backend are structured internally → `c2_container.md`
 - How the Spring Boot application is organised into internal packages → `c3_component.md`
 - How specific flows like WebSocket connection and message delivery work → `sequences/`

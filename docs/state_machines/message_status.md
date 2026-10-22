@@ -1,6 +1,6 @@
 # Message Status State Machine
 
-This document defines every state a message can occupy in Orbit, every valid transition between states, what triggers each transition, and how state is represented in the MongoDB document. This is the reference for implementing status tracking in `MessageService`, the React SPA, and the WebSocket delivery layer.
+This document defines every state a message can occupy in Orbit, every valid transition between states, what triggers each transition, and how state is represented in the MongoDB document. This is the reference for implementing status tracking in `MessageService`, the Angular SPA, and the WebSocket delivery layer.
 
 ---
 
@@ -13,9 +13,9 @@ This document defines every state a message can occupy in Orbit, every valid tra
 ## States
 
 ### SENDING
-**Persisted:** No — client-side React state only
+**Persisted:** No — client-side Angular state (Signals) only
 
-The optimistic UI state. Exists only in the React SPA between the moment the user presses send and the moment the server receipt arrives. The message document does not exist in MongoDB while a message is in this state. Shown to the sender as a "sending…" indicator, typically a single grey clock icon.
+The optimistic UI state. Exists only in the Angular SPA between the moment the user presses send and the moment the server receipt arrives. The message document does not exist in MongoDB while a message is in this state. Shown to the sender as a "sending…" indicator, typically a single grey clock icon.
 
 If the server never responds (timeout, network drop), the message transitions to `FAILED`. It never silently disappears.
 
@@ -37,7 +37,7 @@ From the sender's perspective, shown as a single green tick (✓). The message e
 ### DELIVERED
 **Persisted:** Tracked client-side — no explicit `delivered` field in MongoDB
 
-A message is considered `DELIVERED` when `KafkaConsumerConfig` on any backend instance successfully pushes the STOMP frame to at least one recipient's active WebSocket session. This transition is acknowledged client-side by the sender's React SPA via the `/topic/conversations/{id}/messages` subscription — when the sender's SPA sees the message appear on the topic, it knows delivery occurred.
+A message is considered `DELIVERED` when `KafkaConsumerConfig` on any backend instance successfully pushes the STOMP frame to at least one recipient's active WebSocket session. This transition is acknowledged client-side by the sender's Angular SPA via the `/topic/conversations/{id}/messages` subscription — when the sender's SPA sees the message appear on the topic, it knows delivery occurred.
 
 There is no explicit `delivered: true` field stored on the MongoDB document. The `readBy[]` array is the only server-side delivery record. This is a deliberate design decision — tracking delivery state server-side would require a write per recipient per message, which is expensive at scale. Client-side delivery acknowledgment is sufficient for a chat application.
 
@@ -79,11 +79,11 @@ Constraints:
 ---
 
 ### FAILED
-**Persisted:** No — client-side React state only
+**Persisted:** No — client-side Angular state (Signals) only
 
 `FAILED` is the error counterpart to `SENDING`. A message enters this state when the server returns an error (validation failure, rate limit 429, 500) or when the send attempt times out. The optimistic message is reverted in the UI and replaced with a "failed to send" indicator and a retry option.
 
-On retry, the message transitions back to `SENDING` and the full send flow restarts. The React SPA uses an idempotency key (stable UUID per send attempt) to prevent duplicate messages if the failure was a network timeout where the server actually succeeded.
+On retry, the message transitions back to `SENDING` and the full send flow restarts. The Angular SPA uses an idempotency key (stable UUID per send attempt) to prevent duplicate messages if the failure was a network timeout where the server actually succeeded.
 
 ---
 
@@ -187,4 +187,4 @@ There is no `status` enum field on the message document. Deriving status from at
 | `MessageRepository` | Atomic field updates via `$set` — `deleted`, `edited`, `editedAt`, `readBy` |
 | `KafkaProducerConfig` | Publishes edit and delete events for WebSocket broadcast |
 | `WebSocketConfig` | Routes transition events to correct STOMP destinations |
-| React SPA | Tracks `SENDING` and `FAILED` states locally, derives display state from server fields |
+| Angular SPA | Tracks `SENDING` and `FAILED` states locally, derives display state from server fields |

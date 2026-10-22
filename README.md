@@ -2,7 +2,7 @@
 
 A real-time chat application for people who connect over shared goals — career switchers, interview preppers, learners, and builders.
 
-Built with React and Spring Boot, powered by WebSockets and Kafka, with AI-assisted group communication planned for a future phase.
+Built with Angular and Spring Boot, powered by WebSockets and Kafka, with AI-assisted group communication planned for a future phase.
 
 ---
 
@@ -48,11 +48,11 @@ Built with React and Spring Boot, powered by WebSockets and Kafka, with AI-assis
 ### Frontend
 | Technology | Purpose |
 |---|---|
-| React 19 | UI framework |
-| React Router | Client-side navigation |
+| Angular 21 | UI framework (Standalone components, Signals) |
+| Angular Router | Client-side navigation & functional guards |
 | SockJS + STOMP | WebSocket client |
-| Axios | HTTP client |
-| Vite | Build tool |
+| Angular HttpClient | HTTP client & functional interceptors |
+| SCSS | Component-scoped styling |
 
 ### Backend
 | Technology | Purpose |
@@ -73,7 +73,7 @@ Built with React and Spring Boot, powered by WebSockets and Kafka, with AI-assis
 ### Infrastructure
 | Service | Purpose |
 |---|---|
-| Vercel | React frontend hosting |
+| Vercel | Angular frontend hosting |
 | Render | Spring Boot backend hosting |
 | MongoDB Atlas | Managed MongoDB (free tier) |
 | Upstash | Managed Kafka |
@@ -88,7 +88,7 @@ Orbit uses a **monorepo** structure with a **modular monolithic** backend.
 
 ```
 orbit/
-├── frontend/     # React SPA — deployed on Vercel
+├── frontend/     # Angular SPA — deployed on Vercel
 ├── backend/      # Spring Boot monolith — deployed on Render
 └── docs/         # Architecture decisions, ERD, API contracts
 ```
@@ -171,4 +171,4 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html`
 [GitHub](https://github.com/tkrsatyam) · [LinkedIn](https://www.linkedin.com/in/satyam-kumar-07-2001apr/)
 
 > Built as a portfolio project to demonstrate real-time systems,
-> WebSocket architecture, React, and AI integration.
+> WebSocket architecture, Angular, and AI integration.

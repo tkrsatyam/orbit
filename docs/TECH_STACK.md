@@ -109,7 +109,7 @@ chat.notifications  ← real-time push of unread-count/mention changes to alread
 
 ### Vercel
 - **What:** Frontend hosting platform
-- **Why:** Zero configuration deployment for React/Vite projects. Free tier covers portfolio needs. Native GitHub integration available but intentionally disabled for auto-deploys.
+- **Why:** Zero configuration deployment for Angular projects. Free tier covers portfolio needs. Native GitHub integration available but intentionally disabled for auto-deploys.
 - **CI/CD Note:** Vercel's automatic Git deployment is disabled via `git.deploymentEnabled: false` in `vercel.json`. Deployments are triggered exclusively through the GitHub Actions pipeline via Vercel Deploy Hook. This ensures the frontend only deploys after the CI pipeline passes — not on every push to main (which might have purely backend changes only). Without this, Vercel and GitHub Actions both attempt to deploy simultaneously, causing race conditions and redundant builds.
 - **Already solved in companion project (JobTrackr):** same pattern, same fix.
 

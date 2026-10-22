@@ -52,7 +52,7 @@ Before any AI feature call reaches `AiController`, two checks apply:
 
 ## Flow A — /summary Command
 
-**Trigger:** User types `/summary` in a conversation and sends it. The React SPA detects the slash command and calls the summary endpoint instead of the regular message send endpoint.
+**Trigger:** User types `/summary` in a conversation and sends it. The Angular SPA detects the slash command and calls the summary endpoint instead of the regular message send endpoint.
 
 **Purpose:** Generate a concise catch-up of recent conversation activity for users who have been offline or away.
 
@@ -74,7 +74,7 @@ Before any AI feature call reaches `AiController`, two checks apply:
 
 ## Flow B — @ask Assistant
 
-**Trigger:** A group member sends a message containing `@ask` followed by a question. Unlike `/summary`, this does not replace the normal send action — the message is sent through the standard message send flow like any other group message, is persisted and delivered normally, and is what every group member sees as the question. Separately, the React SPA also detects the `@ask` mention and calls the ask endpoint to generate a response. See [`discussions/012_ask_mention_behavior.md`](../../discussions/012_ask_mention_behavior.md) for why `@ask` and `/summary` behave differently here.
+**Trigger:** A group member sends a message containing `@ask` followed by a question. Unlike `/summary`, this does not replace the normal send action — the message is sent through the standard message send flow like any other group message, is persisted and delivered normally, and is what every group member sees as the question. Separately, the Angular SPA also detects the `@ask` mention and calls the ask endpoint to generate a response. See [`discussions/012_ask_mention_behavior.md`](../../discussions/012_ask_mention_behavior.md) for why `@ask` and `/summary` behave differently here.
 
 **Purpose:** Collaborative AI Q&A inside a group — the answer is visible to everyone, making it a shared knowledge resource.
 
@@ -97,7 +97,7 @@ Before any AI feature call reaches `AiController`, two checks apply:
 
 ## Flow C — Smart Reply Suggestions
 
-**Trigger:** Automatic — the React SPA calls this endpoint after receiving a new inbound message in a conversation. It is a background call that does not block the UI.
+**Trigger:** Automatic — the Angular SPA calls this endpoint after receiving a new inbound message in a conversation. It is a background call that does not block the UI.
 
 **Purpose:** Offer the user 2–3 contextual one-tap reply options below the message input, reducing friction for quick responses.
 
@@ -109,7 +109,7 @@ Before any AI feature call reaches `AiController`, two checks apply:
 4. `ClaudeApiClient` calls the Anthropic API. The response is parsed as a JSON array of strings
 5. `AiController` returns `200 { suggestions: ["…", "…", "…"] }` to the requester only
 
-**No persistence, no broadcast.** Suggestions are ephemeral — displayed below the message input in the React SPA and discarded once the user replies or dismisses them. Other participants never see them.
+**No persistence, no broadcast.** Suggestions are ephemeral — displayed below the message input in the Angular SPA and discarded once the user replies or dismisses them. Other participants never see them.
 
 **Prompt format for reliable JSON:** The system prompt instructs Claude to respond only with a valid JSON array and nothing else — no preamble, no markdown fences. `AiService` wraps the parse in a try-catch; if parsing fails, it falls back to a set of generic suggestions rather than returning an error.
 
@@ -149,11 +149,11 @@ Before any AI feature call reaches `AiController`, two checks apply:
 4. `ClaudeApiClient` calls the Anthropic API
 5. `AiController` returns `200 { flagged, reason, suggestion }` to the requester
 
-**React SPA behaviour:** If `flagged: true`, the SPA shows the suggestion inline above the send button with options to send the original, apply the suggestion, or dismiss. If `flagged: false`, no UI change occurs and the message is sent normally.
+**Angular SPA behaviour:** If `flagged: true`, the SPA shows the suggestion inline above the send button with options to send the original, apply the suggestion, or dismiss. If `flagged: false`, no UI change occurs and the message is sent normally.
 
 **No persistence, no broadcast.** The tone check happens entirely before a message exists. If the user proceeds to send, that send goes through the standard message send flow documented in `message_send_flow.md`.
 
-Because tone checking is purely stateless and makes no database calls, it is the fastest and cheapest of the five AI features. Consider adding client-side debouncing in the React SPA to avoid firing it on every keystroke — a 500ms debounce after the user stops typing is sufficient.
+Because tone checking is purely stateless and makes no database calls, it is the fastest and cheapest of the five AI features. Consider adding client-side debouncing in the Angular SPA to avoid firing it on every keystroke — a 500ms debounce after the user stops typing is sufficient.
 
 ---
 

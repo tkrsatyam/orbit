@@ -8,7 +8,7 @@ This document covers how to work in the Orbit monorepo — local setup conventio
 
 ```
 orbit/
-├── frontend/       React SPA — deployed on Vercel
+├── frontend/       Angular SPA — deployed on Vercel
 ├── backend/        Spring Boot monolith — deployed on Render
 └── docs/           All architecture documentation
 ```
@@ -77,7 +77,7 @@ ORDM-{ticket-number}-{short-description}
 ```
 ORDM-12-websocket-stomp-config
 ORDM-24-message-send-service
-ORDM-31-react-conversation-list
+ORDM-31-angular-conversation-list
 ORDM-45-fix-kafka-consumer-offset
 ORDM-67-mongodb-message-indexes
 ```
@@ -287,9 +287,10 @@ Architecture documentation lives in `docs/`. When making changes that affect the
 - Repositories never call other repositories — cross-collection operations belong in the service layer
 - Persist to MongoDB before publishing to Kafka — always, without exception (see `docs/architecture/sequences/message_send_flow.md`)
 
-### Frontend (React)
+### Frontend (Angular)
 
-- Component files use PascalCase: `ConversationList.jsx`
-- Hook files use camelCase prefixed with `use`: `useWebSocket.js`
-- Environment variables must be prefixed with `VITE_` to be exposed at build time
+- Standalone components using the 4-file structure generated via Angular CLI (`.component.ts`, `.component.html`, `.component.scss`, `.component.spec.ts`)
+- Component state managed via Angular Signals (`signal()`, `computed()`, `input()`, `output()`)
+- Services handle business logic and HTTP calls via `HttpClient`
+- Functional guards and interceptors for routing and authentication
 - JWT access token stored in memory only — never in `localStorage` or `sessionStorage`
