@@ -5,6 +5,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupMemberListResponse;
 import com.orbit.group.dto.GroupMemberResponse;
+import com.orbit.group.dto.GroupPageResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -84,6 +86,26 @@ public class GroupController {
             @Valid @RequestBody CreateGroupRequest request) {
         String userId = resolveUserId(principalUserId, authentication);
         return groupService.createGroup(userId, request);
+    }
+
+    @Operation(summary = "Discover public groups", description = "Returns a paginated list of public groups with optional search and topic tag filters. Unauthenticated access allowed.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Paginated list of public groups",
+                    content = @Content(schema = @Schema(implementation = GroupPageResponse.class))
+            )
+    })
+    @GetMapping
+    public GroupPageResponse discoverGroups(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String tag,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.discoverGroups(userId, q, tag, page, size);
     }
 
     @Operation(summary = "List current user's groups", description = "Returns all groups that the authenticated user is a member of.")
@@ -169,6 +191,43 @@ public class GroupController {
             @PathVariable String inviteToken) {
         String userId = resolveUserId(principalUserId, authentication);
         return groupService.joinViaInvite(userId, inviteToken);
+    }
+
+    @Operation(summary = "Join public group", description = "One-step join for a public group without needing an invite token.")
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Successfully joined the group",
+                    content = @Content(schema = @Schema(implementation = GroupJoinResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Missing or invalid bearer token",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Group is private and requires an invite link",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "Group not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "409",
+                    description = "User is already a member of this group",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @PostMapping("/{groupId}/join")
+    public GroupJoinResponse joinPublicGroup(
+            @AuthenticationPrincipal String principalUserId,
+            Authentication authentication,
+            @PathVariable String groupId) {
+        String userId = resolveUserId(principalUserId, authentication);
+        return groupService.joinPublicGroup(userId, groupId);
     }
 
     @Operation(summary = "Get group details", description = "Retrieves group details. Public groups are visible to all users, private groups are member-only.")

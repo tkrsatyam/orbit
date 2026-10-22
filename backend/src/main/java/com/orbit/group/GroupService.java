@@ -10,6 +10,7 @@ import com.orbit.group.dto.CreateGroupRequest;
 import com.orbit.group.dto.GroupJoinResponse;
 import com.orbit.group.dto.GroupMemberListResponse;
 import com.orbit.group.dto.GroupMemberResponse;
+import com.orbit.group.dto.GroupPageResponse;
 import com.orbit.group.dto.GroupResponse;
 import com.orbit.group.dto.InviteResponse;
 import com.orbit.group.dto.UpdateGroupRequest;
@@ -20,6 +21,11 @@ import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -43,15 +50,18 @@ public class GroupService {
     private final ConversationService conversationService;
     private final OrbitProperties orbitProperties;
     private final UserRepository userRepository;
+    private final MongoTemplate mongoTemplate;
 
     public GroupService(GroupRepository groupRepository,
                         ConversationService conversationService,
                         OrbitProperties orbitProperties,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        MongoTemplate mongoTemplate) {
         this.groupRepository = groupRepository;
         this.conversationService = conversationService;
         this.orbitProperties = orbitProperties;
         this.userRepository = userRepository;
+        this.mongoTemplate = mongoTemplate;
     }
 
     /**
@@ -180,6 +190,120 @@ public class GroupService {
         conversationService.addGroupParticipant(group.getConversationId(), userId);
 
         return new GroupJoinResponse(group.getId(), group.getConversationId(), GroupRole.MEMBER);
+    }
+
+    /**
+     * Joins a public group directly without requiring an invitation link.
+     * Enforces that the group is PUBLIC and caller is not already a member.
+     * Follows the erd.md Group Join checklist:
+     * 1. Push user to groups.members
+     * 2. Push user to conversations.participantIds
+     * 3. Increment groups.memberCount
+     *
+     * @param userId Authenticated caller user ID
+     * @param groupId Group ID
+     * @return GroupJoinResponse with conversationId and role MEMBER
+     * @throws ForbiddenException if group is PRIVATE
+     * @throws ConflictException if already a member
+     */
+    public GroupJoinResponse joinPublicGroup(String userId, String groupId) {
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID is required");
+        }
+        if (groupId == null || groupId.isBlank()) {
+            throw new IllegalArgumentException("Group ID is required");
+        }
+
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        if (group.getVisibility() != GroupVisibility.PUBLIC) {
+            throw new ForbiddenException("Cannot join private group without an invitation link");
+        }
+
+        boolean alreadyMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUserId().equals(userId));
+        if (alreadyMember) {
+            throw new ConflictException("User is already a member of this group");
+        }
+
+        group.getMembers().add(GroupMember.builder()
+                .userId(userId)
+                .role(GroupRole.MEMBER)
+                .joinedAt(Instant.now())
+                .build());
+        group.setMemberCount(group.getMemberCount() + 1);
+        groupRepository.save(group);
+
+        conversationService.addGroupParticipant(group.getConversationId(), userId);
+
+        return new GroupJoinResponse(group.getId(), group.getConversationId(), GroupRole.MEMBER);
+    }
+
+    /**
+     * Discovers public groups with optional search and tag filters, returning paginated results.
+     * Accessible unauthenticated. If callerUserId is present, member status is reflected in the role field.
+     *
+     * @param callerUserId Authenticated user ID (optional/nullable)
+     * @param q Optional search string matching name or description
+     * @param tag Optional topic tag filter
+     * @param page Zero-based page index
+     * @param size Page size (clamped 1-100)
+     * @return GroupPageResponse containing matched public groups
+     */
+    public GroupPageResponse discoverGroups(String callerUserId, String q, String tag, int page, int size) {
+        int safePage = Math.max(0, page);
+        int safeSize = Math.clamp(size, 1, 100);
+
+        List<Criteria> criteriaList = new ArrayList<>();
+        criteriaList.add(Criteria.where("visibility").is(GroupVisibility.PUBLIC));
+
+        if (tag != null && !tag.isBlank()) {
+            String cleanTag = tag.trim().replaceFirst("^#", "");
+            criteriaList.add(Criteria.where("topicTag").regex(Pattern.quote(cleanTag), "i"));
+        }
+
+        if (q != null && !q.isBlank()) {
+            String cleanQ = q.trim();
+            criteriaList.add(new Criteria().orOperator(
+                    Criteria.where("name").regex(Pattern.quote(cleanQ), "i"),
+                    Criteria.where("description").regex(Pattern.quote(cleanQ), "i")
+            ));
+        }
+
+        Criteria combinedCriteria = new Criteria().andOperator(criteriaList.toArray(new Criteria[0]));
+        Query countQuery = Query.query(combinedCriteria);
+
+        long totalElements = mongoTemplate.count(countQuery, Group.class);
+        int totalPages = safeSize > 0 ? (int) Math.ceil((double) totalElements / safeSize) : 0;
+        boolean isLast = totalPages == 0 || safePage >= totalPages - 1;
+
+        Query pageQuery = Query.query(combinedCriteria)
+                .with(PageRequest.of(safePage, safeSize, Sort.by(Sort.Direction.DESC, "createdAt")));
+        List<Group> groups = mongoTemplate.find(pageQuery, Group.class);
+
+        List<GroupResponse> content = groups.stream()
+                .map(group -> {
+                    GroupRole callerRole = null;
+                    if (callerUserId != null && !callerUserId.isBlank()) {
+                        callerRole = group.getMembers().stream()
+                                .filter(m -> m.getUserId().equals(callerUserId))
+                                .findFirst()
+                                .map(GroupMember::getRole)
+                                .orElse(null);
+                    }
+                    return GroupResponse.from(group, callerRole);
+                })
+                .toList();
+
+        return new GroupPageResponse(
+                content,
+                safePage,
+                safeSize,
+                totalElements,
+                totalPages,
+                isLast
+        );
     }
 
     /**

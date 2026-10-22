@@ -98,6 +98,14 @@ export class ConversationsComponent implements OnInit {
       this.activeGroupId.set(null);
     } else {
       this.activeGroupId.set(null);
+      const urlTree = this.router.parseUrl(url);
+      const tabParam = urlTree.queryParams['tab'];
+      if (tabParam === 'GROUPS' || tabParam === 'CHATS' || tabParam === 'CONTACTS') {
+        this.activeNavTab.set(tabParam);
+        if (tabParam === 'CONTACTS') {
+          this.openNewChatModal();
+        }
+      }
     }
   }
 

@@ -100,6 +100,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /api/v1/groups:
+    get:
+      tags:
+      - Groups
+      summary: Discover public groups
+      description: Returns a paginated list of public groups with optional search
+        and topic tag filters. Unauthenticated access allowed.
+      operationId: discoverGroups
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: tag
+        in: query
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 0
+      - name: size
+        in: query
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 20
+      responses:
+        "200":
+          description: Paginated list of public groups
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupPageResponse"
+      security:
+      - bearerAuth: []
     post:
       tags:
       - Groups
@@ -146,13 +187,14 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
-  /api/v1/groups/{groupId}:
-    get:
+  /api/v1/groups/{groupId}/leave:
+    post:
       tags:
       - Groups
-      summary: Get group details
-      description: Retrieves group details. Public groups are visible to all users, private groups are member-only.
-      operationId: getGroupDetails
+      summary: Leave a group
+      description: "Leaves a group. If last member, tears down group. If sole admin,\
+        \ promotes oldest member."
+      operationId: leaveGroup
       parameters:
       - name: groupId
         in: path
@@ -160,57 +202,8 @@ paths:
         schema:
           type: string
       responses:
-        "200":
-          description: Group details retrieved successfully
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/GroupResponse"
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group not found or private
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-    patch:
-      tags:
-      - Groups
-      summary: Update group details
-      description: Updates group metadata. Admin-only operation.
-      operationId: updateGroup
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateGroupRequest"
-        required: true
-      responses:
-        "200":
-          description: Group updated successfully
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/GroupResponse"
-        "400":
-          description: Validation failure
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+        "204":
+          description: Successfully left the group
         "401":
           description: Missing or invalid bearer token
           content:
@@ -218,7 +211,47 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
-          description: Only group admins can update group details
+          description: Caller is not a member of the group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/groups/{groupId}/join:
+    post:
+      tags:
+      - Groups
+      summary: Join public group
+      description: One-step join for a public group without needing an invite token.
+      operationId: joinPublicGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Successfully joined the group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupJoinResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Group is private and requires an invite link
           content:
             '*/*':
               schema:
@@ -230,42 +263,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
         "409":
-          description: Group name already taken
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-    delete:
-      tags:
-      - Groups
-      summary: Delete group
-      description: Permanently deletes the group and cascades to its conversation. Admin-only operation.
-      operationId: deleteGroup
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Group deleted successfully
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Caller is not an admin
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group not found
+          description: User is already a member of this group
           content:
             '*/*':
               schema:
@@ -300,192 +298,6 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: User is not an admin of this group
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group not found
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/groups/{groupId}/members:
-    get:
-      tags:
-      - Groups
-      summary: Get group member list
-      description: Retrieves all members of a group with their roles. Caller must be a member.
-      operationId: getGroupMembers
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "200":
-          description: Member list retrieved successfully
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/GroupMemberListResponse"
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Caller is not a member of the group
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group not found
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/groups/{groupId}/members/{userId}/role:
-    patch:
-      tags:
-      - Groups
-      summary: Update member role
-      description: Promote or demote a group member. Admin-only operation. Cannot demote sole admin.
-      operationId: updateMemberRole
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdateMemberRoleRequest"
-        required: true
-      responses:
-        "200":
-          description: Member role updated successfully
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/GroupMemberResponse"
-        "400":
-          description: Validation failure
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Caller is not an admin
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group or member not found
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "409":
-          description: Cannot demote the sole admin
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/groups/{groupId}/members/{userId}:
-    delete:
-      tags:
-      - Groups
-      summary: Remove member from group
-      description: Evicts a member from the group. Admin-only operation. Cannot remove another admin or self.
-      operationId: removeMember
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      - name: userId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Member removed successfully
-        "400":
-          description: Cannot remove self via remove member endpoint
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Caller is not an admin or target is an admin
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "404":
-          description: Group or member not found
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-      security:
-      - bearerAuth: []
-  /api/v1/groups/{groupId}/leave:
-    post:
-      tags:
-      - Groups
-      summary: Leave a group
-      description: Leaves a group. If last member, tears down group. If sole admin, promotes oldest member.
-      operationId: leaveGroup
-      parameters:
-      - name: groupId
-        in: path
-        required: true
-        schema:
-          type: string
-      responses:
-        "204":
-          description: Successfully left the group
-        "401":
-          description: Missing or invalid bearer token
-          content:
-            '*/*':
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "403":
-          description: Caller is not a member of the group
           content:
             '*/*':
               schema:
@@ -788,6 +600,198 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/groups/{groupId}:
+    get:
+      tags:
+      - Groups
+      summary: Get group details
+      description: "Retrieves group details. Public groups are visible to all users,\
+        \ private groups are member-only."
+      operationId: getGroupDetails
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Group details retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found or private
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+    delete:
+      tags:
+      - Groups
+      summary: Delete group
+      description: Permanently deletes the group and cascades to its conversation.
+        Admin-only operation.
+      operationId: deleteGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Group deleted successfully
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not an admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+    patch:
+      tags:
+      - Groups
+      summary: Update group details
+      description: Updates group metadata. Admin-only operation.
+      operationId: updateGroup
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateGroupRequest"
+        required: true
+      responses:
+        "200":
+          description: Group updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupResponse"
+        "400":
+          description: Validation failure
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Only group admins can update group details
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Group name already taken
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
+  /api/v1/groups/{groupId}/members/{targetUserId}/role:
+    patch:
+      tags:
+      - Groups
+      summary: Update member role
+      description: Promote or demote a group member. Admin-only operation. Cannot
+        demote sole admin.
+      operationId: updateMemberRole
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: targetUserId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMemberRoleRequest"
+        required: true
+      responses:
+        "200":
+          description: Member role updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupMemberResponse"
+        "400":
+          description: Validation failure
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not an admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group or member not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Cannot demote the sole admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/contacts/requests/{requestId}:
     patch:
       tags:
@@ -939,6 +943,47 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/groups/{groupId}/members:
+    get:
+      tags:
+      - Groups
+      summary: Get group member list
+      description: Retrieves all members of a group with their roles. Caller must
+        be a member.
+      operationId: getGroupMembers
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Member list retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/GroupMemberListResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not a member of the group
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/groups/mine:
     get:
       tags:
@@ -984,6 +1029,54 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/v1/groups/{groupId}/members/{targetUserId}:
+    delete:
+      tags:
+      - Groups
+      summary: Remove member from group
+      description: Evicts a member from the group. Admin-only operation. Cannot remove
+        another admin or self.
+      operationId: removeMember
+      parameters:
+      - name: groupId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: targetUserId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Member removed successfully
+        "400":
+          description: Cannot remove self via remove member endpoint
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Missing or invalid bearer token
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Caller is not an admin or target is an admin
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Group or member not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+      security:
+      - bearerAuth: []
   /api/v1/contacts/{contactId}:
     delete:
       tags:
@@ -1073,26 +1166,6 @@ components:
       required:
       - name
       - visibility
-    UpdateGroupRequest:
-      type: object
-      description: Request payload for updating group metadata (all fields optional)
-      properties:
-        name:
-          type: string
-          description: Updated group name
-          example: FAANG Interview Prep 2026
-          maxLength: 100
-          minLength: 3
-        description:
-          type: string
-          description: Updated group description
-          example: Updated description
-          maxLength: 500
-        topicTag:
-          type: string
-          description: Updated topic tag
-          example: "#interview-prep"
-          maxLength: 50
     GroupResponse:
       type: object
       description: Group details response
@@ -1148,18 +1221,6 @@ components:
           - ADMIN
           - MEMBER
           example: ADMIN
-    InviteResponse:
-      type: object
-      description: Private group invite link response
-      properties:
-        inviteLink:
-          type: string
-          description: Full invite URL
-          example: http://localhost:4200/invite/a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        expiresAt:
-          type: string
-          format: date-time
-          description: Timestamp when the invite expires (7 days after issuance)
     GroupJoinResponse:
       type: object
       description: Response returned upon joining a group
@@ -1179,59 +1240,18 @@ components:
           - ADMIN
           - MEMBER
           example: MEMBER
-    GroupMemberListResponse:
+    InviteResponse:
       type: object
-      description: Wrapper response for group member list
+      description: Private group invite link response
       properties:
-        content:
-          type: array
-          items:
-            $ref: "#/components/schemas/GroupMemberResponse"
-    GroupMemberResponse:
-      type: object
-      description: Details of a group member
-      properties:
-        userId:
+        inviteLink:
           type: string
-          description: User ID
-          example: 64f1a2b3c4d5e6f7a8b9c0d1
-        displayName:
-          type: string
-          description: User display name
-          example: Satyam Kumar
-        avatarUrl:
-          type: string
-          description: User avatar URL
-          example: https://pub-xxx.r2.dev/avatars/u1.jpg
-        role:
-          type: string
-          description: Role in group
-          enum:
-          - ADMIN
-          - MEMBER
-          example: ADMIN
-        online:
-          type: boolean
-          description: Whether user is online
-          example: true
-        joinedAt:
+          description: Full invite URL
+          example: http://localhost:4200/invite/a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        expiresAt:
           type: string
           format: date-time
-          description: Timestamp when user joined group
-          example: 2026-06-27T10:30:00Z
-    UpdateMemberRoleRequest:
-      type: object
-      description: Request to update member role in group
-      properties:
-        role:
-          type: string
-          description: New role
-          enum:
-          - ADMIN
-          - MEMBER
-          example: ADMIN
-      required:
-      - role
+          description: Timestamp when the invite expires (7 days after issuance)
     SendRequestDto:
       type: object
       properties:
@@ -1356,6 +1376,73 @@ components:
       required:
       - email
       - password
+    UpdateGroupRequest:
+      type: object
+      description: Request payload for updating group metadata (all fields optional)
+      properties:
+        name:
+          type: string
+          description: Updated group name
+          example: FAANG Interview Prep 2026
+          maxLength: 100
+          minLength: 3
+        description:
+          type: string
+          description: Updated group description
+          example: Updated description
+          maxLength: 500
+          minLength: 0
+        topicTag:
+          type: string
+          description: Updated topic tag
+          example: "#interview-prep"
+          maxLength: 50
+          minLength: 0
+    UpdateMemberRoleRequest:
+      type: object
+      description: Request to update member role in group
+      properties:
+        role:
+          type: string
+          description: "New role: ADMIN or MEMBER"
+          enum:
+          - ADMIN
+          - MEMBER
+          example: ADMIN
+      required:
+      - role
+    GroupMemberResponse:
+      type: object
+      description: Details of a group member
+      properties:
+        userId:
+          type: string
+          description: User ID
+          example: 64f1a2b3c4d5e6f7a8b9c0d1
+        displayName:
+          type: string
+          description: User display name
+          example: Satyam Kumar
+        avatarUrl:
+          type: string
+          description: User avatar URL
+          example: https://pub-xxx.r2.dev/avatars/u1.jpg
+        role:
+          type: string
+          description: Role in group
+          enum:
+          - ADMIN
+          - MEMBER
+          example: ADMIN
+        online:
+          type: boolean
+          description: Whether user is online
+          example: true
+        joinedAt:
+          type: string
+          format: date-time
+          description: Timestamp when user joined group
+          example: 2026-06-27T10:30:00Z
     RespondRequestDto:
       type: object
       properties:
@@ -1464,6 +1551,48 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
+    GroupPageResponse:
+      type: object
+      description: Paginated public group discovery response
+      properties:
+        content:
+          type: array
+          description: List of public groups
+          items:
+            $ref: "#/components/schemas/GroupResponse"
+        page:
+          type: integer
+          format: int32
+          description: Current page index (0-based)
+          example: 0
+        size:
+          type: integer
+          format: int32
+          description: Page size
+          example: 20
+        totalElements:
+          type: integer
+          format: int64
+          description: Total number of matching public groups
+          example: 42
+        totalPages:
+          type: integer
+          format: int32
+          description: Total number of pages
+          example: 3
+        last:
+          type: boolean
+          description: Whether this is the last page
+          example: false
+    GroupMemberListResponse:
+      type: object
+      description: Wrapper response for group member list
+      properties:
+        content:
+          type: array
+          description: List of group members
+          items:
+            $ref: "#/components/schemas/GroupMemberResponse"
     ContactListResponse:
       type: object
       properties:

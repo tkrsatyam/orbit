@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
@@ -44,6 +44,22 @@ export interface GroupJoinResponse {
   role: GroupRole;
 }
 
+export interface GroupPageResponse {
+  content: GroupResponse[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  last: boolean;
+}
+
+export interface GroupDiscoverParams {
+  q?: string;
+  tag?: string;
+  page?: number;
+  size?: number;
+}
+
 export interface GroupMemberResponse {
   userId: string;
   displayName: string;
@@ -78,6 +94,33 @@ export class GroupService {
     return this.http.get<GroupResponse[]>(`${this.baseUrl}/mine`).pipe(
       tap((groups) => this.myGroups.set(groups))
     );
+  }
+
+  /**
+   * Discovers public groups with optional substring query, topic tag, and pagination.
+   */
+  discoverGroups(params: GroupDiscoverParams = {}): Observable<GroupPageResponse> {
+    let httpParams = new HttpParams();
+    if (params.q && params.q.trim()) {
+      httpParams = httpParams.set('q', params.q.trim());
+    }
+    if (params.tag && params.tag.trim()) {
+      httpParams = httpParams.set('tag', params.tag.trim());
+    }
+    if (params.page !== undefined) {
+      httpParams = httpParams.set('page', params.page.toString());
+    }
+    if (params.size !== undefined) {
+      httpParams = httpParams.set('size', params.size.toString());
+    }
+    return this.http.get<GroupPageResponse>(this.baseUrl, { params: httpParams });
+  }
+
+  /**
+   * Joins a public group directly.
+   */
+  joinPublicGroup(groupId: string): Observable<GroupJoinResponse> {
+    return this.http.post<GroupJoinResponse>(`${this.baseUrl}/${groupId}/join`, {});
   }
 
   /**
