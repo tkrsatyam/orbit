@@ -1,0 +1,43 @@
+name: AI Pull Request Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+concurrency:
+  group: ai-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  review:
+    name: Advisory Code Review
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && !endsWith(github.actor, '[bot]')
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js Runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Execute AI Review
+        continue-on-error: true
+        env:
+          GEMINI_AI_REVIEW_API_KEY: ${{ secrets.GEMINI_AI_REVIEW_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref }}
+          GEMINI_MODEL: gemini-2.5-flash
+          DIFF_THRESHOLD: 2000
+        run: node .github/scripts/review-pr.mjs
