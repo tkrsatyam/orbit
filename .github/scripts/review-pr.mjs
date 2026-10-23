@@ -244,7 +244,29 @@ async function callGeminiWithFallback(promptText, apiKey) {
   throw new Error(`All models in fallback chain failed: ${lastError?.message}`);
 }
 
+function sanitizeReviewMarkdown(markdown) {
+  if (!markdown) return markdown;
+
+  return markdown
+    // Truncate backend boilerplate paths: backend/src/main/java/com/orbit/pkg/File.java#L...
+    .replace(
+      /`backend\/src\/(?:main|test)\/java\/com\/orbit\/([^`\s]+)`/g,
+      '`backend/.../$1`'
+    )
+    // Truncate frontend boilerplate paths: frontend/src/app/(core/|features/|.../)pkg/File.ts#L...
+    .replace(
+      /`frontend\/src\/(?:app\/)?(?:core\/|features\/|shared\/)?(?:services\/)?([^`\s]+\/[^`\s]+)`/g,
+      '`frontend/.../$1`'
+    )
+    // Ensure a <br> exists between the backtick location and the following description in table cells
+    .replace(
+      /(\|(?:\s*`[^`]+#L\d+`\s*))(?!\s*<br>)\s*([A-Za-z0-9])/g,
+      '$1<br>$2'
+    );
+}
+
 async function publishOrUpdateComment(repo, prNumber, token, commentBody, commitSha) {
+  const sanitizedBody = sanitizeReviewMarkdown(commentBody);
   const listUrl = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`;
   const signatureTag = `<!-- orbit-ai-review:commit:${commitSha} -->`;
   const headerPattern = `## 🤖 AI Code Review | Commit \`${commitSha}\``;
@@ -272,7 +294,7 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
         const updateRes = await fetch(updateUrl, {
           method: 'PATCH',
           headers: { ...headers, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ body: commentBody })
+          body: JSON.stringify({ body: sanitizedBody })
         });
 
         if (updateRes.ok) {
@@ -305,7 +327,7 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
   const createRes = await fetch(createUrl, {
     method: 'POST',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ body: commentBody })
+    body: JSON.stringify({ body: sanitizedBody })
   });
 
   if (!createRes.ok) {

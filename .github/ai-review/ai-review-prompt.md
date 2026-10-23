@@ -32,9 +32,10 @@ If issues are found, present them in a markdown table:
 
 | Severity | Issue & Location | Suggested Fix |
 |---|---|---|
-| `[Warning]` | `path/to/file.ext#L123`<br>Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
+| `[Warning]` | `backend/.../websocket/StompHandshakeInterceptor.java#L85`<br>Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
 
 Table formatting rules:
+- **Location**: Format as `root/.../subpackage/FileName.ext#L123`<br> (e.g. `backend/.../websocket/StompHandshakeInterceptor.java#L85`<br> or `frontend/.../websocket/websocket.service.ts#L189`<br>). Truncate boilerplate middle directories (e.g. `src/main/java/com/orbit/` or `src/app/core/services/`) to `...` and always separate the location from the description with `<br>`.
 - **Severity**: Must be strictly one of `[Critical]`, `[Warning]`, or `[Suggestion]`.
 - **Formatting**: Keep description and suggested fix concise to fit table cells cleanly. Use inline backticks for code symbols (e.g. `try-catch`, `Optional.ofNullable`), never multiline code fences or raw newlines that break markdown table syntax.
 
