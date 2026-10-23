@@ -2,6 +2,17 @@
   <!-- Chat Header Bar -->
   <header class="chat-header" data-testid="chat-header">
     <div class="chat-header-user">
+      <button
+        type="button"
+        class="btn-mobile-back"
+        (click)="goBack()"
+        aria-label="Back to conversations"
+        data-testid="chat-back-btn"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6" />
+        </svg>
+      </button>
       <div class="peer-avatar-wrapper">
         <div class="peer-avatar" aria-hidden="true">
           <span>{{ peerInitial() }}</span>

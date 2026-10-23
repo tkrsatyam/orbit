@@ -511,3 +511,35 @@
     opacity: 0.6;
   }
 }
+
+// ----------------------------------------------------
+// 4. Mobile Responsive Parity (390x844) per Penpot
+// ----------------------------------------------------
+@media (max-width: 768px) {
+  .orbit-workstation-layout {
+    app-navigation-rail {
+      display: none;
+    }
+
+    .workstation-sidebar {
+      width: 100%;
+      min-width: 100%;
+    }
+
+    .workstation-main {
+      display: none;
+    }
+
+    &.has-active-chat {
+      .workstation-sidebar {
+        display: none;
+      }
+
+      .workstation-main {
+        display: block;
+        width: 100%;
+        min-width: 100%;
+      }
+    }
+  }
+}

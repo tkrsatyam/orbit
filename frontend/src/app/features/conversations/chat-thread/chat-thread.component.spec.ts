@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ActivatedRoute, convertToParamMap } from '@angular/router';
+import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { BehaviorSubject, of, throwError } from 'rxjs';
 import { MessageResponse } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -87,6 +87,7 @@ describe('ChatThreadComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: MessageService, useValue: messageServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
@@ -305,5 +306,12 @@ describe('ChatThreadComponent', () => {
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-testid="composer-blocked-card"]')).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="message-input"]')).toBeTruthy();
+  });
+
+  it('should navigate back to root when goBack is called', () => {
+    const router = TestBed.inject(Router);
+    const navigateSpy = vi.spyOn(router, 'navigate');
+    component.goBack();
+    expect(navigateSpy).toHaveBeenCalledWith(['/']);
   });
 });

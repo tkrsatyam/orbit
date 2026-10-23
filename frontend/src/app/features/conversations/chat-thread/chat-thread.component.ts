@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ChatMessageItem, MessageResponse } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -19,6 +19,7 @@ import { WebSocketService } from '../../../core/services/websocket/websocket.ser
 })
 export class ChatThreadComponent implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   private readonly contactService = inject(ContactService);
@@ -119,6 +120,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       },
       error: () => {}
     });
+  }
+
+  goBack(): void {
+    this.router.navigate(['/']);
   }
 
   onKeydown(event: KeyboardEvent): void {

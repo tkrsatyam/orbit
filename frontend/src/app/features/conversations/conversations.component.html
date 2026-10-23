@@ -1,4 +1,4 @@
-<div class="orbit-workstation-layout">
+<div class="orbit-workstation-layout" [class.has-active-chat]="activeConversationId() !== null || activeGroupId() !== null">
   <!-- Left Navigation Rail (68px) -->
   <app-navigation-rail
     [activeTab]="activeNavTab()"
