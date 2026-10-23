@@ -244,26 +244,58 @@ async function callGeminiWithFallback(promptText, apiKey) {
   throw new Error(`All models in fallback chain failed: ${lastError?.message}`);
 }
 
-async function postCommentToPR(repo, prNumber, token, commentBody) {
-  const url = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`;
+async function publishOrUpdateComment(repo, prNumber, token, commentBody, commitSha) {
+  const listUrl = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`;
+  const signature = `<!-- orbit-ai-review:commit:${commitSha} -->`;
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'orbit-ai-reviewer'
+  };
 
-  const response = await fetch(url, {
+  try {
+    const listRes = await fetch(listUrl, { headers });
+    if (listRes.ok) {
+      const comments = await listRes.json();
+      const existing = comments.find(
+        (c) => typeof c.body === 'string' && c.body.includes(signature)
+      );
+
+      if (existing) {
+        console.log(`Found existing review comment (ID: ${existing.id}) for commit ${commitSha}. Updating in-place...`);
+        const updateUrl = `https://api.github.com/repos/${repo}/issues/comments/${existing.id}`;
+        const updateRes = await fetch(updateUrl, {
+          method: 'PATCH',
+          headers: { ...headers, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: commentBody })
+        });
+
+        if (updateRes.ok) {
+          console.log(`Successfully updated review comment for commit ${commitSha}.`);
+          return;
+        }
+        console.warn(`Failed to update existing comment (status ${updateRes.status}). Falling back to creating new comment.`);
+      }
+    }
+  } catch (err) {
+    console.warn(`Error checking existing comments: ${err.message}. Proceeding to create new comment.`);
+  }
+
+  // Create new comment if no existing comment found or update failed
+  const createUrl = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments`;
+  const createRes = await fetch(createUrl, {
     method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'User-Agent': 'orbit-ai-reviewer'
-    },
+    headers: { ...headers, 'Content-Type': 'application/json' },
     body: JSON.stringify({ body: commentBody })
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to post comment to GitHub (status ${response.status}): ${errorText}`);
+  if (!createRes.ok) {
+    const errorText = await createRes.text();
+    throw new Error(`Failed to post comment to GitHub (status ${createRes.status}): ${errorText}`);
   }
 
-  console.log('Successfully posted review comment to pull request.');
+  console.log(`Successfully created new review comment for commit ${commitSha}.`);
 }
 
 async function main() {
@@ -313,7 +345,7 @@ async function main() {
   const frontendRules = readMarkdownRule('.github/ai-review/frontend-rules.md');
 
   let reviewComment = '';
-  const header = `## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
+  const header = `<!-- orbit-ai-review:commit:${commitSha} -->\n## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
 
   // Decision: Single Call Mode vs Split Call Mode
   const shouldSplit = totalStats.total > DIFF_THRESHOLD && backendStats.total > 100 && frontendStats.total > 100;
@@ -364,9 +396,9 @@ async function main() {
   }
 
   try {
-    await postCommentToPR(GITHUB_REPOSITORY, PR_NUMBER, GITHUB_TOKEN, reviewComment);
+    await publishOrUpdateComment(GITHUB_REPOSITORY, PR_NUMBER, GITHUB_TOKEN, reviewComment, commitSha);
   } catch (postError) {
-    console.warn('Failed to post review comment to PR:', postError.message);
+    console.warn('Failed to publish review comment to PR:', postError.message);
   }
 }
 

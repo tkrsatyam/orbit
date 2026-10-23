@@ -28,10 +28,17 @@ Produce clean, concise GitHub-flavored markdown adhering to this format:
 Provide a 2-3 sentence technical overview of what this diff introduces.
 
 ### Issues Identified
-If issues are found, list each item with:
-- **Location**: `path/to/file.ext#L123` (or relevant symbol/method)
-- **Severity**: `[Critical]` (security flaw, data loss, crash), `[Warning]` (logic edge case, leak, architectural violation), or `[Suggestion]` (clean code improvement).
-- **Description**: Explain the issue plainly and directly.
-- **Suggested Fix**: Provide the minimal code snippet resolving the issue.
+If issues are found, present them in a markdown table:
 
-If no issues are found, state: `No major issues identified.`
+| # | Severity | Location | Description | Suggested Fix |
+|---|---|---|---|---|
+| 1 | `[Warning]` | `path/to/file.ext#L123` | Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
+
+Table formatting rules:
+- Number each row sequentially (`1`, `2`, `3`...) to clearly indicate total issue count.
+- **Severity**: Must be strictly one of `[Critical]`, `[Warning]`, or `[Suggestion]`.
+- **Location**: Specific file path with line number (e.g., `backend/src/.../File.java#L45`).
+- **Formatting**: Keep description and suggested fix concise to fit table cells cleanly. Use inline backticks for code symbols (e.g. `try-catch`, `Optional.ofNullable`), never multiline code fences or raw newlines that break markdown table syntax.
+
+If no issues are found, DO NOT output a table. Instead output:
+`✅ **No major issues identified.**`
