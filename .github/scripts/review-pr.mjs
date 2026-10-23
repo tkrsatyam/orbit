@@ -338,6 +338,46 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
   console.log(`Successfully created new review comment for commit ${commitSha}.`);
 }
 
+async function fetchPRContext(repo, prNumber, token) {
+  const headers = {
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': 'orbit-ai-reviewer'
+  };
+
+  try {
+    const prRes = await fetch(`https://api.github.com/repos/${repo}/pulls/${prNumber}`, { headers });
+    const prData = prRes.ok ? await prRes.json() : null;
+
+    const commentsRes = await fetch(`https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`, { headers });
+    const commentsData = commentsRes.ok ? await commentsRes.json() : [];
+
+    let contextText = '';
+    if (prData) {
+      contextText += `### PR Title: ${prData.title}\n\n### PR Description:\n${prData.body || 'No description provided.'}\n\n`;
+    }
+
+    if (commentsData.length > 0) {
+      contextText += `### PR Discussion & Previous Review Feedback:\n`;
+      const currentCommit = getCommitSha();
+      for (const comment of commentsData) {
+        const author = comment.user?.login || 'unknown';
+        // Avoid self-echo of the exact commit currently being reviewed
+        if (author.includes('bot') && comment.body.includes(`Commit \`${currentCommit}\``)) {
+          continue;
+        }
+        contextText += `\n--- Comment by @${author} ---\n${comment.body}\n`;
+      }
+    }
+
+    return contextText.trim();
+  } catch (err) {
+    console.warn(`Failed to fetch PR context: ${err.message}`);
+    return '';
+  }
+}
+
 async function main() {
   if (!GEMINI_API_KEY) {
     console.warn('GEMINI_AI_REVIEW_API_KEY is not set. Skipping AI review.');
@@ -384,6 +424,14 @@ async function main() {
   const backendRules = readMarkdownRule('.github/ai-review/backend-rules.md');
   const frontendRules = readMarkdownRule('.github/ai-review/frontend-rules.md');
 
+  // Fetch PR description and discussion context
+  const prContext = await fetchPRContext(GITHUB_REPOSITORY, PR_NUMBER, GITHUB_TOKEN);
+  let prContextBlock = '';
+  if (prContext) {
+    console.log(`Fetched PR context (${prContext.length} chars). Injecting into review prompt.`);
+    prContextBlock = `\n\n# Pull Request Description & Conversation Context\n<pr_context>\n${prContext}\n</pr_context>`;
+  }
+
   let reviewComment = '';
   const header = `<!-- orbit-ai-review:commit:${commitSha} -->\n## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
 
@@ -396,8 +444,8 @@ async function main() {
     const backendDiff = getDiffContent('backend');
     const frontendDiff = getDiffContent('frontend');
 
-    const backendFullPrompt = `${basePrompt}\n\n# Backend Domain Rules\n${backendRules}\n\n# Git Diff Under Review\n<diff_content>\n${backendDiff}\n</diff_content>`;
-    const frontendFullPrompt = `${basePrompt}\n\n# Frontend Domain Rules\n${frontendRules}\n\n# Git Diff Under Review\n<diff_content>\n${frontendDiff}\n</diff_content>`;
+    const backendFullPrompt = `${basePrompt}${prContextBlock}\n\n# Backend Domain Rules\n${backendRules}\n\n# Git Diff Under Review\n<diff_content>\n${backendDiff}\n</diff_content>`;
+    const frontendFullPrompt = `${basePrompt}${prContextBlock}\n\n# Frontend Domain Rules\n${frontendRules}\n\n# Git Diff Under Review\n<diff_content>\n${frontendDiff}\n</diff_content>`;
 
     try {
       const [backendRes, frontendRes] = await Promise.all([
@@ -423,7 +471,7 @@ async function main() {
     }
 
     const fullDiff = getDiffContent();
-    const singlePrompt = `${basePrompt}${combinedRules}\n\n# Git Diff Under Review\n<diff_content>\n${fullDiff}\n</diff_content>`;
+    const singlePrompt = `${basePrompt}${prContextBlock}${combinedRules}\n\n# Git Diff Under Review\n<diff_content>\n${fullDiff}\n</diff_content>`;
 
     try {
       const { reviewText, modelUsed } = await callGeminiWithFallback(singlePrompt, GEMINI_API_KEY);
