@@ -15,7 +15,7 @@ const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const PR_NUMBER = process.env.PR_NUMBER;
 const BASE_REF = process.env.BASE_REF || 'main';
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const DIFF_THRESHOLD = parseInt(process.env.DIFF_THRESHOLD || '2000', 10);
 
 const EXCLUSION_PATTERNS = [
