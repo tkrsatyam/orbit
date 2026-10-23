@@ -9,6 +9,8 @@ servers:
 security:
 - bearerAuth: []
 tags:
+- name: Messages
+  description: Message operations within conversations
 - name: Groups
   description: "Group CRUD, membership, roles, and invite links"
 - name: Contacts
@@ -350,6 +352,69 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+  /api/v1/conversations/{id}/messages:
+    post:
+      tags:
+      - Messages
+      summary: Send a message
+      description: Sends a message to a conversation. Supports idempotent retries
+        via X-Idempotency-Key header.
+      operationId: sendRestMessage
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: X-Idempotency-Key
+        in: header
+        description: Client UUID for idempotent deduplication
+        required: false
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendMessageRequest"
+        required: true
+      responses:
+        "201":
+          description: Message sent successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid request or blank content
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden - sender is not a conversation participant
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          description: Conversation not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "429":
+          description: Rate limit exceeded (60 messages/min)
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
   /api/v1/contacts/requests:
     get:
       tags:
@@ -1252,6 +1317,77 @@ components:
           type: string
           format: date-time
           description: Timestamp when the invite expires (7 days after issuance)
+    SendMessageRequest:
+      type: object
+      description: Payload to send a message within a conversation
+      properties:
+        content:
+          type: string
+          description: Content text of the message
+          example: Hey! Have you checked the latest ADR?
+          maxLength: 4000
+          minLength: 0
+        type:
+          type: string
+          default: TEXT
+          description: Message type
+          enum:
+          - TEXT
+          - IMAGE
+          - FILE
+          example: TEXT
+        idempotencyKey:
+          type:
+          - string
+          - "null"
+          description: Client-generated idempotency key (UUID)
+          example: c8f2b7a4-3995-4672-9a0f-1558914619a9
+      required:
+      - content
+    MessageResponse:
+      type: object
+      description: Response representation of a message
+      properties:
+        id:
+          type: string
+          description: Unique message ID
+          example: 60c72b2f9b1d8b2bad000001
+        conversationId:
+          type: string
+          description: Conversation ID
+          example: 60c72b2f9b1d8b2bad000002
+        senderId:
+          type: string
+          description: Sender user ID
+          example: 60c72b2f9b1d8b2bad000003
+        senderName:
+          type: string
+          description: Sender display name snapshot
+          example: Satyam Kumar
+        type:
+          type: string
+          description: Message type
+          enum:
+          - TEXT
+          - IMAGE
+          - FILE
+          example: TEXT
+        content:
+          type: string
+          description: Message text content
+          example: Hey! Have you checked the latest ADR?
+        deleted:
+          type: boolean
+          description: Soft delete indicator
+          example: false
+        edited:
+          type: boolean
+          description: Edited indicator
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when message was created
     SendRequestDto:
       type: object
       properties:

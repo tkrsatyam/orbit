@@ -1,7 +1,7 @@
 import { Component, computed, ElementRef, HostListener, inject, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
-import { IncomingRequest } from '../../core/models/contact.model';
+import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
@@ -38,6 +38,7 @@ export class ConversationsComponent implements OnInit {
   readonly activeNavTab = signal<'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER'>('CHATS');
   readonly groupFilter = signal<'ALL' | 'PUBLIC' | 'PRIVATE'>('ALL');
   readonly activeGroupId = signal<string | null>(null);
+  readonly activeConversationId = signal<string | null>(null);
 
   readonly activeProcessingId = signal<string | null>(null);
   readonly activeAction = signal<'ACCEPT' | 'DECLINE' | 'BLOCK' | null>(null);
@@ -81,6 +82,12 @@ export class ConversationsComponent implements OnInit {
       }
     });
 
+    this.contactService.loadContacts().subscribe({
+      error: () => {
+        // Silently handle initial load failure
+      }
+    });
+
     this.groupService.loadMyGroups().subscribe({
       error: () => {
         // Silently handle initial load failure
@@ -92,16 +99,27 @@ export class ConversationsComponent implements OnInit {
     const url = this.router.url;
     if (url.includes('/groups/')) {
       this.activeNavTab.set('GROUPS');
+      this.activeConversationId.set(null);
       const parts = url.split('/groups/');
       if (parts[1]) {
         const id = parts[1].split('?')[0].split('/')[0];
         this.activeGroupId.set(id);
       }
+    } else if (url.includes('/conversations/')) {
+      this.activeNavTab.set('CHATS');
+      this.activeGroupId.set(null);
+      const parts = url.split('/conversations/');
+      if (parts[1]) {
+        const id = parts[1].split('?')[0].split('/')[0];
+        this.activeConversationId.set(id);
+      }
     } else if (url.includes('/invite/')) {
       this.activeNavTab.set('GROUPS');
       this.activeGroupId.set(null);
+      this.activeConversationId.set(null);
     } else {
       this.activeGroupId.set(null);
+      this.activeConversationId.set(null);
       const urlTree = this.router.parseUrl(url);
       const tabParam = urlTree.queryParams['tab'];
       if (tabParam === 'GROUPS' || tabParam === 'CHATS' || tabParam === 'CONTACTS') {
@@ -162,6 +180,24 @@ export class ConversationsComponent implements OnInit {
 
   navigateToGroup(groupId: string): void {
     this.router.navigate(['/groups', groupId]);
+  }
+
+  navigateToConversation(contact: ContactResponse): void {
+    this.router.navigate(['/conversations', contact.conversationId], {
+      queryParams: {
+        peerId: contact.userId,
+        peerName: contact.displayName
+      }
+    });
+  }
+
+  onSelectConversation(convId: string): void {
+    const contact = this.contactService.contacts().find(c => c.conversationId === convId);
+    if (contact) {
+      this.navigateToConversation(contact);
+    } else {
+      this.router.navigate(['/conversations', convId]);
+    }
   }
 
   handleAcceptRequest(request: IncomingRequest): void {

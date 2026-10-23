@@ -93,10 +93,39 @@
         </div>
       }
 
-      <div class="sidebar-list">
-        <p class="empty-list-notice">
-          No conversations yet. Open New Chat to connect with someone.
-        </p>
+      <div class="sidebar-list" data-testid="conversations-sidebar-list">
+        @if (contactService.contacts().length === 0) {
+          <p class="empty-list-notice">
+            No conversations yet. Open New Chat to connect with someone.
+          </p>
+        } @else {
+          @for (contact of contactService.contacts(); track contact.id) {
+            <div
+              class="chat-list-item"
+              [class.active]="activeConversationId() === contact.conversationId"
+              (click)="navigateToConversation(contact)"
+              [attr.data-testid]="'conversation-item-' + contact.conversationId"
+            >
+              <div class="chat-item-avatar">
+                <span>{{ contact.displayName.charAt(0).toUpperCase() }}</span>
+                @if (contact.online) {
+                  <span class="online-dot" aria-hidden="true"></span>
+                }
+              </div>
+              <div class="chat-item-content">
+                <div class="chat-item-top">
+                  <span class="chat-item-name">{{ contact.displayName }}</span>
+                  <span class="chat-item-status" [class.online]="contact.online">
+                    {{ contact.online ? 'Online' : 'Offline' }}
+                  </span>
+                </div>
+                <div class="chat-item-bottom">
+                  <span class="chat-item-preview">{{ contact.bio || 'Direct Message' }}</span>
+                </div>
+              </div>
+            </div>
+          }
+        }
       </div>
     }
 
@@ -218,6 +247,7 @@
   <app-new-chat-modal
     [isOpen]="isNewChatOpen()"
     (closeModal)="isNewChatOpen.set(false)"
+    (selectConversation)="onSelectConversation($event)"
   />
 
   <app-self-profile-modal
