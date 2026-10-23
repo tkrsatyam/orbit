@@ -15,6 +15,11 @@ Review any changes in `backend/` against these architectural and code quality ru
 - Ensure all exceptions are routed through the standardized global error envelope.
 - Strictly flag empty `catch` blocks or swallowed exceptions.
 
+## System Invariants & Framework Guarantees (Do Not Flag)
+- **Configuration Invariant**: `OrbitProperties` is strictly typed, records are annotated with `@NotNull` and `@NotBlank`, and Spring `@Validated` halts startup if configuration is missing. **Do not flag missing null-checks, default fallbacks, or NPE risks on validated configuration beans**.
+- **Error Handling Invariant**: `GlobalExceptionHandler` intercepts all unhandled exceptions and converts them into standardized RFC 7807 global error envelopes. Controllers and services do not need redundant defensive `try-catch` blocks around standard operations.
+- **Authentication Invariant**: JWT access tokens are validated once per HTTP request or during WebSocket upgrade. Internal service methods trust the populated `SecurityContext` / `Principal`.
+
 ## Security & Resilience
 - Never hardcode credentials, API keys, or secrets.
 - Verify authorization checks on every state-mutating endpoint. Ensure users cannot modify or access entities belonging to other tenants or users without permission.

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFileSync } from 'node:child_process';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,13 +17,14 @@ const PR_NUMBER = process.env.PR_NUMBER;
 const BASE_SHA = process.env.BASE_SHA;
 const HEAD_SHA = process.env.HEAD_SHA;
 const BASE_REF = process.env.BASE_REF || 'main';
+const HEAD_REF = process.env.HEAD_REF || '';
 const DIFF_THRESHOLD = parseInt(process.env.DIFF_THRESHOLD || '2000', 10);
 
 const DEFAULT_MODEL_CHAIN = [
-  'gemini-3.1-flash-lite',
-  'gemini-3.5-flash-lite',
   'gemini-3.8-flash',
-  'gemini-3.6-flash'
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite'
 ];
 
 const MODEL_CHAIN = process.env.GEMINI_MODELS
@@ -91,6 +92,12 @@ function getCommitSha() {
   return sha || 'unknown';
 }
 
+function getLatestCommitInfo() {
+  const target = HEAD_SHA || 'HEAD';
+  const out = runGit(['log', '-1', '--pretty=format:%h - %s%n%b', target], true);
+  return out ? out.trim() : '';
+}
+
 function getDiffStat(pathPrefix = null) {
   const args = ['diff', '--shortstat', ...getDiffTargetArgs(), '--'];
   if (pathPrefix) {
@@ -127,6 +134,264 @@ function getDiffContent(pathPrefix = null) {
   args.push(...EXCLUSION_PATTERNS);
 
   return runGit(args);
+}
+
+function getChangedFiles(pathPrefix = null) {
+  const args = ['diff', '--name-only', ...getDiffTargetArgs(), '--'];
+  if (pathPrefix) {
+    args.push(pathPrefix);
+  }
+  args.push(...EXCLUSION_PATTERNS);
+
+  const output = runGit(args);
+  if (!output) return [];
+  return output.split('\n').map((f) => f.trim()).filter(Boolean);
+}
+
+function isTestFile(filePath) {
+  const normalized = filePath.replace(/\\/g, '/');
+  return (
+    normalized.includes('/src/test/') ||
+    normalized.includes('/e2e/') ||
+    normalized.endsWith('.spec.ts') ||
+    normalized.endsWith('.spec.js') ||
+    /[A-Z][a-zA-Z0-9]*(Test|Tests|IT)\.java$/.test(normalized)
+  );
+}
+
+function partitionDiff(diffContent) {
+  if (!diffContent || !diffContent.trim()) {
+    return { productionDiff: '', testDiff: '' };
+  }
+
+  const chunks = diffContent.split(/(?=^diff --git )/m);
+  let productionDiff = '';
+  let testDiff = '';
+
+  for (const chunk of chunks) {
+    if (!chunk.trim()) continue;
+    const match = chunk.match(/^diff --git (?:\"a\/|a\/)(.+?)(?:\"| )/m);
+    if (match) {
+      const filePath = match[1];
+      if (isTestFile(filePath)) {
+        testDiff += chunk;
+      } else {
+        productionDiff += chunk;
+      }
+    } else {
+      productionDiff += chunk;
+    }
+  }
+
+  return { productionDiff: productionDiff.trim(), testDiff: testDiff.trim() };
+}
+
+function formatDiffBlock(diffContent) {
+  const { productionDiff, testDiff } = partitionDiff(diffContent);
+  let block = '\n\n# Git Diff Under Review\n<diff_content>';
+  if (productionDiff) {
+    block += `\n<production_diff>\n${productionDiff}\n</production_diff>`;
+  }
+  if (testDiff) {
+    block += `\n<test_diff>\n${testDiff}\n</test_diff>`;
+  }
+  block += '\n</diff_content>';
+  return block;
+}
+
+function formatFilesText(files) {
+  const validExtensions = ['.java', '.ts', '.html', '.scss', '.yml', '.yaml', '.xml'];
+  let filesText = '';
+  let count = 0;
+
+  for (const relPath of files) {
+    const ext = relPath.substring(relPath.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(ext)) {
+      continue;
+    }
+
+    const fullPath = resolve(REPO_ROOT, relPath);
+    if (!existsSync(fullPath)) {
+      continue;
+    }
+
+    try {
+      const content = readFileSync(fullPath, 'utf8');
+      if (content.length > 50000) {
+        continue;
+      }
+      const lang = ext.replace('.', '');
+      filesText += `\n### File: ${relPath}\n\`\`\`${lang}\n${content.trim()}\n\`\`\`\n`;
+      count++;
+    } catch (err) {
+      console.warn(`Could not read full file ${relPath}: ${err.message}`);
+    }
+  }
+
+  return { filesText, count };
+}
+
+function fetchPartitionedSourceFiles(fileList) {
+  const prodFiles = fileList.filter((f) => !isTestFile(f));
+  const testFiles = fileList.filter((f) => isTestFile(f));
+
+  const prodResult = formatFilesText(prodFiles);
+  const testResult = formatFilesText(testFiles);
+
+  const totalFiles = prodResult.count + testResult.count;
+  if (totalFiles === 0) return '';
+
+  let block = `\n\n# Full Source Files at HEAD (${totalFiles} files)\n<modified_files_full_source>`;
+  if (prodResult.count > 0) {
+    block += `\n<production_source_files>${prodResult.filesText}\n</production_source_files>`;
+  }
+  if (testResult.count > 0) {
+    block += `\n<test_source_files>${testResult.filesText}\n</test_source_files>`;
+  }
+  block += '\n</modified_files_full_source>';
+
+  return block;
+}
+
+function fetchProjectContracts(changedFiles) {
+  const contracts = [
+    {
+      path: 'backend/src/main/java/com/orbit/common/config/OrbitProperties.java',
+      desc: 'Global Typed & Validated Configuration Record'
+    },
+    {
+      path: 'backend/src/main/resources/application.yml',
+      desc: 'Application Configuration & Environment Mappings'
+    }
+  ];
+
+  const touchedStr = changedFiles.join(' ').toLowerCase();
+  if (touchedStr.includes('websocket') || touchedStr.includes('stomp')) {
+    contracts.push(
+      { path: 'docs/architecture/sequences/websocket_lifecycle.md', desc: 'WebSocket Lifecycle Sequence' },
+      { path: 'docs/architecture/sequences/presence_flow.md', desc: 'Presence Flow Sequence' }
+    );
+  }
+  if (touchedStr.includes('message') || touchedStr.includes('chat')) {
+    contracts.push({ path: 'docs/architecture/sequences/message_send_flow.md', desc: 'Message Send Sequence' });
+  }
+  if (touchedStr.includes('ai')) {
+    contracts.push({ path: 'docs/architecture/sequences/ai_feature_flow.md', desc: 'AI Feature Flow Sequence' });
+  }
+
+  let contractsText = '';
+  for (const contract of contracts) {
+    const fullPath = resolve(REPO_ROOT, contract.path);
+    if (existsSync(fullPath)) {
+      try {
+        const content = readFileSync(fullPath, 'utf8').trim();
+        const ext = contract.path.substring(contract.path.lastIndexOf('.')).replace('.', '');
+        contractsText += `\n### Contract: ${contract.path} (${contract.desc})\n\`\`\`${ext}\n${content}\n\`\`\`\n`;
+      } catch (e) {
+        // Ignore read errors
+      }
+    }
+  }
+
+  if (!contractsText) return '';
+  return `\n\n# Project Contracts & Architectural Baselines\n<project_contracts>${contractsText}\n</project_contracts>`;
+}
+
+function fetchRequirementsAndAdrs(prTitle, prBody, headRef, changedFiles) {
+  const combinedText = `${prTitle || ''} ${prBody || ''} ${headRef || ''} ${changedFiles.join(' ')}`;
+
+  // 1. Extract Requirement IDs (e.g. P1-03, P1-13, P2-01)
+  const reqMatches = [...new Set(combinedText.match(/P[1-4]-\d{2}/gi) || [])].map((m) => m.toUpperCase());
+
+  // 2. Extract Ticket Keys (e.g. ORDM-44)
+  const ticketMatches = [...new Set(combinedText.match(/ORDM-\d+/gi) || [])].map((m) => m.toUpperCase());
+
+  // 3. Extract ADR references (e.g. ADR-002, ADR 002, ADR-2, ADR 2)
+  const adrNumMatches = new Set();
+  const adrRegex = /ADR[-\s]?0*(\d{1,3})/gi;
+  let match;
+  while ((match = adrRegex.exec(combinedText)) !== null) {
+    adrNumMatches.add(parseInt(match[1], 10));
+  }
+
+  // Also infer ADRs from touched files/keywords if not explicitly mentioned
+  const touchedLower = combinedText.toLowerCase();
+  if (touchedLower.includes('websocket') || touchedLower.includes('stomp')) {
+    adrNumMatches.add(2); // 002_websocket_scaling.md
+  }
+  if (touchedLower.includes('contact') && (touchedLower.includes('remove') || touchedLower.includes('delete'))) {
+    adrNumMatches.add(6); // 006_contact_removal_strategy.md
+  }
+  if (touchedLower.includes('block')) {
+    adrNumMatches.add(7); // 007_blocking_behavior.md
+    adrNumMatches.add(13); // 013_block_endpoint_design.md
+  }
+
+  let extractedRequirements = '';
+  const reqFilePath = resolve(REPO_ROOT, 'docs/REQUIREMENTS.md');
+  if (existsSync(reqFilePath)) {
+    try {
+      const reqContent = readFileSync(reqFilePath, 'utf8');
+      const lines = reqContent.split('\n');
+      const matchedLines = [];
+
+      for (const reqId of reqMatches) {
+        for (const line of lines) {
+          if (line.includes(`| ${reqId} `) || line.includes(`| ${reqId}|`)) {
+            matchedLines.push(line.trim());
+          }
+        }
+      }
+
+      for (const ticket of ticketMatches) {
+        for (const line of lines) {
+          if (line.includes(ticket) && !matchedLines.includes(line.trim())) {
+            matchedLines.push(line.trim());
+          }
+        }
+      }
+
+      if (matchedLines.length > 0) {
+        extractedRequirements = `### Functional Requirements Grounding\n| ID | Epic | Feature | Functional Behavior |\n|---|---|---|---|\n${matchedLines.join('\n')}\n`;
+      }
+    } catch (e) {
+      console.warn(`Could not read docs/REQUIREMENTS.md: ${e.message}`);
+    }
+  }
+
+  let extractedAdrs = '';
+  const discussionsDir = resolve(REPO_ROOT, 'docs/discussions');
+  if (existsSync(discussionsDir)) {
+    try {
+      const files = readdirSync(discussionsDir);
+      for (const num of adrNumMatches) {
+        const paddedPrefix = String(num).padStart(3, '0');
+        const adrFile = files.find((f) => f.startsWith(`${paddedPrefix}_`) && f.endsWith('.md'));
+        if (adrFile) {
+          const adrPath = resolve(discussionsDir, adrFile);
+          const content = readFileSync(adrPath, 'utf8').trim();
+          const truncatedContent = content.length > 4000 ? `${content.substring(0, 4000)}\n...(truncated for brevity)` : content;
+          extractedAdrs += `\n### ADR ${adrFile}\n\`\`\`markdown\n${truncatedContent}\n\`\`\`\n`;
+        }
+      }
+    } catch (e) {
+      console.warn(`Could not read docs/discussions directory: ${e.message}`);
+    }
+  }
+
+  if (!extractedRequirements && !extractedAdrs) {
+    return '';
+  }
+
+  let result = '\n\n# Project Requirements & ADR Context\n<requirements_context>\n';
+  if (extractedRequirements) {
+    result += `${extractedRequirements}\n`;
+  }
+  if (extractedAdrs) {
+    result += `### Architectural Decision Records (ADRs)\n${extractedAdrs}\n`;
+  }
+  result += '</requirements_context>';
+  return result;
 }
 
 function readMarkdownRule(relativePath) {
@@ -371,10 +636,14 @@ async function fetchPRContext(repo, prNumber, token) {
       }
     }
 
-    return contextText.trim();
+    return {
+      text: contextText.trim(),
+      title: prData?.title || '',
+      body: prData?.body || ''
+    };
   } catch (err) {
     console.warn(`Failed to fetch PR context: ${err.message}`);
-    return '';
+    return { text: '', title: '', body: '' };
   }
 }
 
@@ -424,12 +693,41 @@ async function main() {
   const backendRules = readMarkdownRule('.github/ai-review/backend-rules.md');
   const frontendRules = readMarkdownRule('.github/ai-review/frontend-rules.md');
 
+  // Extract list of changed files
+  const changedFiles = getChangedFiles();
+  const backendChangedFiles = getChangedFiles('backend');
+  const frontendChangedFiles = getChangedFiles('frontend');
+
+  // Build full source files and project contracts for behavioral delta analysis
+  const projectContractsBlock = fetchProjectContracts(changedFiles);
+  const fullSourceFilesBlock = fetchPartitionedSourceFiles(changedFiles);
+  const backendSourceFilesBlock = fetchPartitionedSourceFiles(backendChangedFiles);
+  const frontendSourceFilesBlock = fetchPartitionedSourceFiles(frontendChangedFiles);
+
   // Fetch PR description and discussion context
   const prContext = await fetchPRContext(GITHUB_REPOSITORY, PR_NUMBER, GITHUB_TOKEN);
+  const commitInfo = getLatestCommitInfo();
+  let commitInfoText = '';
+  if (commitInfo) {
+    commitInfoText = `### Latest Commit Under Review at HEAD:\n\`\`\`\n${commitInfo}\n\`\`\`\n\n`;
+  }
+
   let prContextBlock = '';
-  if (prContext) {
-    console.log(`Fetched PR context (${prContext.length} chars). Injecting into review prompt.`);
-    prContextBlock = `\n\n# Pull Request Description & Conversation Context\n<pr_context>\n${prContext}\n</pr_context>`;
+  if (prContext.text || commitInfoText) {
+    const combinedContext = `${commitInfoText}${prContext.text}`.trim();
+    console.log(`Fetched PR and commit context (${combinedContext.length} chars). Injecting into review prompt.`);
+    prContextBlock = `\n\n# Pull Request Description & Conversation Context\n<pr_context>\n${combinedContext}\n</pr_context>`;
+  }
+
+  // Extract relevant requirements and ADR context
+  const requirementsContextBlock = fetchRequirementsAndAdrs(
+    prContext.title,
+    prContext.body,
+    HEAD_REF,
+    changedFiles
+  );
+  if (requirementsContextBlock) {
+    console.log(`Extracted functional requirements and ADR context for PR #${PR_NUMBER}. Injecting into review prompt.`);
   }
 
   let reviewComment = '';
@@ -444,8 +742,11 @@ async function main() {
     const backendDiff = getDiffContent('backend');
     const frontendDiff = getDiffContent('frontend');
 
-    const backendFullPrompt = `${basePrompt}${prContextBlock}\n\n# Backend Domain Rules\n${backendRules}\n\n# Git Diff Under Review\n<diff_content>\n${backendDiff}\n</diff_content>`;
-    const frontendFullPrompt = `${basePrompt}${prContextBlock}\n\n# Frontend Domain Rules\n${frontendRules}\n\n# Git Diff Under Review\n<diff_content>\n${frontendDiff}\n</diff_content>`;
+    const backendDiffBlock = formatDiffBlock(backendDiff);
+    const frontendDiffBlock = formatDiffBlock(frontendDiff);
+
+    const backendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${backendSourceFilesBlock}${prContextBlock}\n\n# Backend Domain Rules\n${backendRules}${backendDiffBlock}`;
+    const frontendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${frontendSourceFilesBlock}${prContextBlock}\n\n# Frontend Domain Rules\n${frontendRules}${frontendDiffBlock}`;
 
     try {
       const [backendRes, frontendRes] = await Promise.all([
@@ -471,7 +772,8 @@ async function main() {
     }
 
     const fullDiff = getDiffContent();
-    const singlePrompt = `${basePrompt}${prContextBlock}${combinedRules}\n\n# Git Diff Under Review\n<diff_content>\n${fullDiff}\n</diff_content>`;
+    const fullDiffBlock = formatDiffBlock(fullDiff);
+    const singlePrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${fullSourceFilesBlock}${prContextBlock}${combinedRules}${fullDiffBlock}`;
 
     try {
       const { reviewText, modelUsed } = await callGeminiWithFallback(singlePrompt, GEMINI_API_KEY);

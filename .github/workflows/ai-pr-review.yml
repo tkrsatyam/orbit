@@ -40,6 +40,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           BASE_REF: ${{ github.base_ref }}
-          GEMINI_MODELS: gemini-3.1-flash-lite,gemini-3.5-flash-lite,gemini-3.8-flash,gemini-3.6-flash
+          HEAD_REF: ${{ github.head_ref }}
+          GEMINI_MODELS: gemini-3.8-flash,gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite
           DIFF_THRESHOLD: 2000
         run: node .github/scripts/review-pr.mjs
