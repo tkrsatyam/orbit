@@ -179,6 +179,28 @@ describe('WebSocketService', () => {
     }
   });
 
+  it('should accumulate reconnectAttempts across multiple reconnect cycles without resetting', () => {
+    vi.useFakeTimers();
+    try {
+      service.connect('test-token');
+      const client = (service as any).client as Client;
+      client.onConnect?.({} as any);
+
+      for (let i = 1; i <= 5; i++) {
+        const activeClient = (service as any).client as Client;
+        activeClient.onWebSocketClose?.({} as any);
+        expect(service.reconnectAttempts()).toBe(i);
+        const delay = Math.min(100 * Math.pow(2, i - 1), 30000);
+        vi.advanceTimersByTime(delay + 10);
+      }
+
+      expect(service.reconnectAttempts()).toBe(5);
+      expect(service.showReconnectAlert()).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('should set showReconnectAlert to true after 5 failed reconnect attempts', () => {
     (service as any).reconnectAttempts.set(5);
     expect(service.showReconnectAlert()).toBe(true);

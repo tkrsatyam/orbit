@@ -34,7 +34,7 @@ export class WebSocketService implements OnDestroy {
   /**
    * Initializes and activates the WebSocket connection using the provided or active token.
    */
-  connect(token?: string): void {
+  connect(token?: string, isReconnect = false): void {
     const activeToken = token ?? this.authService.accessToken();
     if (!activeToken) {
       this.disconnect();
@@ -45,7 +45,24 @@ export class WebSocketService implements OnDestroy {
       return;
     }
 
-    this.disconnect();
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+
+    if (this.client) {
+      for (const sub of this.subscriptions.values()) {
+        sub.stompSub?.unsubscribe();
+        sub.stompSub = undefined;
+      }
+      this.client.deactivate();
+      this.client = null;
+    }
+
+    if (!isReconnect) {
+      this.reconnectAttempts.set(0);
+    }
+
     this.currentToken = activeToken;
     this.status.set('CONNECTING');
 
@@ -170,7 +187,7 @@ export class WebSocketService implements OnDestroy {
 
     this.reconnectTimer = setTimeout(() => {
       if (this.currentToken) {
-        this.connect(this.currentToken);
+        this.connect(this.currentToken, true);
       }
     }, delay);
   }
