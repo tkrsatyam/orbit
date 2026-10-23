@@ -254,9 +254,22 @@
 .delivery-status {
   display: inline-flex;
   align-items: center;
+  flex-shrink: 0;
+  margin-left: 2px;
+  padding-right: 2px;
 
-  &.sent {
+  svg {
+    display: block;
+    overflow: visible;
+  }
+
+  &.sent,
+  &.delivered {
     color: currentColor;
+  }
+
+  &.read {
+    color: var(--orbit-accent, #f59e0b);
   }
 
   &.sending {

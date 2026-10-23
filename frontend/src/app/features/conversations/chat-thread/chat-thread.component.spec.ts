@@ -229,7 +229,31 @@ describe('ChatThreadComponent', () => {
     expect(component.messages().length).toBe(1);
     expect(component.messages()[0].id).toBe('msg-incoming-1');
     expect(component.messages()[0].content).toBe('Hey there!');
+    expect(component.messages()[0].deliveryStatus).toBe('DELIVERED');
+  });
+
+  it('should transition own message from SENT to DELIVERED when topic event arrives', () => {
+    messageServiceMock.isWebSocketConnected.mockReturnValue(true);
+    component.messageInput.set('Delivered test');
+    component.sendMessage();
+
+    const receipt: MessageResponse = {
+      id: 'msg-delivered-1',
+      conversationId: 'conv-test-1',
+      senderId: 'my-user-id',
+      senderName: 'Satyam Kumar',
+      type: 'TEXT',
+      content: 'Delivered test',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-23T22:40:00Z'
+    };
+    receiptCallback!(receipt);
     expect(component.messages()[0].deliveryStatus).toBe('SENT');
+
+    // Topic broadcast arrives
+    conversationCallback!(receipt);
+    expect(component.messages()[0].deliveryStatus).toBe('DELIVERED');
   });
 
   it('should handle receipt for optimistic message', () => {

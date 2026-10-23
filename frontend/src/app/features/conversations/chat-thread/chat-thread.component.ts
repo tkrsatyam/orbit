@@ -185,12 +185,15 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   }
 
   private handleReceipt(receipt: MessageResponse): void {
-    // Replace optimistic placeholder with confirmed server response
+    // Replace optimistic placeholder with confirmed server response (status: SENT = single checkmark)
     this.messages.update(list => {
       const idx = list.findIndex(m => m.id === 'temp-' + receipt.id || (m.idempotencyKey && m.content === receipt.content && m.deliveryStatus === 'SENDING'));
       if (idx !== -1) {
         const updated = [...list];
-        updated[idx] = { ...receipt, deliveryStatus: 'SENT' };
+        // If already promoted to DELIVERED by topic event, keep DELIVERED, otherwise set SENT
+        const currentStatus = updated[idx].deliveryStatus;
+        const newStatus = currentStatus === 'DELIVERED' ? 'DELIVERED' : 'SENT';
+        updated[idx] = { ...receipt, deliveryStatus: newStatus };
         return updated;
       }
       return list;
@@ -199,18 +202,32 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
   private handleIncomingMessage(incoming: MessageResponse): void {
     this.messages.update(list => {
-      // Deduplicate if already present by server ID
-      if (list.some(m => m.id === incoming.id)) {
+      // If already present by server ID (e.g. from receipt)
+      const existingIdx = list.findIndex(m => m.id === incoming.id);
+      if (existingIdx !== -1) {
+        if (list[existingIdx].senderId === this.currentUserId()) {
+          const updated = [...list];
+          updated[existingIdx] = { ...list[existingIdx], deliveryStatus: 'DELIVERED' };
+          return updated;
+        }
         return list;
       }
+
       // If matches optimistic message by content and sender
-      const pendingIdx = list.findIndex(m => m.deliveryStatus === 'SENDING' && m.senderId === incoming.senderId && m.content === incoming.content);
+      const pendingIdx = list.findIndex(m =>
+        (m.deliveryStatus === 'SENDING' || m.deliveryStatus === 'SENT') &&
+        m.senderId === incoming.senderId &&
+        m.content === incoming.content
+      );
       if (pendingIdx !== -1) {
         const updated = [...list];
-        updated[pendingIdx] = { ...incoming, deliveryStatus: 'SENT' };
+        const status = incoming.senderId === this.currentUserId() ? 'DELIVERED' : 'SENT';
+        updated[pendingIdx] = { ...incoming, deliveryStatus: status };
         return updated;
       }
-      return [...list, { ...incoming, deliveryStatus: 'SENT' }];
+
+      // Incoming message from peer
+      return [...list, { ...incoming, deliveryStatus: 'DELIVERED' }];
     });
     this.scrollToBottom();
   }
@@ -220,7 +237,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       const idx = list.findIndex(m => m.idempotencyKey === idempotencyKey);
       if (idx !== -1) {
         const updated = [...list];
-        updated[idx] = { ...serverMsg, deliveryStatus: 'SENT' };
+        const currentStatus = updated[idx].deliveryStatus;
+        const newStatus = currentStatus === 'DELIVERED' ? 'DELIVERED' : 'SENT';
+        updated[idx] = { ...serverMsg, deliveryStatus: newStatus };
         return updated;
       }
       return list;
@@ -228,7 +247,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.scrollToBottom();
   }
 
-  private updateMessageStatus(idempotencyKey: string, status: 'SENDING' | 'SENT' | 'FAILED'): void {
+  private updateMessageStatus(idempotencyKey: string, status: 'SENDING' | 'SENT' | 'DELIVERED' | 'FAILED'): void {
     this.messages.update(list => {
       return list.map(m => m.idempotencyKey === idempotencyKey ? { ...m, deliveryStatus: status } : m);
     });

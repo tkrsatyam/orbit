@@ -1,6 +1,6 @@
 export type MessageType = 'TEXT' | 'IMAGE' | 'FILE';
 
-export type MessageDeliveryStatus = 'SENDING' | 'SENT' | 'FAILED';
+export type MessageDeliveryStatus = 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 
 export interface MessageResponse {
   id: string;
