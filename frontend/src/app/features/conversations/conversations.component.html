@@ -191,6 +191,20 @@
 
   <!-- Center Main Workstation Canvas (~760px) -->
   <main class="workstation-main" data-testid="workstation-main">
+    @if (webSocketService.showReconnectAlert()) {
+      <div class="ws-reconnect-banner" role="status" aria-live="polite" data-testid="ws-reconnect-banner">
+        <span class="pulse-indicator" aria-hidden="true"></span>
+        <span class="banner-text">Reconnecting to live chat service...</span>
+        <button
+          type="button"
+          class="btn-retry-connect"
+          (click)="webSocketService.connect()"
+          data-testid="ws-retry-btn"
+        >
+          Retry
+        </button>
+      </div>
+    }
     <router-outlet />
   </main>
 

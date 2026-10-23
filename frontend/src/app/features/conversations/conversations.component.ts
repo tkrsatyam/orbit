@@ -6,6 +6,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
+import { WebSocketService } from '../../core/services/websocket/websocket.service';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
 import { NavigationRailComponent } from '../../shared/components/navigation-rail/navigation-rail.component';
 import { NewChatModalComponent } from '../../shared/components/new-chat-modal/new-chat-modal.component';
@@ -26,6 +27,7 @@ export class ConversationsComponent implements OnInit {
   private readonly userService = inject(UserService);
   readonly contactService = inject(ContactService);
   readonly groupService = inject(GroupService);
+  readonly webSocketService = inject(WebSocketService);
 
   readonly isMenuOpen = signal<boolean>(false);
   readonly isProfileOpen = signal<boolean>(false);
@@ -65,6 +67,7 @@ export class ConversationsComponent implements OnInit {
 
   ngOnInit(): void {
     this.syncRouteState();
+    this.webSocketService.connect();
 
     this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
@@ -216,6 +219,7 @@ export class ConversationsComponent implements OnInit {
 
   handleLogout(): void {
     this.isMenuOpen.set(false);
+    this.webSocketService.disconnect();
     this.authService.logout().subscribe({
       next: () => {
         this.router.navigate(['/login']);
