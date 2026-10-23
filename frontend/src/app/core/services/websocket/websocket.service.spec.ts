@@ -186,4 +186,32 @@ describe('WebSocketService', () => {
     (service as any).reconnectAttempts.set(4);
     expect(service.showReconnectAlert()).toBe(false);
   });
+
+  it('should construct valid SockJS URL using URL API with token parameter', () => {
+    const url = (service as any).buildSockJsUrl('my-token-123');
+    const parsed = new URL(url);
+
+    expect(parsed.pathname).toBe('/ws');
+    expect(parsed.searchParams.get('token')).toBe('my-token-123');
+  });
+
+  it('should generate distinct subscription keys for multiple subscriptions to same destination', () => {
+    service.connect('test-token');
+    const client = (service as any).client as Client;
+    vi.spyOn(client, 'connected', 'get').mockReturnValue(true);
+    client.onConnect?.({} as any);
+
+    vi.spyOn(client, 'subscribe').mockReturnValue({ id: 'sub-1', unsubscribe: vi.fn() } as any);
+
+    const unsub1 = service.subscribe('/topic/common', () => {});
+    const unsub2 = service.subscribe('/topic/common', () => {});
+
+    const subscriptions = (service as any).subscriptions as Map<string, any>;
+    expect(subscriptions.size).toBe(2);
+
+    unsub1();
+    expect(subscriptions.size).toBe(1);
+    unsub2();
+    expect(subscriptions.size).toBe(0);
+  });
 });

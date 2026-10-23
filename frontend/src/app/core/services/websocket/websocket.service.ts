@@ -22,6 +22,7 @@ export class WebSocketService implements OnDestroy {
   private currentToken: string | null = null;
   private readonly subscriptions = new Map<string, PendingSubscription>();
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private subscriptionCounter = 0;
 
   readonly status = signal<WebSocketStatus>('DISCONNECTED');
   readonly reconnectAttempts = signal<number>(0);
@@ -108,7 +109,10 @@ export class WebSocketService implements OnDestroy {
    * Automatically re-subscribes upon reconnection.
    */
   subscribe<T>(destination: string, callback: (payload: T) => void): () => void {
-    const subKey = `${destination}_${Math.random().toString(36).substring(2, 9)}`;
+    const uniqueId = typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${++this.subscriptionCounter}_${Date.now()}`;
+    const subKey = `${destination}_${uniqueId}`;
     const pendingSub: PendingSubscription = {
       destination,
       callback,
@@ -193,8 +197,13 @@ export class WebSocketService implements OnDestroy {
 
   private buildSockJsUrl(token: string): string {
     const rawWsUrl = environment.wsUrl || '/ws';
-    const httpUrl = rawWsUrl.replace(/^ws:\/\//i, 'http://').replace(/^wss:\/\//i, 'https://');
-    const separator = httpUrl.includes('?') ? '&' : '?';
-    return `${httpUrl}${separator}token=${encodeURIComponent(token)}`;
+    const baseOrigin = typeof window !== 'undefined' && window.location?.origin
+      ? window.location.origin
+      : 'http://localhost';
+
+    const normalizedUrl = rawWsUrl.replace(/^ws:\/\//i, 'http://').replace(/^wss:\/\//i, 'https://');
+    const parsedUrl = new URL(normalizedUrl, baseOrigin);
+    parsedUrl.searchParams.set('token', token);
+    return parsedUrl.toString();
   }
 }
