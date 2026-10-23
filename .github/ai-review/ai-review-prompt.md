@@ -32,12 +32,12 @@ If issues are found, present them in a markdown table:
 
 | # | Severity | Location | Description | Suggested Fix |
 |---|---|---|---|---|
-| 1 | `[Warning]` | `path/to/file.ext#L123` | Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
+| 1 | `[Warning]` | `File.java#L123`<br>`<small>path/to/dir</small>` | Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
 
 Table formatting rules:
 - Number each row sequentially (`1`, `2`, `3`...) to clearly indicate total issue count.
 - **Severity**: Must be strictly one of `[Critical]`, `[Warning]`, or `[Suggestion]`.
-- **Location**: Specific file path with line number (e.g., `backend/src/.../File.java#L45`).
+- **Location**: Format as `FileName.ext#L123`<br>`<small>relative/dir/path</small>` so the file name and line number are immediately visible and the directory path wraps onto a second line, preventing horizontal table scrolling.
 - **Formatting**: Keep description and suggested fix concise to fit table cells cleanly. Use inline backticks for code symbols (e.g. `try-catch`, `Optional.ofNullable`), never multiline code fences or raw newlines that break markdown table syntax.
 
 If no issues are found, DO NOT output a table. Instead output:

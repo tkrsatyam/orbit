@@ -246,7 +246,8 @@ async function callGeminiWithFallback(promptText, apiKey) {
 
 async function publishOrUpdateComment(repo, prNumber, token, commentBody, commitSha) {
   const listUrl = `https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`;
-  const signature = `<!-- orbit-ai-review:commit:${commitSha} -->`;
+  const signatureTag = `<!-- orbit-ai-review:commit:${commitSha} -->`;
+  const headerPattern = `## 🤖 AI Code Review | Commit \`${commitSha}\``;
   const headers = {
     'Authorization': `Bearer ${token}`,
     'Accept': 'application/vnd.github+json',
@@ -258,13 +259,16 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
     const listRes = await fetch(listUrl, { headers });
     if (listRes.ok) {
       const comments = await listRes.json();
-      const existing = comments.find(
-        (c) => typeof c.body === 'string' && c.body.includes(signature)
+      const matchingComments = comments.filter(
+        (c) =>
+          typeof c.body === 'string' &&
+          (c.body.includes(signatureTag) || c.body.includes(headerPattern))
       );
 
-      if (existing) {
-        console.log(`Found existing review comment (ID: ${existing.id}) for commit ${commitSha}. Updating in-place...`);
-        const updateUrl = `https://api.github.com/repos/${repo}/issues/comments/${existing.id}`;
+      if (matchingComments.length > 0) {
+        const primary = matchingComments[0];
+        console.log(`Found existing review comment (ID: ${primary.id}) for commit ${commitSha}. Updating in-place...`);
+        const updateUrl = `https://api.github.com/repos/${repo}/issues/comments/${primary.id}`;
         const updateRes = await fetch(updateUrl, {
           method: 'PATCH',
           headers: { ...headers, 'Content-Type': 'application/json' },
@@ -272,7 +276,21 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
         });
 
         if (updateRes.ok) {
-          console.log(`Successfully updated review comment for commit ${commitSha}.`);
+          console.log(`Successfully updated review comment (ID: ${primary.id}) for commit ${commitSha}.`);
+
+          // Remove any duplicate comments previously created for this same commit
+          for (let i = 1; i < matchingComments.length; i++) {
+            const duplicate = matchingComments[i];
+            console.log(`Cleaning up duplicate review comment (ID: ${duplicate.id}) for commit ${commitSha}...`);
+            try {
+              await fetch(`https://api.github.com/repos/${repo}/issues/comments/${duplicate.id}`, {
+                method: 'DELETE',
+                headers
+              });
+            } catch (delErr) {
+              console.warn(`Failed to delete duplicate comment ${duplicate.id}:`, delErr.message);
+            }
+          }
           return;
         }
         console.warn(`Failed to update existing comment (status ${updateRes.status}). Falling back to creating new comment.`);
