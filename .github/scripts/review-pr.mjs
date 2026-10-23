@@ -14,6 +14,8 @@ const GEMINI_API_KEY = process.env.GEMINI_AI_REVIEW_API_KEY || process.env.GEMIN
 const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
 const GITHUB_REPOSITORY = process.env.GITHUB_REPOSITORY;
 const PR_NUMBER = process.env.PR_NUMBER;
+const BASE_SHA = process.env.BASE_SHA;
+const HEAD_SHA = process.env.HEAD_SHA;
 const BASE_REF = process.env.BASE_REF || 'main';
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.8-flash';
 const DIFF_THRESHOLD = parseInt(process.env.DIFF_THRESHOLD || '2000', 10);
@@ -57,13 +59,23 @@ function runGit(args) {
   }
 }
 
+function getDiffTargetArgs() {
+  if (BASE_SHA && HEAD_SHA) {
+    return [BASE_SHA, HEAD_SHA];
+  }
+  return [`origin/${BASE_REF}...HEAD`];
+}
+
 function getCommitSha() {
+  if (HEAD_SHA) {
+    return HEAD_SHA.substring(0, 7);
+  }
   const sha = runGit(['rev-parse', '--short', 'HEAD']);
   return sha || 'unknown';
 }
 
-function getDiffStat(baseBranch, pathPrefix = null) {
-  const args = ['diff', '--shortstat', `origin/${baseBranch}...HEAD`, '--'];
+function getDiffStat(pathPrefix = null) {
+  const args = ['diff', '--shortstat', ...getDiffTargetArgs(), '--'];
   if (pathPrefix) {
     args.push(pathPrefix);
   }
@@ -90,8 +102,8 @@ function getDiffStat(baseBranch, pathPrefix = null) {
   };
 }
 
-function getDiffContent(baseBranch, pathPrefix = null) {
-  const args = ['diff', `origin/${baseBranch}...HEAD`, '--'];
+function getDiffContent(pathPrefix = null) {
+  const args = ['diff', ...getDiffTargetArgs(), '--'];
   if (pathPrefix) {
     args.push(pathPrefix);
   }
@@ -231,15 +243,26 @@ async function main() {
   }
 
   const commitSha = getCommitSha();
-  console.log(`Starting AI Code Review for PR #${PR_NUMBER} (commit: ${commitSha}, base: ${BASE_REF})...`);
+  console.log(`Starting AI Code Review for PR #${PR_NUMBER} (commit: ${commitSha}, base: ${BASE_REF}, baseSha: ${BASE_SHA || 'none'}, headSha: ${HEAD_SHA || 'none'})...`);
 
-  // Ensure base branch is fetched
-  runGit(['fetch', 'origin', BASE_REF, '--depth=1']);
+  // Ensure commits are available in local git graph
+  if (BASE_SHA && HEAD_SHA) {
+    // If specific SHAs were not unpacked in checkout, fetch them directly
+    const hasBase = runGit(['cat-file', '-t', BASE_SHA]);
+    const hasHead = runGit(['cat-file', '-t', HEAD_SHA]);
+    if (hasBase !== 'commit' || hasHead !== 'commit') {
+      console.log(`Fetching commit revisions ${BASE_SHA} and ${HEAD_SHA}...`);
+      runGit(['fetch', 'origin', BASE_SHA, HEAD_SHA]);
+    }
+  } else {
+    // Fallback when running outside PR workflow: fetch base branch without shallow truncation
+    runGit(['fetch', 'origin', BASE_REF]);
+  }
 
   // Calculate statistics
-  const totalStats = getDiffStat(BASE_REF);
-  const backendStats = getDiffStat(BASE_REF, 'backend');
-  const frontendStats = getDiffStat(BASE_REF, 'frontend');
+  const totalStats = getDiffStat();
+  const backendStats = getDiffStat('backend');
+  const frontendStats = getDiffStat('frontend');
 
   console.log(`Total changed lines: ${totalStats.total} (${totalStats.insertions}+ / ${totalStats.deletions}-)`);
   console.log(`Backend: ${backendStats.total} lines. Frontend: ${frontendStats.total} lines.`);
@@ -264,8 +287,8 @@ async function main() {
   if (shouldSplit) {
     console.log(`Diff exceeds threshold (${totalStats.total} > ${DIFF_THRESHOLD}) with substantial BE and FE changes. Executing Split Mode.`);
 
-    const backendDiff = getDiffContent(BASE_REF, 'backend');
-    const frontendDiff = getDiffContent(BASE_REF, 'frontend');
+    const backendDiff = getDiffContent('backend');
+    const frontendDiff = getDiffContent('frontend');
 
     const backendFullPrompt = `${basePrompt}\n\n# Backend Domain Rules\n${backendRules}\n\n# Git Diff Under Review\n<diff_content>\n${backendDiff}\n</diff_content>`;
     const frontendFullPrompt = `${basePrompt}\n\n# Frontend Domain Rules\n${frontendRules}\n\n# Git Diff Under Review\n<diff_content>\n${frontendDiff}\n</diff_content>`;
@@ -292,7 +315,7 @@ async function main() {
       combinedRules += `\n\n# Frontend Domain Rules\n${frontendRules}`;
     }
 
-    const fullDiff = getDiffContent(BASE_REF);
+    const fullDiff = getDiffContent();
     const singlePrompt = `${basePrompt}${combinedRules}\n\n# Git Diff Under Review\n<diff_content>\n${fullDiff}\n</diff_content>`;
 
     try {
