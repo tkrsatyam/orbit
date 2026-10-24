@@ -2,6 +2,7 @@ package com.orbit.message.dto;
 
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -34,9 +35,22 @@ public record MessageResponse(
         boolean edited,
 
         @Schema(description = "Timestamp when message was created")
-        Instant createdAt
+        Instant createdAt,
+
+        @Schema(description = "Delivery status of the message", example = "DELIVERED")
+        MessageDeliveryStatus deliveryStatus
 ) {
+    public MessageResponse(String id, String conversationId, String senderId, String senderName,
+                           MessageType type, String content, boolean deleted, boolean edited,
+                           Instant createdAt) {
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, createdAt, MessageDeliveryStatus.DELIVERED);
+    }
+
     public static MessageResponse from(Message message) {
+        return from(message, MessageDeliveryStatus.DELIVERED);
+    }
+
+    public static MessageResponse from(Message message, MessageDeliveryStatus deliveryStatus) {
         String content = message.isDeleted() ? null : message.getContent();
         return new MessageResponse(
                 message.getId(),
@@ -47,11 +61,16 @@ public record MessageResponse(
                 content,
                 message.isDeleted(),
                 message.isEdited(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                deliveryStatus
         );
     }
 
     public static MessageResponse from(BlockedMessage message) {
+        return from(message, MessageDeliveryStatus.SENT);
+    }
+
+    public static MessageResponse from(BlockedMessage message, MessageDeliveryStatus deliveryStatus) {
         String content = message.isDeleted() ? null : message.getContent();
         return new MessageResponse(
                 message.getId(),
@@ -62,7 +81,8 @@ public record MessageResponse(
                 content,
                 message.isDeleted(),
                 message.isEdited(),
-                message.getCreatedAt()
+                message.getCreatedAt(),
+                deliveryStatus
         );
     }
 }

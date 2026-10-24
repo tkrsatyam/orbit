@@ -438,4 +438,35 @@ describe('ChatThreadComponent', () => {
     expect(delNotice).toBeTruthy();
     expect(delNotice.textContent).toContain('This message was deleted');
   });
+
+  it('should preserve SENT deliveryStatus for blocked messages in history', () => {
+    const mockHistory = {
+      content: [
+        {
+          id: 'blocked-msg-1',
+          conversationId: 'conv-test-1',
+          senderId: 'my-user-id',
+          senderName: 'Satyam Kumar',
+          type: 'TEXT' as const,
+          content: 'Blocked message attempt',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T09:00:00Z',
+          deliveryStatus: 'SENT' as const
+        }
+      ],
+      hasMore: false,
+      nextCursor: null
+    };
+
+    messageServiceMock.getConversationMessages.mockReturnValue(of(mockHistory));
+    component.loadInitialHistory('conv-test-1');
+    fixture.detectChanges();
+
+    expect(component.messages().length).toBe(1);
+    expect(component.messages()[0].deliveryStatus).toBe('SENT');
+    const sentCheck = fixture.nativeElement.querySelector('.delivery-status.sent');
+    expect(sentCheck).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.delivery-status.delivered')).toBeNull();
+  });
 });

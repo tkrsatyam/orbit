@@ -17,6 +17,7 @@ import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
@@ -415,7 +416,9 @@ class MessageServiceTest {
         assertThat(response.content()).hasSize(2);
         // Chronological: normal (t1) then blocked (t2)
         assertThat(response.content().get(0).id()).isEqualTo("m1");
+        assertThat(response.content().get(0).deliveryStatus()).isEqualTo(MessageDeliveryStatus.DELIVERED);
         assertThat(response.content().get(1).id()).isEqualTo("b1");
+        assertThat(response.content().get(1).deliveryStatus()).isEqualTo(MessageDeliveryStatus.SENT);
     }
 
     @Test

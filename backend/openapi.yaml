@@ -1440,6 +1440,16 @@ components:
           type: string
           format: date-time
           description: Timestamp when message was created
+        deliveryStatus:
+          type: string
+          description: Delivery status of the message
+          enum:
+          - SENDING
+          - SENT
+          - DELIVERED
+          - READ
+          - FAILED
+          example: DELIVERED
     SendRequestDto:
       type: object
       properties:

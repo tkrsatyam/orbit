@@ -18,6 +18,7 @@ import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
@@ -161,7 +162,7 @@ public class MessageService {
 
             BlockedMessage savedBlocked = blockedMessageRepository.save(blockedMessage);
             // Steps 3 (lastMessage), 4 (notifications), and 5 (Kafka) are skipped entirely per ADR 007
-            return MessageResponse.from(savedBlocked);
+            return MessageResponse.from(savedBlocked, MessageDeliveryStatus.SENT);
         }
 
         // 5b. Normal Send Path (Persist-before-publish)
@@ -194,18 +195,18 @@ public class MessageService {
         }
 
         // 8. Publish MessageDeliveryEvent to Kafka chat.messages
-        MessageResponse response = MessageResponse.from(savedMessage);
+        MessageResponse deliveryResponse = MessageResponse.from(savedMessage, MessageDeliveryStatus.DELIVERED);
         MessageDeliveryEvent event = new MessageDeliveryEvent(
                 savedMessage.getId(),
                 conversationId,
                 senderId,
                 recipientIds,
-                response
+                deliveryResponse
         );
         kafkaMessageProducer.publishMessage(event);
 
-        // 9. Return receipt to sender
-        return response;
+        // 9. Return receipt to sender (status SENT)
+        return MessageResponse.from(savedMessage, MessageDeliveryStatus.SENT);
     }
 
     /**
@@ -271,10 +272,10 @@ public class MessageService {
 
         List<MessageResponse> combined = new ArrayList<>(messages.size() + blockedMessages.size());
         for (Message m : messages) {
-            combined.add(MessageResponse.from(m));
+            combined.add(MessageResponse.from(m, MessageDeliveryStatus.DELIVERED));
         }
         for (BlockedMessage bm : blockedMessages) {
-            combined.add(MessageResponse.from(bm));
+            combined.add(MessageResponse.from(bm, MessageDeliveryStatus.SENT));
         }
 
         // Sort descending by createdAt (newest first)

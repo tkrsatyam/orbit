@@ -12,6 +12,7 @@ export interface MessageResponse {
   deleted: boolean;
   edited: boolean;
   createdAt: string;
+  deliveryStatus?: MessageDeliveryStatus;
 }
 
 export interface MessageHistoryResponse {

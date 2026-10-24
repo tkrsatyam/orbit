@@ -110,7 +110,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
         const items: ChatMessageItem[] = history.content.map(m => ({
           ...m,
-          deliveryStatus: m.senderId === this.currentUserId() ? 'DELIVERED' : undefined
+          deliveryStatus: m.senderId === this.currentUserId()
+            ? (m.deliveryStatus ?? 'DELIVERED')
+            : undefined
         }));
         this.messages.set(items);
         this.hasMore.set(history.hasMore);
@@ -143,7 +145,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
         const olderItems: ChatMessageItem[] = history.content.map(m => ({
           ...m,
-          deliveryStatus: m.senderId === this.currentUserId() ? 'DELIVERED' : undefined
+          deliveryStatus: m.senderId === this.currentUserId()
+            ? (m.deliveryStatus ?? 'DELIVERED')
+            : undefined
         }));
 
         this.messages.update(existing => {
