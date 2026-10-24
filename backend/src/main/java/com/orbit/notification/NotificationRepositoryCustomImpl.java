@@ -32,6 +32,15 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
     }
 
     @Override
+    public void decrementUnreadCount(String userId, String conversationId) {
+        Query query = new Query(Criteria.where("userId").is(userId).and("conversationId").is(conversationId).and("count").gt(0));
+        Update update = new Update()
+                .inc("count", -1)
+                .set("updatedAt", Instant.now());
+        mongoTemplate.updateFirst(query, update, Notification.class);
+    }
+
+    @Override
     public void markConversationAsRead(String userId, String conversationId) {
         Query query = new Query(Criteria.where("userId").is(userId).and("conversationId").is(conversationId));
         Update update = new Update()

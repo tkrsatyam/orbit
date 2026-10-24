@@ -909,6 +909,97 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+  /api/v1/conversations/{id}/messages/{messageId}:
+    delete:
+      tags:
+      - Messages
+      summary: Delete message
+      description: Deletes a message with mode=FOR_EVERYONE (soft delete) or mode=FOR_ME
+        (per-user delete).
+      operationId: deleteMessage
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: mode
+        in: query
+        required: false
+        schema:
+          type: string
+          default: FOR_EVERYONE
+          enum:
+          - FOR_EVERYONE
+          - FOR_ME
+      responses:
+        "204":
+          description: Message deleted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - not sender/admin for FOR_EVERYONE
+        "404":
+          description: Conversation or message not found
+    patch:
+      tags:
+      - Messages
+      summary: Edit message
+      description: Edits message text content. Only permitted for sender on TEXT messages.
+      operationId: editMessage
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EditMessageRequest"
+        required: true
+      responses:
+        "200":
+          description: Message edited successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400":
+          description: Invalid request or cannot edit deleted/non-text message
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "403":
+          description: Forbidden - sender is not author
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "404":
+          description: Conversation or message not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
   /api/v1/contacts/requests/{requestId}:
     patch:
       tags:
@@ -1378,7 +1469,7 @@ components:
           description: Content text of the message
           example: Hey! Have you checked the latest ADR?
           maxLength: 4000
-          minLength: 0
+          minLength: 1
         type:
           type: string
           default: TEXT
@@ -1436,6 +1527,10 @@ components:
           type: boolean
           description: Edited indicator
           example: false
+        editedAt:
+          type: string
+          format: date-time
+          description: "Timestamp when message was edited, or null if unedited"
         createdAt:
           type: string
           format: date-time
@@ -1641,6 +1736,18 @@ components:
           format: date-time
           description: Timestamp when user joined group
           example: 2026-06-27T10:30:00Z
+    EditMessageRequest:
+      type: object
+      description: Request payload to edit a text message
+      properties:
+        content:
+          type: string
+          description: Updated text content
+          example: Hey! Have you checked the latest ADR? It's updated.
+          maxLength: 4000
+          minLength: 1
+      required:
+      - content
     RespondRequestDto:
       type: object
       properties:

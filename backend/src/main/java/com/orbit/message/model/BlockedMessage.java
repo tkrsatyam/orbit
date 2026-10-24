@@ -14,6 +14,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Stores diverted messages sent by a blocked user in the 'blockedMessages' collection.
@@ -22,7 +24,8 @@ import java.time.Instant;
 @Document(collection = "blockedMessages")
 @CompoundIndexes({
         @CompoundIndex(name = "blocked_conv_sender_created_idx", def = "{'conversationId': 1, 'senderId': 1, 'createdAt': -1}"),
-        @CompoundIndex(name = "blocked_conv_sender_idempotency_idx", def = "{'conversationId': 1, 'senderId': 1, 'idempotencyKey': 1}", sparse = true)
+        @CompoundIndex(name = "blocked_conv_sender_idempotency_idx", def = "{'conversationId': 1, 'senderId': 1, 'idempotencyKey': 1}", sparse = true),
+        @CompoundIndex(name = "blocked_conv_sender_deletedfor_created_idx", def = "{'conversationId': 1, 'senderId': 1, 'deletedFor': 1, 'createdAt': -1}")
 })
 @Getter
 @Setter
@@ -49,6 +52,9 @@ public class BlockedMessage {
 
     @Builder.Default
     private boolean deleted = false;
+
+    @Builder.Default
+    private List<String> deletedFor = new ArrayList<>();
 
     @Builder.Default
     private boolean edited = false;

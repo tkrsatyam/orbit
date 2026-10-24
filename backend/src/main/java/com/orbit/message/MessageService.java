@@ -11,13 +11,19 @@ import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
 import com.orbit.conversation.model.LastMessageSnapshot;
+import com.orbit.group.GroupRepository;
+import com.orbit.group.model.GroupRole;
+import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
+import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
+import com.orbit.message.kafka.MessageEditedEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import com.orbit.notification.NotificationRepository;
@@ -51,6 +57,7 @@ public class MessageService {
     private final NotificationRepository notificationRepository;
     private final ContactService contactService;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
     private final KafkaMessageProducer kafkaMessageProducer;
     private final TokenBucketRateLimiter rateLimiter;
     private final OrbitProperties properties;
@@ -61,6 +68,7 @@ public class MessageService {
                           NotificationRepository notificationRepository,
                           ContactService contactService,
                           UserRepository userRepository,
+                          GroupRepository groupRepository,
                           KafkaMessageProducer kafkaMessageProducer,
                           TokenBucketRateLimiter rateLimiter,
                           OrbitProperties properties) {
@@ -70,6 +78,7 @@ public class MessageService {
         this.notificationRepository = notificationRepository;
         this.contactService = contactService;
         this.userRepository = userRepository;
+        this.groupRepository = groupRepository;
         this.kafkaMessageProducer = kafkaMessageProducer;
         this.rateLimiter = rateLimiter;
         this.properties = properties;
@@ -259,14 +268,14 @@ public class MessageService {
         List<BlockedMessage> blockedMessages;
 
         if (cursorCreatedAt != null) {
-            messages = messageRepository.findByConversationIdAndCreatedAtLessThanOrderByCreatedAtDesc(
-                    conversationId, cursorCreatedAt, pageRequest);
-            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdAndCreatedAtLessThanOrderByCreatedAtDesc(
+            messages = messageRepository.findByConversationIdAndNotDeletedForAndCreatedAtLessThanOrderByCreatedAtDesc(
+                    conversationId, currentUserId, cursorCreatedAt, pageRequest);
+            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForAndCreatedAtLessThanOrderByCreatedAtDesc(
                     conversationId, currentUserId, cursorCreatedAt, pageRequest);
         } else {
-            messages = messageRepository.findByConversationIdOrderByCreatedAtDesc(
-                    conversationId, pageRequest);
-            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(
+            messages = messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(
+                    conversationId, currentUserId, pageRequest);
+            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(
                     conversationId, currentUserId, pageRequest);
         }
 
@@ -291,5 +300,215 @@ public class MessageService {
         Collections.reverse(content);
 
         return new MessageHistoryResponse(content, hasMore, nextCursor);
+    }
+
+    /**
+     * Edits a text message authored by the authenticated user.
+     * Enforces P1-15: only sender can edit, only TEXT messages, no edit history stored.
+     * Fans out MessageEditedEvent to Kafka topic 'chat.messages.edited'.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageId      the ID of the message to edit
+     * @param currentUserId  the authenticated user requesting the edit
+     * @param request        the updated message content
+     * @return updated MessageResponse with edited: true and editedAt populated
+     */
+    public MessageResponse editMessage(String conversationId, String messageId, String currentUserId, EditMessageRequest request) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Message ID cannot be blank");
+        }
+        if (request == null || request.content() == null || request.content().trim().isBlank()) {
+            throw new IllegalArgumentException("Message content cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(currentUserId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        Optional<Message> normalMsgOpt = messageRepository.findById(messageId);
+        if (normalMsgOpt.isPresent()) {
+            Message message = normalMsgOpt.get();
+            if (!conversationId.equals(message.getConversationId())) {
+                throw new ResourceNotFoundException("Message not found in conversation");
+            }
+            if (!currentUserId.equals(message.getSenderId())) {
+                throw new ForbiddenException("You can only edit your own messages");
+            }
+            if (message.isDeleted()) {
+                throw new IllegalArgumentException("Cannot edit a deleted message");
+            }
+            if (message.getType() != MessageType.TEXT) {
+                throw new IllegalArgumentException("Only TEXT messages can be edited");
+            }
+
+            message.setContent(request.content().trim());
+            message.setEdited(true);
+            message.setEditedAt(Instant.now());
+            Message saved = messageRepository.save(message);
+
+            if (conversation.getLastMessage() != null && messageId.equals(conversation.getLastMessage().getMessageId())) {
+                conversation.getLastMessage().setContent(saved.getContent());
+                conversationRepository.save(conversation);
+            }
+
+            List<String> recipientIds = conversation.getParticipantIds().stream()
+                    .filter(id -> !id.equals(currentUserId))
+                    .toList();
+            kafkaMessageProducer.publishMessageEdited(new MessageEditedEvent(
+                    saved.getId(),
+                    conversationId,
+                    saved.getContent(),
+                    saved.getEditedAt(),
+                    recipientIds
+            ));
+
+            return MessageResponse.from(saved, MessageDeliveryStatus.DELIVERED);
+        }
+
+        Optional<BlockedMessage> blockedMsgOpt = blockedMessageRepository.findById(messageId);
+        if (blockedMsgOpt.isPresent()) {
+            BlockedMessage blocked = blockedMsgOpt.get();
+            if (!conversationId.equals(blocked.getConversationId())) {
+                throw new ResourceNotFoundException("Message not found in conversation");
+            }
+            if (!currentUserId.equals(blocked.getSenderId())) {
+                throw new ForbiddenException("You can only edit your own messages");
+            }
+            if (blocked.isDeleted()) {
+                throw new IllegalArgumentException("Cannot edit a deleted message");
+            }
+            if (blocked.getType() != MessageType.TEXT) {
+                throw new IllegalArgumentException("Only TEXT messages can be edited");
+            }
+
+            blocked.setContent(request.content().trim());
+            blocked.setEdited(true);
+            blocked.setEditedAt(Instant.now());
+            BlockedMessage saved = blockedMessageRepository.save(blocked);
+            // No Kafka publish for blocked messages per ADR 007
+            return MessageResponse.from(saved, MessageDeliveryStatus.SENT);
+        }
+
+        throw new ResourceNotFoundException("Message not found");
+    }
+
+    /**
+     * Deletes a message (Delete for Everyone or Delete for Me) per ADR 014.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageId      the ID of the message to delete
+     * @param currentUserId  the authenticated user requesting deletion
+     * @param mode           deletion mode (FOR_EVERYONE or FOR_ME)
+     */
+    public void deleteMessage(String conversationId, String messageId, String currentUserId, MessageDeleteMode mode) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Message ID cannot be blank");
+        }
+
+        if (mode == null) {
+            mode = MessageDeleteMode.FOR_EVERYONE;
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(currentUserId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        Optional<Message> normalMsgOpt = messageRepository.findById(messageId);
+        if (normalMsgOpt.isPresent()) {
+            Message message = normalMsgOpt.get();
+            if (!conversationId.equals(message.getConversationId())) {
+                throw new ResourceNotFoundException("Message not found in conversation");
+            }
+
+            if (mode == MessageDeleteMode.FOR_EVERYONE) {
+                boolean isSender = currentUserId.equals(message.getSenderId());
+                boolean isAdmin = false;
+                if (!isSender && conversation.getType() == ConversationType.GROUP && conversation.getGroupId() != null) {
+                    isAdmin = groupRepository.findById(conversation.getGroupId())
+                            .map(group -> group.getMembers().stream()
+                                    .anyMatch(m -> m.getUserId().equals(currentUserId) && m.getRole() == GroupRole.ADMIN))
+                            .orElse(false);
+                }
+
+                if (!isSender && !isAdmin) {
+                    throw new ForbiddenException("You can only delete your own messages for everyone");
+                }
+
+                message.setDeleted(true);
+                message.setContent(null);
+                messageRepository.save(message);
+
+                if (conversation.getLastMessage() != null && messageId.equals(conversation.getLastMessage().getMessageId())) {
+                    conversation.getLastMessage().setContent("This message was deleted");
+                    conversationRepository.save(conversation);
+                }
+
+                List<String> recipientIds = conversation.getParticipantIds().stream()
+                        .filter(id -> !id.equals(currentUserId))
+                        .toList();
+                kafkaMessageProducer.publishMessageDeleted(new MessageDeletedEvent(
+                        message.getId(),
+                        conversationId,
+                        recipientIds
+                ));
+            } else {
+                // FOR_ME: Append to deletedFor
+                if (message.getDeletedFor() == null) {
+                    message.setDeletedFor(new ArrayList<>());
+                }
+                if (!message.getDeletedFor().contains(currentUserId)) {
+                    message.getDeletedFor().add(currentUserId);
+                    messageRepository.save(message);
+                }
+
+                // If user was recipient and message was unread, decrement unread count
+                if (!currentUserId.equals(message.getSenderId())) {
+                    notificationRepository.decrementUnreadCount(currentUserId, conversationId);
+                }
+            }
+            return;
+        }
+
+        Optional<BlockedMessage> blockedMsgOpt = blockedMessageRepository.findById(messageId);
+        if (blockedMsgOpt.isPresent()) {
+            BlockedMessage blocked = blockedMsgOpt.get();
+            if (!conversationId.equals(blocked.getConversationId())) {
+                throw new ResourceNotFoundException("Message not found in conversation");
+            }
+
+            if (mode == MessageDeleteMode.FOR_EVERYONE) {
+                if (!currentUserId.equals(blocked.getSenderId())) {
+                    throw new ForbiddenException("You can only delete your own messages for everyone");
+                }
+                blocked.setDeleted(true);
+                blocked.setContent(null);
+                blockedMessageRepository.save(blocked);
+                // No Kafka broadcast for blocked messages per ADR 007
+            } else {
+                // FOR_ME: Append to deletedFor
+                if (blocked.getDeletedFor() == null) {
+                    blocked.setDeletedFor(new ArrayList<>());
+                }
+                if (!blocked.getDeletedFor().contains(currentUserId)) {
+                    blocked.getDeletedFor().add(currentUserId);
+                    blockedMessageRepository.save(blocked);
+                }
+            }
+            return;
+        }
+
+        throw new ResourceNotFoundException("Message not found");
     }
 }

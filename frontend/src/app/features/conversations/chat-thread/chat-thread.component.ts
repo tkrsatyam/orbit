@@ -1,9 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { ChatMessageItem, MessageResponse } from '../../../core/models/message.model';
+import {
+  ChatMessageItem,
+  MessageDeleteMode,
+  MessageDeletedEventPayload,
+  MessageEditedEventPayload,
+  MessageResponse
+} from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContactService } from '../../../core/services/contact.service';
 import { MessageService } from '../../../core/services/message/message.service';
@@ -27,6 +33,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   readonly webSocketService = inject(WebSocketService);
 
   @ViewChild('messagesScroll') private messagesScrollContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('composerTextarea') private composerTextarea?: ElementRef<HTMLTextAreaElement>;
 
   readonly conversationId = signal<string>('');
   readonly peerId = signal<string>('');
@@ -42,6 +49,17 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   readonly isLoadingOlder = signal<boolean>(false);
   readonly isLoadingInitial = signal<boolean>(false);
 
+  // Edit message state
+  readonly editingMessage = signal<ChatMessageItem | null>(null);
+  readonly isEditing = computed(() => this.editingMessage() !== null);
+
+  // Active floating action bar (message ID)
+  readonly activeActionMessageId = signal<string | null>(null);
+
+  // Delete modal state
+  readonly deleteModalMessage = signal<ChatMessageItem | null>(null);
+  readonly isDeleting = signal<boolean>(false);
+
   readonly currentUserId = computed(() => this.authService.currentUser()?.id ?? '');
 
   /**
@@ -52,7 +70,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
   private unsubscribeTopic?: () => void;
   private unsubscribeReceipts?: () => void;
+  private unsubscribeEdits?: () => void;
+  private unsubscribeDeletes?: () => void;
   private routeSub?: Subscription;
+  private touchTimer?: ReturnType<typeof setTimeout>;
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe(params => {
@@ -89,6 +110,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.nextCursor.set(null);
     this.isLoadingOlder.set(false);
     this.isLoadingInitial.set(true);
+    this.editingMessage.set(null);
+    this.activeActionMessageId.set(null);
+    this.deleteModalMessage.set(null);
 
     this.loadInitialHistory(id);
 
@@ -100,6 +124,16 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     // Subscribe to direct send receipts
     this.unsubscribeReceipts = this.messageService.subscribeToReceipts((receipt: MessageResponse) => {
       this.handleReceipt(receipt);
+    });
+
+    // Subscribe to message edits
+    this.unsubscribeEdits = this.messageService.subscribeToEdits(id, (edited: MessageEditedEventPayload) => {
+      this.handleEditedMessage(edited);
+    });
+
+    // Subscribe to message deletions
+    this.unsubscribeDeletes = this.messageService.subscribeToDeletes(id, (deleted: MessageDeletedEventPayload) => {
+      this.handleDeletedMessage(deleted);
     });
   }
 
@@ -193,6 +227,18 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       this.unsubscribeReceipts();
       this.unsubscribeReceipts = undefined;
     }
+    if (this.unsubscribeEdits) {
+      this.unsubscribeEdits();
+      this.unsubscribeEdits = undefined;
+    }
+    if (this.unsubscribeDeletes) {
+      this.unsubscribeDeletes();
+      this.unsubscribeDeletes = undefined;
+    }
+    if (this.touchTimer) {
+      clearTimeout(this.touchTimer);
+      this.touchTimer = undefined;
+    }
   }
 
   checkBlockStatus(peerId: string): void {
@@ -221,7 +267,103 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.router.navigate(['/']);
   }
 
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.activeActionMessageId()) {
+      this.activeActionMessageId.set(null);
+    }
+  }
+
+  toggleActions(msg: ChatMessageItem, event: MouseEvent): void {
+    event.stopPropagation();
+    this.activeActionMessageId.update(curr => curr === msg.id ? null : msg.id);
+  }
+
+  onTouchStart(msg: ChatMessageItem, _event: TouchEvent): void {
+    if (msg.deleted) return;
+    if (this.touchTimer) {
+      clearTimeout(this.touchTimer);
+    }
+    this.touchTimer = setTimeout(() => {
+      this.activeActionMessageId.set(msg.id);
+    }, 500);
+  }
+
+  onTouchEnd(): void {
+    if (this.touchTimer) {
+      clearTimeout(this.touchTimer);
+      this.touchTimer = undefined;
+    }
+  }
+
+  onTouchMove(): void {
+    if (this.touchTimer) {
+      clearTimeout(this.touchTimer);
+      this.touchTimer = undefined;
+    }
+  }
+
+  startEdit(msg: ChatMessageItem): void {
+    if (msg.senderId !== this.currentUserId() || msg.deleted || msg.type !== 'TEXT') {
+      return;
+    }
+    this.editingMessage.set(msg);
+    this.messageInput.set(msg.content);
+    this.activeActionMessageId.set(null);
+    setTimeout(() => {
+      this.composerTextarea?.nativeElement?.focus();
+    }, 0);
+  }
+
+  cancelEdit(): void {
+    this.editingMessage.set(null);
+    this.messageInput.set('');
+  }
+
+  openDeleteModal(msg: ChatMessageItem): void {
+    this.activeActionMessageId.set(null);
+    this.deleteModalMessage.set(msg);
+  }
+
+  closeDeleteModal(): void {
+    this.deleteModalMessage.set(null);
+  }
+
+  confirmDelete(mode: MessageDeleteMode): void {
+    const target = this.deleteModalMessage();
+    const convId = this.conversationId();
+    if (!target || !convId || this.isDeleting()) {
+      return;
+    }
+
+    this.isDeleting.set(true);
+    this.messageService.deleteMessage(convId, target.id, mode).subscribe({
+      next: () => {
+        this.isDeleting.set(false);
+        this.closeDeleteModal();
+        if (mode === 'FOR_EVERYONE') {
+          this.messages.update(list => list.map(m =>
+            m.id === target.id ? { ...m, deleted: true, content: '' } : m
+          ));
+        } else {
+          // FOR_ME: completely remove from current user's local view
+          this.messages.update(list => list.filter(m => m.id !== target.id));
+        }
+      },
+      error: (err) => {
+        console.error('Failed to delete message', err);
+        this.isDeleting.set(false);
+      }
+    });
+  }
+
   onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.isEditing()) {
+      event.preventDefault();
+      this.cancelEdit();
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
@@ -232,6 +374,38 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     const content = this.messageInput().trim();
     const convId = this.conversationId();
     if (!content || !convId || this.isPeerBlockedByMe()) {
+      return;
+    }
+
+    // If currently in edit mode, submit message edit
+    if (this.isEditing()) {
+      const editTarget = this.editingMessage();
+      if (!editTarget) return;
+
+      if (content === editTarget.content) {
+        this.cancelEdit();
+        return;
+      }
+
+      this.isSending.set(true);
+      this.messageService.editMessage(convId, editTarget.id, content).subscribe({
+        next: (response) => {
+          this.messages.update(list => list.map(m =>
+            m.id === editTarget.id ? {
+              ...m,
+              content: response.content,
+              edited: true,
+              editedAt: response.editedAt
+            } : m
+          ));
+          this.isSending.set(false);
+          this.cancelEdit();
+        },
+        error: (err) => {
+          console.error('Failed to edit message', err);
+          this.isSending.set(false);
+        }
+      });
       return;
     }
 
@@ -360,6 +534,30 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
           this.messagesScrollContainer.nativeElement.scrollHeight;
       }
     }, 50);
+  }
+
+  handleEditedMessage(edited: MessageEditedEventPayload): void {
+    this.messages.update(list => list.map(m =>
+      m.id === edited.messageId ? {
+        ...m,
+        content: edited.content,
+        edited: true,
+        editedAt: edited.editedAt
+      } : m
+    ));
+  }
+
+  handleDeletedMessage(deleted: MessageDeletedEventPayload): void {
+    this.messages.update(list => list.map(m =>
+      m.id === deleted.messageId ? {
+        ...m,
+        deleted: true,
+        content: ''
+      } : m
+    ));
+    if (this.editingMessage()?.id === deleted.messageId) {
+      this.cancelEdit();
+    }
   }
 
   formatTime(isoString: string): string {

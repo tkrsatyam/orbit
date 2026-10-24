@@ -1,8 +1,10 @@
 package com.orbit.message;
 
+import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
+import com.orbit.message.model.MessageDeleteMode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -19,7 +21,9 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.annotation.SendToUser;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -102,6 +106,52 @@ public class MessageController {
         String currentUserId = authentication.getName();
         MessageHistoryResponse response = messageService.getConversationMessages(conversationId, currentUserId, size, before);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * REST endpoint for editing a message.
+     */
+    @Operation(summary = "Edit message", description = "Edits message text content. Only permitted for sender on TEXT messages.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Message edited successfully",
+                    content = @Content(schema = @Schema(implementation = MessageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request or cannot edit deleted/non-text message"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - sender is not author"),
+            @ApiResponse(responseCode = "404", description = "Conversation or message not found")
+    })
+    @PatchMapping("/api/v1/conversations/{id}/messages/{messageId}")
+    public ResponseEntity<MessageResponse> editMessage(
+            @PathVariable("id") String conversationId,
+            @PathVariable("messageId") String messageId,
+            @Valid @RequestBody EditMessageRequest request,
+            Authentication authentication) {
+
+        String currentUserId = authentication.getName();
+        MessageResponse response = messageService.editMessage(conversationId, messageId, currentUserId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * REST endpoint for deleting a message.
+     */
+    @Operation(summary = "Delete message", description = "Deletes a message with mode=FOR_EVERYONE (soft delete) or mode=FOR_ME (per-user delete).")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Message deleted successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - not sender/admin for FOR_EVERYONE"),
+            @ApiResponse(responseCode = "404", description = "Conversation or message not found")
+    })
+    @DeleteMapping("/api/v1/conversations/{id}/messages/{messageId}")
+    public ResponseEntity<Void> deleteMessage(
+            @PathVariable("id") String conversationId,
+            @PathVariable("messageId") String messageId,
+            @RequestParam(value = "mode", required = false, defaultValue = "FOR_EVERYONE") MessageDeleteMode mode,
+            Authentication authentication) {
+
+        String currentUserId = authentication.getName();
+        messageService.deleteMessage(conversationId, messageId, currentUserId, mode);
+        return ResponseEntity.noContent().build();
     }
 
     /**

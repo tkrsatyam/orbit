@@ -235,7 +235,8 @@ The primary and highest-volume collection in Orbit. Stores all messages across a
       content:          String,       -- message text
                                       -- null when deleted: true
                                       -- null for IMAGE and FILE types
-      deleted:          Boolean,      -- soft delete flag, default false
+      deleted:          Boolean,      -- soft delete flag (for everyone), default false
+      deletedFor:       [ObjectId],   -- ref: users._id — users who deleted message for themselves (ADR 014)
       edited:           Boolean,      -- default false
       editedAt:         ISODate,      -- null until first edit
       quotedMessage: {

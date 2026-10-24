@@ -2,7 +2,15 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { MessageHistoryResponse, MessageResponse, SendMessagePayload } from '../../models/message.model';
+import {
+  EditMessagePayload,
+  MessageDeleteMode,
+  MessageDeletedEventPayload,
+  MessageEditedEventPayload,
+  MessageHistoryResponse,
+  MessageResponse,
+  SendMessagePayload
+} from '../../models/message.model';
 import { WebSocketService } from '../websocket/websocket.service';
 
 /**
@@ -134,5 +142,62 @@ export class MessageService {
    */
   isWebSocketConnected(): boolean {
     return this.webSocketService.isConnected();
+  }
+
+  /**
+   * Subscribes to real-time message edits on /topic/conversations/{id}/messages/edited.
+   */
+  subscribeToEdits(
+    conversationId: string,
+    callback: (edited: MessageEditedEventPayload) => void
+  ): () => void {
+    const destination = `/topic/conversations/${conversationId}/messages/edited`;
+    return this.webSocketService.subscribe<MessageEditedEventPayload>(destination, callback);
+  }
+
+  /**
+   * Subscribes to real-time message deletions on /topic/conversations/{id}/messages/deleted.
+   */
+  subscribeToDeletes(
+    conversationId: string,
+    callback: (deleted: MessageDeletedEventPayload) => void
+  ): () => void {
+    const destination = `/topic/conversations/${conversationId}/messages/deleted`;
+    return this.webSocketService.subscribe<MessageDeletedEventPayload>(destination, callback);
+  }
+
+  /**
+   * Edits a message via PATCH /api/v1/conversations/{conversationId}/messages/{messageId}.
+   */
+  editMessage(
+    conversationId: string,
+    messageId: string,
+    content: string
+  ): Observable<MessageResponse> {
+    const payload: EditMessagePayload = { content };
+    return this.http.patch<MessageResponse>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}`,
+      payload,
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Deletes a message via DELETE /api/v1/conversations/{conversationId}/messages/{messageId}.
+   * Supports mode=FOR_EVERYONE (soft delete) and mode=FOR_ME (per-user delete).
+   */
+  deleteMessage(
+    conversationId: string,
+    messageId: string,
+    mode: MessageDeleteMode = 'FOR_EVERYONE'
+  ): Observable<void> {
+    const params = new HttpParams().set('mode', mode);
+    return this.http.delete<void>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}`,
+      {
+        params,
+        withCredentials: true
+      }
+    );
   }
 }

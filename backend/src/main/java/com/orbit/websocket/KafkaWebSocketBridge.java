@@ -1,6 +1,10 @@
 package com.orbit.websocket;
 
+import com.orbit.message.dto.MessageDeletedNotification;
+import com.orbit.message.dto.MessageEditedNotification;
+import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
+import com.orbit.message.kafka.MessageEditedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -49,5 +53,37 @@ public class KafkaWebSocketBridge {
             log.trace("Discarding chat.messages event: no local active sessions for recipients of conversationId={}",
                     event.conversationId());
         }
+    }
+
+    /**
+     * Consumes message edited events and fans out to /topic/conversations/{conversationId}/messages/edited.
+     */
+    @KafkaListener(topics = "chat.messages.edited", groupId = "orbit-websocket-group")
+    public void handleMessageEdited(MessageEditedEvent event) {
+        if (event == null || event.conversationId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time message edit to subscribers: conversationId={}, messageId={}",
+                event.conversationId(), event.messageId());
+        String destination = "/topic/conversations/" + event.conversationId() + "/messages/edited";
+        messagingTemplate.convertAndSend(destination,
+                new MessageEditedNotification(event.messageId(), event.content(), event.editedAt()));
+    }
+
+    /**
+     * Consumes message deleted events and fans out to /topic/conversations/{conversationId}/messages/deleted.
+     */
+    @KafkaListener(topics = "chat.messages.deleted", groupId = "orbit-websocket-group")
+    public void handleMessageDeleted(MessageDeletedEvent event) {
+        if (event == null || event.conversationId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time message delete to subscribers: conversationId={}, messageId={}",
+                event.conversationId(), event.messageId());
+        String destination = "/topic/conversations/" + event.conversationId() + "/messages/deleted";
+        messagingTemplate.convertAndSend(destination,
+                new MessageDeletedNotification(event.messageId()));
     }
 }

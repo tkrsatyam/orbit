@@ -146,13 +146,14 @@ Message status is not stored as a single enum field. It is derived from a combin
 
 ```
 {
-  deleted:   Boolean    — true = DELETED state
-  edited:    Boolean    — true = EDITED flag active
-  editedAt:  ISODate    — null until first edit
-  file:      Object     — set to null on delete for IMAGE/FILE type messages
+  deleted:    Boolean    — true = DELETED state (for everyone)
+  deletedFor: [ObjectId] — user IDs who deleted this message for themselves (ADR 014)
+  edited:     Boolean    — true = EDITED flag active
+  editedAt:   ISODate    — null until first edit
+  file:       Object     — set to null on delete for IMAGE/FILE type messages
   readBy: [
     { userId: ObjectId, readAt: ISODate }
-  ]                     — empty = not READ, populated = READ
+  ]                      — empty = not READ, populated = READ
 }
 ```
 
@@ -160,7 +161,8 @@ The delivery state (`SENT` → `DELIVERED` → `READ`) is derived at the client 
 
 - Document exists, `readBy[]` empty → `SENT` or `DELIVERED` (client tracks which)
 - `readBy[]` contains the viewing user's `userId` → `READ` for that user
-- `deleted: true` → `DELETED` regardless of other fields
+- `deleted: true` → `DELETED` (for everyone) regardless of other fields
+- `deletedFor` contains viewing user's `userId` → hidden/omitted from history for that user (ADR 014)
 - `edited: true` → `EDITED` flag overlaid on current delivery state
 
 There is no `status` enum field on the message document. Deriving status from atomic boolean fields and the `readBy[]` array avoids race conditions on concurrent state transitions and keeps the schema simple.

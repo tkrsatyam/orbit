@@ -2,6 +2,8 @@ export type MessageType = 'TEXT' | 'IMAGE' | 'FILE';
 
 export type MessageDeliveryStatus = 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 'FAILED';
 
+export type MessageDeleteMode = 'FOR_EVERYONE' | 'FOR_ME';
+
 export interface MessageResponse {
   id: string;
   conversationId: string;
@@ -10,7 +12,9 @@ export interface MessageResponse {
   type: MessageType;
   content: string;
   deleted: boolean;
+  deletedFor?: string[];
   edited: boolean;
+  editedAt?: string | null;
   createdAt: string;
   deliveryStatus?: MessageDeliveryStatus;
 }
@@ -25,6 +29,20 @@ export interface SendMessagePayload {
   content: string;
   type?: MessageType;
   idempotencyKey?: string;
+}
+
+export interface EditMessagePayload {
+  content: string;
+}
+
+export interface MessageEditedEventPayload {
+  messageId: string;
+  content: string;
+  editedAt: string;
+}
+
+export interface MessageDeletedEventPayload {
+  messageId: string;
 }
 
 export interface ChatMessageItem extends MessageResponse {

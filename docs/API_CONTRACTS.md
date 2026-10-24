@@ -647,17 +647,29 @@ Notes:
 
 ### DELETE /api/v1/conversations/{conversationId}/messages/{messageId}
 
-Delete a message.
+Delete a message (Delete for Everyone or Delete for Me).
 
-Auth: Required — must be the message sender, or group admin for group messages
+Auth: Required — must be a participant of the conversation
+
+Query Parameters:
+- mode — optional, one of: FOR_EVERYONE, FOR_ME. Defaults to FOR_EVERYONE if omitted and caller is the sender.
 
 Response: 204
 
 Notes:
-- Soft delete — deleted: true, content set to null
-- Document preserved for conversation continuity
-- For IMAGE and FILE type messages, file is also set to null and the underlying object is permanently deleted from Cloudflare R2 — this cannot be undone, unlike the message document itself. See [`discussions/011_message_attachment_cleanup_on_delete.md`](./discussions/011_message_attachment_cleanup_on_delete.md)
-- WebSocket event broadcast to all participants (no-op for blockedMessages documents, since there are no other participants with visibility into them)
+- When mode=FOR_EVERYONE:
+  - Caller must be the message sender (or group admin)
+  - Soft delete — deleted: true, content set to null
+  - Document preserved for conversation continuity ("This message was deleted" displayed)
+  - For IMAGE and FILE type messages, file is also set to null and the underlying object is permanently deleted from Cloudflare R2 — see [`discussions/011_message_attachment_cleanup_on_delete.md`](./discussions/011_message_attachment_cleanup_on_delete.md)
+  - WebSocket event broadcast to all participants (/topic/conversations/{id}/messages/deleted with { messageId })
+  - If the message was conversations.lastMessage, lastMessage.content is set to "This message was deleted"
+- When mode=FOR_ME:
+  - Caller can be any conversation participant (sender or receiver)
+  - Atomically appends caller's userId to deletedFor array (ADR 014)
+  - The message is excluded from the caller's message history and completely removed from their view
+  - No WebSocket broadcast is sent to other participants (preserves privacy)
+  - If the message was unread by the caller, the unread count is decremented/cleaned up
 - `MessageService` looks up the message by ID in both `messages` and `blockedMessages`
 
 ---
