@@ -1,5 +1,6 @@
 package com.orbit.message.kafka;
 
+import com.orbit.presence.dto.TypingEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -16,6 +17,7 @@ public class KafkaMessageProducer {
     public static final String CHAT_MESSAGES_TOPIC = "chat.messages";
     public static final String CHAT_MESSAGES_EDITED_TOPIC = "chat.messages.edited";
     public static final String CHAT_MESSAGES_DELETED_TOPIC = "chat.messages.deleted";
+    public static final String CHAT_PRESENCE_TOPIC = "chat.presence";
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
@@ -70,6 +72,22 @@ public class KafkaMessageProducer {
         } catch (Exception e) {
             log.error("Failed to publish message deleted event to Kafka for messageId={}: {}",
                     event.messageId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Publishes a typing event to Kafka topic 'chat.presence'.
+     *
+     * @param event the typing event
+     */
+    public void publishTyping(TypingEvent event) {
+        try {
+            kafkaTemplate.send(CHAT_PRESENCE_TOPIC, event.conversationId(), event);
+            log.debug("Published typing event to Kafka: conversationId={}, userId={}, typing={}",
+                    event.conversationId(), event.userId(), event.typing());
+        } catch (Exception e) {
+            log.error("Failed to publish typing event to Kafka for conversationId={}, userId={}: {}",
+                    event.conversationId(), event.userId(), e.getMessage(), e);
         }
     }
 }

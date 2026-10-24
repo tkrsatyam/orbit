@@ -45,6 +45,16 @@ export interface MessageDeletedEventPayload {
   messageId: string;
 }
 
+export interface TypingRequestPayload {
+  typing: boolean;
+}
+
+export interface TypingEventPayload {
+  userId: string;
+  displayName: string;
+  typing: boolean;
+}
+
 export interface ChatMessageItem extends MessageResponse {
   deliveryStatus?: MessageDeliveryStatus;
   idempotencyKey?: string;

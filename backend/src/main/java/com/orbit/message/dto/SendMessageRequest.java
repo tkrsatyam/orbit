@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Size;
 @Schema(description = "Payload to send a message within a conversation")
 public record SendMessageRequest(
         @NotBlank(message = "Message content cannot be blank")
-        @Size(max = 4000, message = "Message content must not exceed 4000 characters")
-        @Schema(description = "Content text of the message", example = "Hey! Have you checked the latest ADR?")
+        @Size(min = 1, max = 4000, message = "Message content must not exceed 4000 characters")
+        @Schema(description = "Content text of the message", example = "Hey! Have you checked the latest ADR?", minLength = 1)
         String content,
 
         @Schema(description = "Message type", example = "TEXT", defaultValue = "TEXT")
