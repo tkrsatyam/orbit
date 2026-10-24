@@ -23,6 +23,7 @@ describe('ChatThreadComponent', () => {
     subscribeToReceipts: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
     sendMessageRest: ReturnType<typeof vi.fn>;
+    getConversationMessages: ReturnType<typeof vi.fn>;
     isWebSocketConnected: ReturnType<typeof vi.fn>;
   };
   let contactServiceMock: {
@@ -62,6 +63,7 @@ describe('ChatThreadComponent', () => {
       }),
       sendMessageStomp: vi.fn(),
       sendMessageRest: vi.fn(),
+      getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
       isWebSocketConnected: vi.fn().mockReturnValue(true)
     };
 
@@ -313,5 +315,158 @@ describe('ChatThreadComponent', () => {
     const navigateSpy = vi.spyOn(router, 'navigate');
     component.goBack();
     expect(navigateSpy).toHaveBeenCalledWith(['/']);
+  });
+
+  it('should load initial message history and hydrate messages signal', () => {
+    const mockHistory = {
+      content: [
+        {
+          id: 'hist-1',
+          conversationId: 'conv-test-1',
+          senderId: 'peer-user-1',
+          senderName: 'Ananya Roy',
+          type: 'TEXT' as const,
+          content: 'Hello historical 1',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T09:00:00Z'
+        },
+        {
+          id: 'hist-2',
+          conversationId: 'conv-test-1',
+          senderId: 'my-user-id',
+          senderName: 'Satyam Kumar',
+          type: 'TEXT' as const,
+          content: 'Hello historical 2',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T09:01:00Z'
+        }
+      ],
+      hasMore: true,
+      nextCursor: 'hist-1'
+    };
+
+    messageServiceMock.getConversationMessages.mockReturnValue(of(mockHistory));
+    component.loadInitialHistory('conv-test-1');
+
+    expect(component.messages().length).toBe(2);
+    expect(component.messages()[0].content).toBe('Hello historical 1');
+    expect(component.messages()[1].content).toBe('Hello historical 2');
+    expect(component.messages()[1].deliveryStatus).toBe('DELIVERED');
+    expect(component.hasMore()).toBe(true);
+    expect(component.nextCursor()).toBe('hist-1');
+  });
+
+  it('should load older messages and prepend them without duplicates', () => {
+    component.messages.set([
+      {
+        id: 'msg-recent',
+        conversationId: 'conv-test-1',
+        senderId: 'peer-user-1',
+        senderName: 'Ananya Roy',
+        type: 'TEXT',
+        content: 'Recent message',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-24T10:00:00Z'
+      }
+    ]);
+    component.hasMore.set(true);
+    component.nextCursor.set('msg-recent');
+
+    const olderHistory = {
+      content: [
+        {
+          id: 'msg-older',
+          conversationId: 'conv-test-1',
+          senderId: 'peer-user-1',
+          senderName: 'Ananya Roy',
+          type: 'TEXT' as const,
+          content: 'Older message',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T09:30:00Z'
+        }
+      ],
+      hasMore: false,
+      nextCursor: null
+    };
+
+    messageServiceMock.getConversationMessages.mockReturnValue(of(olderHistory));
+    component.loadOlderMessages();
+
+    expect(messageServiceMock.getConversationMessages).toHaveBeenCalledWith('conv-test-1', 50, 'msg-recent');
+    expect(component.messages().length).toBe(2);
+    expect(component.messages()[0].id).toBe('msg-older');
+    expect(component.messages()[1].id).toBe('msg-recent');
+    expect(component.hasMore()).toBe(false);
+    expect(component.nextCursor()).toBeNull();
+  });
+
+  it('should trigger loadOlderMessages when scrolled near top and hasMore is true', () => {
+    const loadSpy = vi.spyOn(component, 'loadOlderMessages');
+    component.hasMore.set(true);
+
+    const mockEvent = {
+      target: {
+        scrollTop: 20
+      }
+    } as unknown as Event;
+
+    component.onScroll(mockEvent);
+    expect(loadSpy).toHaveBeenCalled();
+  });
+
+  it('should render deleted message notice when deleted is true', () => {
+    component.messages.set([
+      {
+        id: 'msg-del',
+        conversationId: 'conv-test-1',
+        senderId: 'peer-user-1',
+        senderName: 'Ananya Roy',
+        type: 'TEXT',
+        content: '',
+        deleted: true,
+        edited: false,
+        createdAt: '2026-10-24T09:00:00Z'
+      }
+    ]);
+    fixture.detectChanges();
+
+    const delNotice = fixture.nativeElement.querySelector('.deleted-text');
+    expect(delNotice).toBeTruthy();
+    expect(delNotice.textContent).toContain('This message was deleted');
+  });
+
+  it('should preserve SENT deliveryStatus for blocked messages in history', () => {
+    const mockHistory = {
+      content: [
+        {
+          id: 'blocked-msg-1',
+          conversationId: 'conv-test-1',
+          senderId: 'my-user-id',
+          senderName: 'Satyam Kumar',
+          type: 'TEXT' as const,
+          content: 'Blocked message attempt',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T09:00:00Z',
+          deliveryStatus: 'SENT' as const
+        }
+      ],
+      hasMore: false,
+      nextCursor: null
+    };
+
+    messageServiceMock.getConversationMessages.mockReturnValue(of(mockHistory));
+    component.loadInitialHistory('conv-test-1');
+    fixture.detectChanges();
+
+    expect(component.messages().length).toBe(1);
+    expect(component.messages()[0].deliveryStatus).toBe('SENT');
+    const sentCheck = fixture.nativeElement.querySelector('.delivery-status.sent');
+    expect(sentCheck).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.delivery-status.delivered')).toBeNull();
   });
 });

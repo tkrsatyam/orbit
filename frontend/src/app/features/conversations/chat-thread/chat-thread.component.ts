@@ -37,6 +37,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   readonly messageInput = signal<string>('');
   readonly messages = signal<ChatMessageItem[]>([]);
   readonly isSending = signal<boolean>(false);
+  readonly hasMore = signal<boolean>(false);
+  readonly nextCursor = signal<string | null>(null);
+  readonly isLoadingOlder = signal<boolean>(false);
+  readonly isLoadingInitial = signal<boolean>(false);
 
   readonly currentUserId = computed(() => this.authService.currentUser()?.id ?? '');
 
@@ -80,6 +84,14 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private setupConversation(id: string): void {
     this.cleanupSubscriptions();
 
+    this.messages.set([]);
+    this.hasMore.set(false);
+    this.nextCursor.set(null);
+    this.isLoadingOlder.set(false);
+    this.isLoadingInitial.set(true);
+
+    this.loadInitialHistory(id);
+
     // Subscribe to incoming messages on this conversation topic
     this.unsubscribeTopic = this.messageService.subscribeToConversation(id, (incoming: MessageResponse) => {
       this.handleIncomingMessage(incoming);
@@ -89,6 +101,87 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.unsubscribeReceipts = this.messageService.subscribeToReceipts((receipt: MessageResponse) => {
       this.handleReceipt(receipt);
     });
+  }
+
+  loadInitialHistory(id: string): void {
+    this.messageService.getConversationMessages(id).subscribe({
+      next: (history) => {
+        if (this.conversationId() !== id) return;
+
+        const items: ChatMessageItem[] = history.content.map(m => ({
+          ...m,
+          deliveryStatus: m.senderId === this.currentUserId()
+            ? (m.deliveryStatus ?? 'DELIVERED')
+            : undefined
+        }));
+        this.messages.set(items);
+        this.hasMore.set(history.hasMore);
+        this.nextCursor.set(history.nextCursor ?? null);
+        this.isLoadingInitial.set(false);
+        this.scrollToBottom();
+      },
+      error: (err) => {
+        console.error('Failed to load conversation history', err);
+        this.isLoadingInitial.set(false);
+      }
+    });
+  }
+
+  loadOlderMessages(): void {
+    const convId = this.conversationId();
+    const cursor = this.nextCursor();
+    if (!convId || !cursor || this.isLoadingOlder() || !this.hasMore()) {
+      return;
+    }
+
+    const viewport = this.messagesScrollContainer?.nativeElement;
+    const prevScrollHeight = viewport ? viewport.scrollHeight : 0;
+    const prevScrollTop = viewport ? viewport.scrollTop : 0;
+
+    this.isLoadingOlder.set(true);
+    this.messageService.getConversationMessages(convId, 50, cursor).subscribe({
+      next: (history) => {
+        if (this.conversationId() !== convId) return;
+
+        const olderItems: ChatMessageItem[] = history.content.map(m => ({
+          ...m,
+          deliveryStatus: m.senderId === this.currentUserId()
+            ? (m.deliveryStatus ?? 'DELIVERED')
+            : undefined
+        }));
+
+        this.messages.update(existing => {
+          const existingIds = new Set(existing.map(m => m.id));
+          const filteredOlder = olderItems.filter(m => !existingIds.has(m.id));
+          return [...filteredOlder, ...existing];
+        });
+
+        this.hasMore.set(history.hasMore);
+        this.nextCursor.set(history.nextCursor ?? null);
+        this.isLoadingOlder.set(false);
+
+        // Maintain scroll anchor position so view doesn't jump
+        setTimeout(() => {
+          if (viewport) {
+            const newScrollHeight = viewport.scrollHeight;
+            viewport.scrollTop = prevScrollTop + (newScrollHeight - prevScrollHeight);
+          }
+        }, 0);
+      },
+      error: (err) => {
+        console.error('Failed to load older messages', err);
+        this.isLoadingOlder.set(false);
+      }
+    });
+  }
+
+  onScroll(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target) return;
+
+    if (target.scrollTop <= 60 && this.hasMore() && !this.isLoadingOlder()) {
+      this.loadOlderMessages();
+    }
   }
 
   private cleanupSubscriptions(): void {

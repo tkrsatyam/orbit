@@ -10,12 +10,14 @@ import com.orbit.contact.ContactService;
 import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
+import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -39,6 +42,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -84,8 +88,8 @@ class MessageServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(properties.rateLimit()).thenReturn(rateLimitConfig);
-        when(rateLimitConfig.messagesPerMinute()).thenReturn(60);
+        lenient().when(properties.rateLimit()).thenReturn(rateLimitConfig);
+        lenient().when(rateLimitConfig.messagesPerMinute()).thenReturn(60);
 
         messageService = new MessageService(
                 messageRepository,
@@ -275,5 +279,208 @@ class MessageServiceTest {
                 .hasMessageContaining("rate limit exceeded");
 
         verify(conversationRepository, never()).findById(anyString());
+    }
+
+    @Test
+    @DisplayName("getConversationMessages returns messages in chronological order with default size 50")
+    void shouldReturnMessagesInChronologicalOrder_DefaultSize50() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Instant t1 = Instant.parse("2026-10-24T10:00:00Z");
+        Instant t2 = Instant.parse("2026-10-24T10:05:00Z");
+
+        Message m1 = Message.builder().id("m1").conversationId(conversationId).senderId(senderId).content("Hello").createdAt(t1).build();
+        Message m2 = Message.builder().id("m2").conversationId(conversationId).senderId(recipientId).content("Hi").createdAt(t2).build();
+
+        // Repository returns newest first (t2 then t1)
+        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+                .thenReturn(List.of(m2, m1));
+        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, null, null);
+
+        assertThat(response.hasMore()).isFalse();
+        assertThat(response.nextCursor()).isNull();
+        // Chronological order: m1 then m2
+        assertThat(response.content()).hasSize(2);
+        assertThat(response.content().get(0).id()).isEqualTo("m1");
+        assertThat(response.content().get(1).id()).isEqualTo("m2");
+    }
+
+    @Test
+    @DisplayName("getConversationMessages clamps size to 100 and computes hasMore and nextCursor")
+    void shouldClampSizeTo100_AndComputeHasMoreAndNextCursor() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        List<Message> mockMessages = new ArrayList<>();
+        Instant baseTime = Instant.parse("2026-10-24T10:00:00Z");
+        for (int i = 101; i >= 1; i--) {
+            mockMessages.add(Message.builder()
+                    .id("msg-" + i)
+                    .conversationId(conversationId)
+                    .senderId(senderId)
+                    .content("Msg " + i)
+                    .createdAt(baseTime.plusSeconds(i))
+                    .build());
+        }
+
+        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+                .thenReturn(mockMessages);
+        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        // Request with size 150 (should clamp to 100)
+        MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 150, null);
+
+        assertThat(response.hasMore()).isTrue();
+        assertThat(response.content()).hasSize(100);
+        // Oldest item in the sliced 100 batch is msg-2 (since 101 was the newest and 1 was 101st)
+        assertThat(response.nextCursor()).isEqualTo("msg-2");
+        assertThat(response.content().get(0).id()).isEqualTo("msg-2");
+        assertThat(response.content().get(99).id()).isEqualTo("msg-101");
+    }
+
+    @Test
+    @DisplayName("getConversationMessages resolves before cursor and queries older messages")
+    void shouldResolveBeforeCursor_AndQueryOlderMessages() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Instant cursorTime = Instant.parse("2026-10-24T10:10:00Z");
+        Message cursorMsg = Message.builder()
+                .id("msg-cursor")
+                .conversationId(conversationId)
+                .createdAt(cursorTime)
+                .build();
+        when(messageRepository.findById("msg-cursor")).thenReturn(Optional.of(cursorMsg));
+
+        Instant t0 = Instant.parse("2026-10-24T10:00:00Z");
+        Message olderMsg = Message.builder()
+                .id("msg-older")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .content("Older message")
+                .createdAt(t0)
+                .build();
+
+        when(messageRepository.findByConversationIdAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(cursorTime), any(Pageable.class)))
+                .thenReturn(List.of(olderMsg));
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(senderId), eq(cursorTime), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 20, "msg-cursor");
+
+        assertThat(response.hasMore()).isFalse();
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).id()).isEqualTo("msg-older");
+    }
+
+    @Test
+    @DisplayName("getConversationMessages merges blocked messages for sender per ADR 007")
+    void shouldMergeBlockedMessages_ForSender() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Instant t1 = Instant.parse("2026-10-24T10:00:00Z");
+        Instant t2 = Instant.parse("2026-10-24T10:02:00Z");
+
+        Message normal = Message.builder().id("m1").conversationId(conversationId).senderId(recipientId).content("Normal").createdAt(t1).build();
+        BlockedMessage blocked = BlockedMessage.builder().id("b1").conversationId(conversationId).senderId(senderId).content("Blocked attempt").createdAt(t2).build();
+
+        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+                .thenReturn(List.of(normal));
+        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+                .thenReturn(List.of(blocked));
+
+        MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 50, null);
+
+        assertThat(response.content()).hasSize(2);
+        // Chronological: normal (t1) then blocked (t2)
+        assertThat(response.content().get(0).id()).isEqualTo("m1");
+        assertThat(response.content().get(0).deliveryStatus()).isEqualTo(MessageDeliveryStatus.DELIVERED);
+        assertThat(response.content().get(1).id()).isEqualTo("b1");
+        assertThat(response.content().get(1).deliveryStatus()).isEqualTo(MessageDeliveryStatus.SENT);
+    }
+
+    @Test
+    @DisplayName("getConversationMessages masks content when message is soft deleted")
+    void shouldMaskContent_WhenMessageIsSoftDeleted() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message deletedMsg = Message.builder()
+                .id("m-del")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Secret text")
+                .deleted(true)
+                .createdAt(Instant.now())
+                .build();
+
+        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+                .thenReturn(List.of(deletedMsg));
+        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+                .thenReturn(List.of());
+
+        MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 50, null);
+
+        assertThat(response.content()).hasSize(1);
+        assertThat(response.content().get(0).deleted()).isTrue();
+        assertThat(response.content().get(0).content()).isNull();
+    }
+
+    @Test
+    @DisplayName("getConversationMessages throws ForbiddenException when user is not a participant")
+    void shouldThrowForbiddenException_WhenGettingMessagesAsNonParticipant() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of("other-user-1", "other-user-2"))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        assertThatThrownBy(() -> messageService.getConversationMessages(conversationId, senderId, 50, null))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("not a participant");
+    }
+
+    @Test
+    @DisplayName("getConversationMessages throws ResourceNotFoundException when cursor message is not found")
+    void shouldThrowResourceNotFoundException_WhenCursorMessageNotFound() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(messageRepository.findById("missing-cursor")).thenReturn(Optional.empty());
+        when(blockedMessageRepository.findById("missing-cursor")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> messageService.getConversationMessages(conversationId, senderId, 50, "missing-cursor"))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Cursor message not found");
     }
 }

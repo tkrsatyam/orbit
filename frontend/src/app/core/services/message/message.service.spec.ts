@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { environment } from '../../../../environments/environment';
-import { MessageResponse } from '../../models/message.model';
+import { MessageHistoryResponse, MessageResponse } from '../../models/message.model';
 import { WebSocketService } from '../websocket/websocket.service';
 import { MessageService } from './message.service';
 
@@ -117,6 +117,42 @@ describe('MessageService', () => {
     );
     unsub();
     expect(mockUnsubscribe).toHaveBeenCalled();
+  });
+
+  it('should get conversation messages with query parameters', () => {
+    const mockHistory: MessageHistoryResponse = {
+      content: [
+        {
+          id: 'msg-1',
+          conversationId: 'conv-123',
+          senderId: 'user-1',
+          senderName: 'Satyam',
+          type: 'TEXT',
+          content: 'Hello history',
+          deleted: false,
+          edited: false,
+          createdAt: '2026-10-24T10:00:00Z'
+        }
+      ],
+      hasMore: true,
+      nextCursor: 'msg-1'
+    };
+
+    let result: MessageHistoryResponse | undefined;
+    service.getConversationMessages('conv-123', 25, 'cursor-prev').subscribe(res => {
+      result = res;
+    });
+
+    const req = httpTesting.expectOne(
+      r => r.url === `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages`
+    );
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.get('size')).toBe('25');
+    expect(req.request.params.get('before')).toBe('cursor-prev');
+    expect(req.request.withCredentials).toBe(true);
+
+    req.flush(mockHistory);
+    expect(result).toEqual(mockHistory);
   });
 
   it('should delegate isWebSocketConnected to WebSocketService.isConnected()', () => {
