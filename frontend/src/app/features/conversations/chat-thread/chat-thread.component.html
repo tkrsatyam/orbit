@@ -224,8 +224,11 @@
         }
 
         @if (isPeerTyping()) {
-          <!-- Live Incoming Typing Bubble (Apple Messages Style) -->
+          <!-- Live Incoming Typing Bubble (Apple Messages Style with peer avatar) -->
           <div class="message-row incoming typing-row" data-testid="typing-indicator-row">
+            <div class="incoming-avatar" aria-hidden="true">
+              <span>{{ peerInitial() }}</span>
+            </div>
             <div class="message-bubble typing-bubble" data-testid="typing-bubble">
               <div class="typing-dots" aria-hidden="true">
                 <span class="typing-dot"></span>

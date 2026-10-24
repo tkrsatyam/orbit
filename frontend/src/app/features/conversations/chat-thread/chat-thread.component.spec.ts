@@ -833,5 +833,26 @@ describe('ChatThreadComponent', () => {
 
       expect(component.isPeerTyping()).toBe(false);
     });
+
+    it('should render incoming-avatar with peerInitial alongside typing bubble in the message stream', () => {
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+      fixture.detectChanges();
+
+      const typingRow = fixture.nativeElement.querySelector('[data-testid="typing-indicator-row"]');
+      expect(typingRow).toBeTruthy();
+
+      const avatar = typingRow.querySelector('.incoming-avatar');
+      expect(avatar).toBeTruthy();
+      expect(avatar.textContent.trim()).toBe(component.peerInitial());
+
+      const bubble = typingRow.querySelector('[data-testid="typing-bubble"]');
+      expect(bubble).toBeTruthy();
+      const dots = bubble.querySelectorAll('.typing-dot');
+      expect(dots.length).toBe(3);
+    });
   });
 });
