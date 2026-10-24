@@ -25,7 +25,8 @@ import java.util.List;
 @CompoundIndexes({
         @CompoundIndex(name = "conv_created_idx", def = "{'conversationId': 1, 'createdAt': -1}"),
         @CompoundIndex(name = "conv_id_idx", def = "{'conversationId': 1, '_id': -1}"),
-        @CompoundIndex(name = "conv_idempotency_idx", def = "{'conversationId': 1, 'idempotencyKey': 1}", sparse = true)
+        @CompoundIndex(name = "conv_idempotency_idx", def = "{'conversationId': 1, 'idempotencyKey': 1}", sparse = true),
+        @CompoundIndex(name = "conv_deletedfor_created_idx", def = "{'conversationId': 1, 'deletedFor': 1, 'createdAt': -1}")
 })
 @Getter
 @Setter

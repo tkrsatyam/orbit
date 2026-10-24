@@ -1469,7 +1469,7 @@ components:
           description: Content text of the message
           example: Hey! Have you checked the latest ADR?
           maxLength: 4000
-          minLength: 0
+          minLength: 1
         type:
           type: string
           default: TEXT
@@ -1745,7 +1745,7 @@ components:
           description: Updated text content
           example: Hey! Have you checked the latest ADR? It's updated.
           maxLength: 4000
-          minLength: 0
+          minLength: 1
       required:
       - content
     RespondRequestDto:
