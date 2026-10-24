@@ -1,6 +1,7 @@
 import { Component, computed, ElementRef, HostListener, inject, input, model, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { User } from '../../../core/models/auth.model';
+import { ThemeService } from '../../../core/services/theme/theme.service';
 import { AvatarComponent } from '../avatar/avatar.component';
 
 export type NavRailTab = 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER';
@@ -14,6 +15,7 @@ export type NavRailTab = 'CHATS' | 'GROUPS' | 'CONTACTS' | 'DISCOVER';
 })
 export class NavigationRailComponent {
   private readonly elementRef = inject(ElementRef);
+  private readonly themeService = inject(ThemeService);
 
   readonly activeTab = input<NavRailTab>('CHATS');
   readonly incomingCount = input<number>(0);
@@ -25,12 +27,19 @@ export class NavigationRailComponent {
 
   readonly isMenuOpen = model<boolean>(false);
 
+  readonly isDark = this.themeService.isDark;
+  readonly logoSrc = computed(() => this.isDark() ? 'brand/orbit-icon.svg' : 'brand/orbit-icon-light.svg');
+
   readonly displayName = computed(() => this.user()?.displayName ?? 'Anonymous User');
   readonly email = computed(() => this.user()?.email ?? '');
   readonly avatarUrl = computed(() => this.user()?.avatarUrl);
 
   selectTab(tab: NavRailTab): void {
     this.tabChange.emit(tab);
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   toggleMenu(event: MouseEvent): void {

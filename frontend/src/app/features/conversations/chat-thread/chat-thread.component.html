@@ -114,7 +114,25 @@
                 </div>
               }
 
-              <div class="message-bubble outgoing" [class.failed]="msg.deliveryStatus === 'FAILED'">
+              <div
+                class="message-bubble outgoing"
+                [class.failed]="msg.deliveryStatus === 'FAILED'"
+                (contextmenu)="onContextMenu(msg, $event)"
+              >
+                @if (!msg.deleted) {
+                  <button
+                    type="button"
+                    class="bubble-chevron-btn"
+                    [class.active]="activeActionMessageId() === msg.id"
+                    (click)="toggleActions(msg, $event)"
+                    title="Message options"
+                    [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                }
                 <div class="bubble-content">
                   @if (msg.deleted) {
                     <p class="bubble-text deleted-text"><em>You deleted this message.</em></p>
@@ -204,7 +222,24 @@
                 </div>
               }
 
-              <div class="message-bubble incoming">
+              <div
+                class="message-bubble incoming"
+                (contextmenu)="onContextMenu(msg, $event)"
+              >
+                @if (!msg.deleted) {
+                  <button
+                    type="button"
+                    class="bubble-chevron-btn"
+                    [class.active]="activeActionMessageId() === msg.id"
+                    (click)="toggleActions(msg, $event)"
+                    title="Message options"
+                    [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                  >
+                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                }
                 <div class="bubble-content">
                   @if (msg.deleted) {
                     <p class="bubble-text deleted-text"><em>This message was deleted.</em></p>

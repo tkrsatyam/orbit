@@ -854,5 +854,56 @@ describe('ChatThreadComponent', () => {
       const dots = bubble.querySelectorAll('.typing-dot');
       expect(dots.length).toBe(3);
     });
+
+    it('should open message action bar on chevron click', () => {
+      const mockMsg = {
+        id: 'msg-test-chevron',
+        conversationId: 'conv-test-1',
+        senderId: 'user-me-1',
+        senderName: 'Satyam',
+        type: 'TEXT',
+        content: 'Testing chevron action trigger',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      (component as any).messages.set([mockMsg]);
+      fixture.detectChanges();
+
+      const chevron = fixture.nativeElement.querySelector('[data-testid="message-chevron-btn-msg-test-chevron"]');
+      expect(chevron).toBeTruthy();
+
+      chevron.click();
+      fixture.detectChanges();
+
+      expect(component.activeActionMessageId()).toBe('msg-test-chevron');
+      const actionsBar = fixture.nativeElement.querySelector('[data-testid="message-actions-msg-test-chevron"]');
+      expect(actionsBar.classList.contains('visible')).toBe(true);
+    });
+
+    it('should open message action bar on contextmenu (right-click)', () => {
+      const mockMsg = {
+        id: 'msg-test-contextmenu',
+        conversationId: 'conv-test-1',
+        senderId: 'peer-user-1',
+        senderName: 'Ananya',
+        type: 'TEXT',
+        content: 'Testing contextmenu trigger',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      (component as any).messages.set([mockMsg]);
+      fixture.detectChanges();
+
+      const bubble = fixture.nativeElement.querySelector('.message-bubble.incoming');
+      expect(bubble).toBeTruthy();
+
+      const event = new MouseEvent('contextmenu', { cancelable: true });
+      bubble.dispatchEvent(event);
+      fixture.detectChanges();
+
+      expect(component.activeActionMessageId()).toBe('msg-test-contextmenu');
+    });
   });
 });

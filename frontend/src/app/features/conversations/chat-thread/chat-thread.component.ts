@@ -312,6 +312,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.activeActionMessageId.update(curr => curr === msg.id ? null : msg.id);
   }
 
+  onContextMenu(msg: ChatMessageItem, event: MouseEvent): void {
+    if (msg.deleted) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeActionMessageId.set(msg.id);
+  }
+
   onTouchStart(msg: ChatMessageItem, _event: TouchEvent): void {
     if (msg.deleted) return;
     if (this.touchTimer) {
