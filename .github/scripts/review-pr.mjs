@@ -750,14 +750,19 @@ function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = [
   // 4. Verification / Sign-Off Section
   let signoffSection = '';
   if (allClean) {
-    let archItems = results
-      .map((r) => (results.length > 1 ? `  * **${r.domain}**: ${r.verification?.architecture || 'Verified.'}` : `* ${r.verification?.architecture || 'Verified.'}`))
-      .join('\n');
-    let secItems = results
-      .map((r) => (results.length > 1 ? `  * **${r.domain}**: ${r.verification?.security || 'Verified.'}` : `* ${r.verification?.security || 'Verified.'}`))
-      .join('\n');
-
-    signoffSection = `✅ **No major issues identified.**\n\n### Verification Checklist\n- **Architecture & Protocol Verification**:\n${archItems}\n- **Security & Concurrency Verification**:\n${secItems}\n`;
+    if (results.length === 1) {
+      const archText = results[0].verification?.architecture || 'Verified.';
+      const secText = results[0].verification?.security || 'Verified.';
+      signoffSection = `✅ **No major issues identified.**\n\n### Verification Checklist\n- **Architecture & Protocol Verification**: ${archText}\n- **Security & Concurrency Verification**: ${secText}\n`;
+    } else {
+      const archItems = results
+        .map((r) => `  * **${r.domain}**: ${r.verification?.architecture || 'Verified.'}`)
+        .join('\n');
+      const secItems = results
+        .map((r) => `  * **${r.domain}**: ${r.verification?.security || 'Verified.'}`)
+        .join('\n');
+      signoffSection = `✅ **No major issues identified.**\n\n### Verification Checklist\n- **Architecture & Protocol Verification**:\n${archItems}\n- **Security & Concurrency Verification**:\n${secItems}\n`;
+    }
   } else {
     let domainSignoffLines = '';
     for (const r of results) {
