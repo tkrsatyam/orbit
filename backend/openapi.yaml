@@ -353,6 +353,58 @@ paths:
       security:
       - bearerAuth: []
   /api/v1/conversations/{id}/messages:
+    get:
+      tags:
+      - Messages
+      summary: Get conversation messages
+      description: Retrieves paginated message history in chronological order. Supports
+        cursor pagination via the 'before' parameter.
+      operationId: getConversationMessages
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: size
+        in: query
+        description: "Number of messages to retrieve (default 50, max 100)"
+        required: false
+        schema:
+          type: integer
+          format: int32
+          default: 50
+      - name: before
+        in: query
+        description: Message ID cursor to fetch messages before
+        required: false
+        schema:
+          type: string
+      responses:
+        "200":
+          description: Message history retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageHistoryResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageHistoryResponse"
+        "403":
+          description: Forbidden - requester is not a conversation participant
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageHistoryResponse"
+        "404":
+          description: Conversation or cursor message not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/MessageHistoryResponse"
     post:
       tags:
       - Messages
@@ -1729,6 +1781,25 @@ components:
           description: List of group members
           items:
             $ref: "#/components/schemas/GroupMemberResponse"
+    MessageHistoryResponse:
+      type: object
+      description: Paginated message history envelope
+      properties:
+        content:
+          type: array
+          description: List of messages in chronological order (oldest to newest in
+            this batch)
+          items:
+            $ref: "#/components/schemas/MessageResponse"
+        hasMore:
+          type: boolean
+          description: Indicates whether older messages exist before this batch
+          example: true
+        nextCursor:
+          type: string
+          description: Cursor (message ID) to pass as 'before' parameter to load previous
+            messages
+          example: 60c72b2f9b1d8b2bad000001
     ContactListResponse:
       type: object
       properties:

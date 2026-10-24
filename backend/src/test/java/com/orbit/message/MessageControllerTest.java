@@ -1,5 +1,6 @@
 package com.orbit.message;
 
+import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageType;
@@ -115,5 +116,30 @@ class MessageControllerTest {
         assertThatThrownBy(() -> messageController.sendStompMessage(conversationId, request, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unauthenticated");
+    }
+
+    @Test
+    @DisplayName("REST getConversationMessages delegates to MessageService and returns 200 OK")
+    void shouldGetConversationMessages_AndReturnOk() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        MessageHistoryResponse expectedHistory = new MessageHistoryResponse(
+                java.util.List.of(),
+                false,
+                null
+        );
+        when(messageService.getConversationMessages(conversationId, senderId, 50, "msg-cursor"))
+                .thenReturn(expectedHistory);
+
+        ResponseEntity<MessageHistoryResponse> responseEntity = messageController.getConversationMessages(
+                conversationId,
+                50,
+                "msg-cursor",
+                authentication
+        );
+
+        assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(responseEntity.getBody()).isEqualTo(expectedHistory);
+        verify(messageService).getConversationMessages(conversationId, senderId, 50, "msg-cursor");
     }
 }

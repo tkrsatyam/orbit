@@ -14,6 +14,12 @@ export interface MessageResponse {
   createdAt: string;
 }
 
+export interface MessageHistoryResponse {
+  content: MessageResponse[];
+  hasMore: boolean;
+  nextCursor?: string | null;
+}
+
 export interface SendMessagePayload {
   content: string;
   type?: MessageType;

@@ -31,8 +31,26 @@
   </header>
 
   <!-- Messages Scroll Viewport -->
-  <div #messagesScroll class="messages-viewport" data-testid="messages-viewport">
-    @if (messages().length === 0) {
+  <div #messagesScroll class="messages-viewport" (scroll)="onScroll($event)" data-testid="messages-viewport">
+    @if (isLoadingOlder()) {
+      <div class="loading-older-indicator" data-testid="loading-older-indicator">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span>Loading older messages...</span>
+      </div>
+    }
+
+    @if (isLoadingInitial()) {
+      <div class="thread-loading-state" data-testid="thread-loading-state">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span>Loading messages...</span>
+      </div>
+    } @else if (messages().length === 0) {
       <div class="thread-empty-state" data-testid="thread-empty-state">
         <div class="empty-icon-circle" aria-hidden="true">
           <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -54,7 +72,11 @@
             <div class="message-row outgoing" [attr.data-testid]="'message-row-' + msg.id">
               <div class="message-bubble outgoing" [class.failed]="msg.deliveryStatus === 'FAILED'">
                 <div class="bubble-content">
-                  <p class="bubble-text">{{ msg.content }}</p>
+                  @if (msg.deleted) {
+                    <p class="bubble-text deleted-text"><em>This message was deleted</em></p>
+                  } @else {
+                    <p class="bubble-text">{{ msg.content }}</p>
+                  }
                 </div>
                 <div class="bubble-meta">
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
@@ -106,7 +128,11 @@
               </div>
               <div class="message-bubble incoming">
                 <div class="bubble-content">
-                  <p class="bubble-text">{{ msg.content }}</p>
+                  @if (msg.deleted) {
+                    <p class="bubble-text deleted-text"><em>This message was deleted</em></p>
+                  } @else {
+                    <p class="bubble-text">{{ msg.content }}</p>
+                  }
                 </div>
                 <div class="bubble-meta">
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>

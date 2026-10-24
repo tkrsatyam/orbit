@@ -37,13 +37,14 @@ public record MessageResponse(
         Instant createdAt
 ) {
     public static MessageResponse from(Message message) {
+        String content = message.isDeleted() ? null : message.getContent();
         return new MessageResponse(
                 message.getId(),
                 message.getConversationId(),
                 message.getSenderId(),
                 message.getSenderName(),
                 message.getType(),
-                message.getContent(),
+                content,
                 message.isDeleted(),
                 message.isEdited(),
                 message.getCreatedAt()
@@ -51,13 +52,14 @@ public record MessageResponse(
     }
 
     public static MessageResponse from(BlockedMessage message) {
+        String content = message.isDeleted() ? null : message.getContent();
         return new MessageResponse(
                 message.getId(),
                 message.getConversationId(),
                 message.getSenderId(),
                 message.getSenderName(),
                 message.getType(),
-                message.getContent(),
+                content,
                 message.isDeleted(),
                 message.isEdited(),
                 message.getCreatedAt()

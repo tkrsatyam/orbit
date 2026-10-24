@@ -11,6 +11,7 @@ import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
 import com.orbit.conversation.model.LastMessageSnapshot;
+import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
@@ -23,9 +24,13 @@ import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -201,5 +206,89 @@ public class MessageService {
 
         // 9. Return receipt to sender
         return response;
+    }
+
+    /**
+     * Retrieves paginated message history for a conversation.
+     * Enforces participant membership and cursor-based pagination.
+     * Merges normal messages and blocked messages scoped to the requesting sender (ADR 007).
+     *
+     * @param conversationId the conversation identifier
+     * @param currentUserId  the authenticated user ID requesting history
+     * @param size           page size (default 50, maximum 100)
+     * @param before         optional message ID cursor to paginate backwards from
+     * @return paginated message history in chronological order
+     */
+    public MessageHistoryResponse getConversationMessages(String conversationId, String currentUserId, Integer size, String before) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (currentUserId == null || currentUserId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(currentUserId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        int pageSize = (size == null || size <= 0) ? 50 : Math.min(size, 100);
+
+        Instant cursorCreatedAt = null;
+        if (before != null && !before.isBlank()) {
+            Optional<Message> normalMsg = messageRepository.findById(before);
+            if (normalMsg.isPresent() && conversationId.equals(normalMsg.get().getConversationId())) {
+                cursorCreatedAt = normalMsg.get().getCreatedAt();
+            } else {
+                Optional<BlockedMessage> blockedMsg = blockedMessageRepository.findById(before);
+                if (blockedMsg.isPresent()
+                        && conversationId.equals(blockedMsg.get().getConversationId())
+                        && currentUserId.equals(blockedMsg.get().getSenderId())) {
+                    cursorCreatedAt = blockedMsg.get().getCreatedAt();
+                } else {
+                    throw new ResourceNotFoundException("Cursor message not found: " + before);
+                }
+            }
+        }
+
+        PageRequest pageRequest = PageRequest.of(0, pageSize + 1);
+        List<Message> messages;
+        List<BlockedMessage> blockedMessages;
+
+        if (cursorCreatedAt != null) {
+            messages = messageRepository.findByConversationIdAndCreatedAtLessThanOrderByCreatedAtDesc(
+                    conversationId, cursorCreatedAt, pageRequest);
+            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdAndCreatedAtLessThanOrderByCreatedAtDesc(
+                    conversationId, currentUserId, cursorCreatedAt, pageRequest);
+        } else {
+            messages = messageRepository.findByConversationIdOrderByCreatedAtDesc(
+                    conversationId, pageRequest);
+            blockedMessages = blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(
+                    conversationId, currentUserId, pageRequest);
+        }
+
+        List<MessageResponse> combined = new ArrayList<>(messages.size() + blockedMessages.size());
+        for (Message m : messages) {
+            combined.add(MessageResponse.from(m));
+        }
+        for (BlockedMessage bm : blockedMessages) {
+            combined.add(MessageResponse.from(bm));
+        }
+
+        // Sort descending by createdAt (newest first)
+        combined.sort(Comparator.comparing(MessageResponse::createdAt, Comparator.reverseOrder())
+                .thenComparing(MessageResponse::id, Comparator.reverseOrder()));
+
+        boolean hasMore = combined.size() > pageSize;
+        List<MessageResponse> sliced = hasMore ? combined.subList(0, pageSize) : combined;
+
+        String nextCursor = (hasMore && !sliced.isEmpty()) ? sliced.get(sliced.size() - 1).id() : null;
+
+        List<MessageResponse> content = new ArrayList<>(sliced);
+        Collections.reverse(content);
+
+        return new MessageHistoryResponse(content, hasMore, nextCursor);
     }
 }

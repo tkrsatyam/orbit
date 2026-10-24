@@ -1,8 +1,8 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../../../environments/environment';
-import { MessageResponse, SendMessagePayload } from '../../models/message.model';
+import { MessageHistoryResponse, MessageResponse, SendMessagePayload } from '../../models/message.model';
 import { WebSocketService } from '../websocket/websocket.service';
 
 /**
@@ -41,6 +41,36 @@ export class MessageService {
     callback: (receipt: MessageResponse) => void
   ): () => void {
     return this.webSocketService.subscribe<MessageResponse>('/user/queue/receipts', callback);
+  }
+
+  /**
+   * Retrieves paginated message history for a conversation.
+   *
+   * @param conversationId destination conversation ID
+   * @param size page size (default 50, max 100)
+   * @param before message ID cursor to paginate backwards from
+   * @returns Observable of paginated message history envelope
+   */
+  getConversationMessages(
+    conversationId: string,
+    size?: number,
+    before?: string
+  ): Observable<MessageHistoryResponse> {
+    let params = new HttpParams();
+    if (size !== undefined && size !== null) {
+      params = params.set('size', size.toString());
+    }
+    if (before) {
+      params = params.set('before', before);
+    }
+
+    return this.http.get<MessageHistoryResponse>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages`,
+      {
+        params,
+        withCredentials: true
+      }
+    );
   }
 
   /**
