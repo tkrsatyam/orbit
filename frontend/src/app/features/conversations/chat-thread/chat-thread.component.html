@@ -69,16 +69,63 @@
         @for (msg of messages(); track msg.id) {
           @if (msg.senderId === currentUserId()) {
             <!-- Outgoing Message (Me) -->
-            <div class="message-row outgoing" [attr.data-testid]="'message-row-' + msg.id">
+            <div
+              class="message-row outgoing"
+              [class.has-active-actions]="activeActionMessageId() === msg.id"
+              [attr.data-testid]="'message-row-' + msg.id"
+              (touchstart)="onTouchStart(msg, $event)"
+              (touchend)="onTouchEnd()"
+              (touchmove)="onTouchMove()"
+            >
+              @if (!msg.deleted) {
+                <!-- Floating Action Bar -->
+                <div
+                  class="message-actions-bar"
+                  [class.visible]="activeActionMessageId() === msg.id"
+                  (click)="$event.stopPropagation()"
+                  [attr.data-testid]="'message-actions-' + msg.id"
+                >
+                  @if (msg.type === 'TEXT') {
+                    <button
+                      type="button"
+                      class="btn-action-item"
+                      (click)="startEdit(msg)"
+                      title="Edit message"
+                      [attr.data-testid]="'edit-message-btn-' + msg.id"
+                    >
+                      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="btn-action-item btn-action-delete"
+                    (click)="openDeleteModal(msg)"
+                    title="Delete message"
+                    [attr.data-testid]="'delete-message-btn-' + msg.id"
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              }
+
               <div class="message-bubble outgoing" [class.failed]="msg.deliveryStatus === 'FAILED'">
                 <div class="bubble-content">
                   @if (msg.deleted) {
-                    <p class="bubble-text deleted-text"><em>This message was deleted</em></p>
+                    <p class="bubble-text deleted-text"><em>You deleted this message.</em></p>
                   } @else {
                     <p class="bubble-text">{{ msg.content }}</p>
                   }
                 </div>
                 <div class="bubble-meta">
+                  @if (msg.edited && !msg.deleted) {
+                    <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                  }
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
 
                   @if (msg.deliveryStatus === 'SENDING') {
@@ -122,19 +169,53 @@
             </div>
           } @else {
             <!-- Incoming Message (Peer) -->
-            <div class="message-row incoming" [attr.data-testid]="'message-row-' + msg.id">
+            <div
+              class="message-row incoming"
+              [class.has-active-actions]="activeActionMessageId() === msg.id"
+              [attr.data-testid]="'message-row-' + msg.id"
+              (touchstart)="onTouchStart(msg, $event)"
+              (touchend)="onTouchEnd()"
+              (touchmove)="onTouchMove()"
+            >
               <div class="incoming-avatar" aria-hidden="true">
                 <span>{{ peerInitial() }}</span>
               </div>
+
+              @if (!msg.deleted) {
+                <!-- Floating Action Bar (Delete for me only) -->
+                <div
+                  class="message-actions-bar"
+                  [class.visible]="activeActionMessageId() === msg.id"
+                  (click)="$event.stopPropagation()"
+                  [attr.data-testid]="'message-actions-' + msg.id"
+                >
+                  <button
+                    type="button"
+                    class="btn-action-item btn-action-delete"
+                    (click)="openDeleteModal(msg)"
+                    title="Delete message"
+                    [attr.data-testid]="'delete-message-btn-' + msg.id"
+                  >
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
+                </div>
+              }
+
               <div class="message-bubble incoming">
                 <div class="bubble-content">
                   @if (msg.deleted) {
-                    <p class="bubble-text deleted-text"><em>This message was deleted</em></p>
+                    <p class="bubble-text deleted-text"><em>This message was deleted.</em></p>
                   } @else {
                     <p class="bubble-text">{{ msg.content }}</p>
                   }
                 </div>
                 <div class="bubble-meta">
+                  @if (msg.edited && !msg.deleted) {
+                    <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                  }
                   <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
                 </div>
               </div>
@@ -168,11 +249,36 @@
       </div>
     } @else {
       <!-- Active Composer -->
-      <div class="composer-card">
+      <div class="composer-card" [class.editing]="isEditing()">
+        @if (isEditing()) {
+          <!-- Composer Editing Mode Banner -->
+          <div class="composer-editing-banner" data-testid="composer-editing-banner">
+            <div class="editing-info">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              <div class="editing-text-wrap">
+                <span class="editing-title">Editing message</span>
+                <span class="editing-preview">{{ editingMessage()?.content }}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn-cancel-edit"
+              (click)="cancelEdit()"
+              title="Cancel edit (Esc)"
+              data-testid="cancel-edit-btn"
+            >
+              Cancel
+            </button>
+          </div>
+        }
         <textarea
+          #composerTextarea
           class="composer-textarea"
           rows="1"
-          [placeholder]="'Message ' + peerName() + '...'"
+          [placeholder]="isEditing() ? 'Edit message...' : 'Message ' + peerName() + '...'"
           [ngModel]="messageInput()"
           (ngModelChange)="messageInput.set($event)"
           (keydown)="onKeydown($event)"
@@ -183,17 +289,89 @@
             type="button"
             class="btn-send"
             (click)="sendMessage()"
-            [disabled]="!messageInput().trim()"
+            [disabled]="!messageInput().trim() || isSending()"
             data-testid="send-message-btn"
           >
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <line x1="22" y1="2" x2="11" y2="13" />
-              <polygon points="22 2 15 22 11 13 2 9 22 2" />
-            </svg>
-            <span>Send</span>
+            @if (isEditing()) {
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Save</span>
+            } @else {
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              <span>Send</span>
+            }
           </button>
         </div>
       </div>
     }
   </footer>
+
+  <!-- Elevated Delete Modal Dialog -->
+  @if (deleteModalMessage(); as targetMsg) {
+    <div class="delete-modal-backdrop" (click)="closeDeleteModal()" data-testid="delete-modal-backdrop">
+      <div class="delete-modal-dialog" (click)="$event.stopPropagation()" data-testid="delete-modal-dialog">
+        <div class="delete-modal-header">
+          <div class="delete-icon-circle" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
+          </div>
+          <h3 class="delete-modal-title">Delete message?</h3>
+        </div>
+        <p class="delete-modal-desc">
+          @if (targetMsg.senderId === currentUserId() && !targetMsg.deleted) {
+            Choose how you want to delete this message.
+          } @else {
+            This message will be removed from your view only.
+          }
+        </p>
+        <div class="delete-modal-actions">
+          @if (targetMsg.senderId === currentUserId() && !targetMsg.deleted) {
+            <button
+              type="button"
+              class="btn-delete-option btn-danger"
+              (click)="confirmDelete('FOR_EVERYONE')"
+              [disabled]="isDeleting()"
+              data-testid="confirm-delete-everyone-btn"
+            >
+              Delete for everyone
+            </button>
+            <button
+              type="button"
+              class="btn-delete-option btn-secondary"
+              (click)="confirmDelete('FOR_ME')"
+              [disabled]="isDeleting()"
+              data-testid="confirm-delete-forme-btn"
+            >
+              Delete for me
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn-delete-option btn-danger"
+              (click)="confirmDelete('FOR_ME')"
+              [disabled]="isDeleting()"
+              data-testid="confirm-delete-forme-btn"
+            >
+              Delete for me
+            </button>
+          }
+          <button
+            type="button"
+            class="btn-delete-option btn-cancel"
+            (click)="closeDeleteModal()"
+            [disabled]="isDeleting()"
+            data-testid="cancel-delete-btn"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  }
 </div>

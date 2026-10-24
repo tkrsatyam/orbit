@@ -10,13 +10,21 @@ import com.orbit.contact.ContactService;
 import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
+import com.orbit.group.GroupRepository;
+import com.orbit.group.model.Group;
+import com.orbit.group.model.GroupMember;
+import com.orbit.group.model.GroupRole;
+import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
+import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
+import com.orbit.message.kafka.MessageEditedEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
+import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
 import com.orbit.notification.NotificationRepository;
@@ -69,6 +77,9 @@ class MessageServiceTest {
     private UserRepository userRepository;
 
     @Mock
+    private GroupRepository groupRepository;
+
+    @Mock
     private KafkaMessageProducer kafkaMessageProducer;
 
     @Mock
@@ -98,6 +109,7 @@ class MessageServiceTest {
                 notificationRepository,
                 contactService,
                 userRepository,
+                groupRepository,
                 kafkaMessageProducer,
                 rateLimiter,
                 properties
@@ -298,9 +310,9 @@ class MessageServiceTest {
         Message m2 = Message.builder().id("m2").conversationId(conversationId).senderId(recipientId).content("Hi").createdAt(t2).build();
 
         // Repository returns newest first (t2 then t1)
-        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+        when(messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of(m2, m1));
-        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of());
 
         MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, null, null);
@@ -335,9 +347,9 @@ class MessageServiceTest {
                     .build());
         }
 
-        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+        when(messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(mockMessages);
-        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of());
 
         // Request with size 150 (should clamp to 100)
@@ -378,9 +390,9 @@ class MessageServiceTest {
                 .createdAt(t0)
                 .build();
 
-        when(messageRepository.findByConversationIdAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(cursorTime), any(Pageable.class)))
+        when(messageRepository.findByConversationIdAndNotDeletedForAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(senderId), eq(cursorTime), any(Pageable.class)))
                 .thenReturn(List.of(olderMsg));
-        when(blockedMessageRepository.findByConversationIdAndSenderIdAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(senderId), eq(cursorTime), any(Pageable.class)))
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForAndCreatedAtLessThanOrderByCreatedAtDesc(eq(conversationId), eq(senderId), eq(cursorTime), any(Pageable.class)))
                 .thenReturn(List.of());
 
         MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 20, "msg-cursor");
@@ -406,9 +418,9 @@ class MessageServiceTest {
         Message normal = Message.builder().id("m1").conversationId(conversationId).senderId(recipientId).content("Normal").createdAt(t1).build();
         BlockedMessage blocked = BlockedMessage.builder().id("b1").conversationId(conversationId).senderId(senderId).content("Blocked attempt").createdAt(t2).build();
 
-        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+        when(messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of(normal));
-        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of(blocked));
 
         MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 50, null);
@@ -440,9 +452,9 @@ class MessageServiceTest {
                 .createdAt(Instant.now())
                 .build();
 
-        when(messageRepository.findByConversationIdOrderByCreatedAtDesc(eq(conversationId), any(Pageable.class)))
+        when(messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of(deletedMsg));
-        when(blockedMessageRepository.findByConversationIdAndSenderIdOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any(Pageable.class)))
                 .thenReturn(List.of());
 
         MessageHistoryResponse response = messageService.getConversationMessages(conversationId, senderId, 50, null);
@@ -482,5 +494,320 @@ class MessageServiceTest {
         assertThatThrownBy(() -> messageService.getConversationMessages(conversationId, senderId, 50, "missing-cursor"))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Cursor message not found");
+    }
+
+    // ==========================================
+    // ORDM-47: Edit & Delete Message Unit Tests
+    // ==========================================
+
+    @Test
+    @DisplayName("editMessage successfully edits TEXT message authored by sender and publishes Kafka event")
+    void shouldEditMessageSuccessfully_WhenSenderAndTextMessage() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .lastMessage(com.orbit.conversation.model.LastMessageSnapshot.builder()
+                        .messageId("msg-edit-1")
+                        .content("Original text")
+                        .build())
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message original = Message.builder()
+                .id("msg-edit-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Original text")
+                .type(MessageType.TEXT)
+                .deleted(false)
+                .edited(false)
+                .createdAt(Instant.now().minusSeconds(60))
+                .build();
+        when(messageRepository.findById("msg-edit-1")).thenReturn(Optional.of(original));
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EditMessageRequest request = new EditMessageRequest("Updated text message");
+        MessageResponse response = messageService.editMessage(conversationId, "msg-edit-1", senderId, request);
+
+        assertThat(response.id()).isEqualTo("msg-edit-1");
+        assertThat(response.content()).isEqualTo("Updated text message");
+        assertThat(response.edited()).isTrue();
+        assertThat(response.editedAt()).isNotNull();
+
+        // Verify conversation lastMessage update
+        assertThat(conversation.getLastMessage().getContent()).isEqualTo("Updated text message");
+        verify(conversationRepository).save(conversation);
+
+        // Verify Kafka event published
+        ArgumentCaptor<MessageEditedEvent> eventCaptor = ArgumentCaptor.forClass(MessageEditedEvent.class);
+        verify(kafkaMessageProducer).publishMessageEdited(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().messageId()).isEqualTo("msg-edit-1");
+        assertThat(eventCaptor.getValue().content()).isEqualTo("Updated text message");
+        assertThat(eventCaptor.getValue().recipientIds()).containsExactly(recipientId);
+    }
+
+    @Test
+    @DisplayName("editMessage throws ForbiddenException when non-sender attempts to edit")
+    void shouldThrowForbiddenException_WhenNonSenderEditsMessage() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message original = Message.builder()
+                .id("msg-edit-2")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Original text")
+                .type(MessageType.TEXT)
+                .build();
+        when(messageRepository.findById("msg-edit-2")).thenReturn(Optional.of(original));
+
+        EditMessageRequest request = new EditMessageRequest("Hacked edit");
+        assertThatThrownBy(() -> messageService.editMessage(conversationId, "msg-edit-2", recipientId, request))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("only edit your own messages");
+
+        verify(kafkaMessageProducer, never()).publishMessageEdited(any());
+    }
+
+    @Test
+    @DisplayName("editMessage throws IllegalArgumentException when editing deleted message")
+    void shouldThrowIllegalArgumentException_WhenEditingDeletedMessage() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message deleted = Message.builder()
+                .id("msg-del-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .deleted(true)
+                .content(null)
+                .type(MessageType.TEXT)
+                .build();
+        when(messageRepository.findById("msg-del-1")).thenReturn(Optional.of(deleted));
+
+        EditMessageRequest request = new EditMessageRequest("Revived edit");
+        assertThatThrownBy(() -> messageService.editMessage(conversationId, "msg-del-1", senderId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot edit a deleted message");
+    }
+
+    @Test
+    @DisplayName("editMessage throws IllegalArgumentException when editing non-TEXT message")
+    void shouldThrowIllegalArgumentException_WhenEditingNonTextMessage() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message imageMsg = Message.builder()
+                .id("msg-img-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .deleted(false)
+                .type(MessageType.IMAGE)
+                .build();
+        when(messageRepository.findById("msg-img-1")).thenReturn(Optional.of(imageMsg));
+
+        EditMessageRequest request = new EditMessageRequest("Image caption edit");
+        assertThatThrownBy(() -> messageService.editMessage(conversationId, "msg-img-1", senderId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Only TEXT messages can be edited");
+    }
+
+    @Test
+    @DisplayName("editMessage edits diverted message in blockedMessages collection with no Kafka publish")
+    void shouldEditBlockedMessage_WithNoKafkaPublish() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(messageRepository.findById("blocked-msg-1")).thenReturn(Optional.empty());
+
+        BlockedMessage blocked = BlockedMessage.builder()
+                .id("blocked-msg-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .type(MessageType.TEXT)
+                .content("Blocked original")
+                .deleted(false)
+                .build();
+        when(blockedMessageRepository.findById("blocked-msg-1")).thenReturn(Optional.of(blocked));
+        when(blockedMessageRepository.save(any(BlockedMessage.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        EditMessageRequest request = new EditMessageRequest("Blocked edited text");
+        MessageResponse response = messageService.editMessage(conversationId, "blocked-msg-1", senderId, request);
+
+        assertThat(response.id()).isEqualTo("blocked-msg-1");
+        assertThat(response.content()).isEqualTo("Blocked edited text");
+        assertThat(response.deliveryStatus()).isEqualTo(MessageDeliveryStatus.SENT);
+        verify(kafkaMessageProducer, never()).publishMessageEdited(any());
+    }
+
+    @Test
+    @DisplayName("deleteMessage with FOR_EVERYONE soft-deletes message and publishes Kafka delete event")
+    void shouldDeleteMessageForEveryone_WhenSender() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .lastMessage(com.orbit.conversation.model.LastMessageSnapshot.builder()
+                        .messageId("msg-del-2")
+                        .content("Last message content")
+                        .build())
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-del-2")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Message to delete")
+                .deleted(false)
+                .build();
+        when(messageRepository.findById("msg-del-2")).thenReturn(Optional.of(message));
+
+        messageService.deleteMessage(conversationId, "msg-del-2", senderId, MessageDeleteMode.FOR_EVERYONE);
+
+        assertThat(message.isDeleted()).isTrue();
+        assertThat(message.getContent()).isNull();
+        verify(messageRepository).save(message);
+
+        assertThat(conversation.getLastMessage().getContent()).isEqualTo("This message was deleted");
+        verify(conversationRepository).save(conversation);
+
+        ArgumentCaptor<MessageDeletedEvent> eventCaptor = ArgumentCaptor.forClass(MessageDeletedEvent.class);
+        verify(kafkaMessageProducer).publishMessageDeleted(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().messageId()).isEqualTo("msg-del-2");
+        assertThat(eventCaptor.getValue().recipientIds()).containsExactly(recipientId);
+    }
+
+    @Test
+    @DisplayName("deleteMessage with FOR_EVERYONE succeeds when caller is group admin in group conversation")
+    void shouldDeleteMessageForEveryone_WhenGroupAdmin() {
+        String groupId = "group-1";
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.GROUP)
+                .groupId(groupId)
+                .participantIds(List.of(senderId, recipientId, "admin-user"))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Group group = Group.builder()
+                .id(groupId)
+                .members(List.of(
+                        GroupMember.builder().userId("admin-user").role(GroupRole.ADMIN).build(),
+                        GroupMember.builder().userId(senderId).role(GroupRole.MEMBER).build()
+                ))
+                .build();
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        Message memberMsg = Message.builder()
+                .id("msg-member")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Spam message")
+                .deleted(false)
+                .build();
+        when(messageRepository.findById("msg-member")).thenReturn(Optional.of(memberMsg));
+
+        messageService.deleteMessage(conversationId, "msg-member", "admin-user", MessageDeleteMode.FOR_EVERYONE);
+
+        assertThat(memberMsg.isDeleted()).isTrue();
+        assertThat(memberMsg.getContent()).isNull();
+        verify(messageRepository).save(memberMsg);
+        verify(kafkaMessageProducer).publishMessageDeleted(any());
+    }
+
+    @Test
+    @DisplayName("deleteMessage with FOR_EVERYONE throws ForbiddenException when non-sender and non-admin")
+    void shouldThrowForbiddenException_WhenNonSenderAndNonAdminDeletesForEveryone() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-target")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Target message")
+                .build();
+        when(messageRepository.findById("msg-target")).thenReturn(Optional.of(message));
+
+        assertThatThrownBy(() -> messageService.deleteMessage(conversationId, "msg-target", recipientId, MessageDeleteMode.FOR_EVERYONE))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("only delete your own messages for everyone");
+
+        verify(kafkaMessageProducer, never()).publishMessageDeleted(any());
+    }
+
+    @Test
+    @DisplayName("deleteMessage with FOR_ME appends user ID to deletedFor and decrements unread count for recipient")
+    void shouldDeleteMessageForMe_AndDecrementUnreadCount() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-for-me")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Message for me delete")
+                .deletedFor(new ArrayList<>())
+                .build();
+        when(messageRepository.findById("msg-for-me")).thenReturn(Optional.of(message));
+
+        messageService.deleteMessage(conversationId, "msg-for-me", recipientId, MessageDeleteMode.FOR_ME);
+
+        assertThat(message.getDeletedFor()).containsExactly(recipientId);
+        assertThat(message.isDeleted()).isFalse(); // Not deleted globally
+        verify(messageRepository).save(message);
+        verify(notificationRepository).decrementUnreadCount(recipientId, conversationId);
+        verify(kafkaMessageProducer, never()).publishMessageDeleted(any());
+    }
+
+    @Test
+    @DisplayName("deleteMessage with FOR_ME appends user ID to deletedFor on BlockedMessage")
+    void shouldDeleteBlockedMessageForMe() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(messageRepository.findById("blocked-del-1")).thenReturn(Optional.empty());
+
+        BlockedMessage blocked = BlockedMessage.builder()
+                .id("blocked-del-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .deletedFor(new ArrayList<>())
+                .build();
+        when(blockedMessageRepository.findById("blocked-del-1")).thenReturn(Optional.of(blocked));
+
+        messageService.deleteMessage(conversationId, "blocked-del-1", senderId, MessageDeleteMode.FOR_ME);
+
+        assertThat(blocked.getDeletedFor()).containsExactly(senderId);
+        verify(blockedMessageRepository).save(blocked);
+        verify(kafkaMessageProducer, never()).publishMessageDeleted(any());
     }
 }

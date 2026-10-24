@@ -14,6 +14,8 @@ import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Stores diverted messages sent by a blocked user in the 'blockedMessages' collection.
@@ -49,6 +51,9 @@ public class BlockedMessage {
 
     @Builder.Default
     private boolean deleted = false;
+
+    @Builder.Default
+    private List<String> deletedFor = new ArrayList<>();
 
     @Builder.Default
     private boolean edited = false;

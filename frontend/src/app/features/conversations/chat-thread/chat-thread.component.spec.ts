@@ -21,8 +21,12 @@ describe('ChatThreadComponent', () => {
   let messageServiceMock: {
     subscribeToConversation: ReturnType<typeof vi.fn>;
     subscribeToReceipts: ReturnType<typeof vi.fn>;
+    subscribeToEdits: ReturnType<typeof vi.fn>;
+    subscribeToDeletes: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
     sendMessageRest: ReturnType<typeof vi.fn>;
+    editMessage: ReturnType<typeof vi.fn>;
+    deleteMessage: ReturnType<typeof vi.fn>;
     getConversationMessages: ReturnType<typeof vi.fn>;
     isWebSocketConnected: ReturnType<typeof vi.fn>;
   };
@@ -46,6 +50,8 @@ describe('ChatThreadComponent', () => {
 
   let conversationCallback: ((msg: MessageResponse) => void) | undefined;
   let receiptCallback: ((receipt: MessageResponse) => void) | undefined;
+  let editCallback: ((edited: any) => void) | undefined;
+  let deleteCallback: ((deleted: any) => void) | undefined;
 
   beforeEach(async () => {
     authServiceMock = {
@@ -61,8 +67,18 @@ describe('ChatThreadComponent', () => {
         receiptCallback = cb;
         return () => {};
       }),
+      subscribeToEdits: vi.fn().mockImplementation((_convId: string, cb: (edited: any) => void) => {
+        editCallback = cb;
+        return () => {};
+      }),
+      subscribeToDeletes: vi.fn().mockImplementation((_convId: string, cb: (deleted: any) => void) => {
+        deleteCallback = cb;
+        return () => {};
+      }),
       sendMessageStomp: vi.fn(),
       sendMessageRest: vi.fn(),
+      editMessage: vi.fn().mockReturnValue(of({ id: 'msg-1', content: 'Updated content', edited: true, editedAt: '2026-10-24T10:00:00Z' })),
+      deleteMessage: vi.fn().mockReturnValue(of(undefined)),
       getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
       isWebSocketConnected: vi.fn().mockReturnValue(true)
     };
@@ -436,7 +452,29 @@ describe('ChatThreadComponent', () => {
 
     const delNotice = fixture.nativeElement.querySelector('.deleted-text');
     expect(delNotice).toBeTruthy();
-    expect(delNotice.textContent).toContain('This message was deleted');
+    expect(delNotice.textContent).toContain('This message was deleted.');
+  });
+
+  it('should render "You deleted this message." when sender deletes own message', () => {
+    component.messages.set([
+      {
+        id: 'msg-del-own',
+        conversationId: 'conv-test-1',
+        senderId: 'my-user-id',
+        senderName: 'Satyam Kumar',
+        type: 'TEXT',
+        content: '',
+        deleted: true,
+        edited: false,
+        createdAt: '2026-10-24T09:00:00Z',
+        deliveryStatus: 'DELIVERED'
+      }
+    ]);
+    fixture.detectChanges();
+
+    const delNotice = fixture.nativeElement.querySelector('.message-bubble.outgoing .deleted-text');
+    expect(delNotice).toBeTruthy();
+    expect(delNotice.textContent).toContain('You deleted this message.');
   });
 
   it('should preserve SENT deliveryStatus for blocked messages in history', () => {
@@ -468,5 +506,208 @@ describe('ChatThreadComponent', () => {
     const sentCheck = fixture.nativeElement.querySelector('.delivery-status.sent');
     expect(sentCheck).toBeTruthy();
     expect(fixture.nativeElement.querySelector('.delivery-status.delivered')).toBeNull();
+  });
+
+  describe('Edit Message Functionality', () => {
+    const ownMessage = {
+      id: 'msg-own-1',
+      conversationId: 'conv-test-1',
+      senderId: 'my-user-id',
+      senderName: 'Satyam Kumar',
+      type: 'TEXT' as const,
+      content: 'Original content',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-24T09:00:00Z',
+      deliveryStatus: 'DELIVERED' as const
+    };
+
+    it('should set editingMessage and populate input on startEdit', () => {
+      component.messages.set([ownMessage]);
+      component.startEdit(ownMessage);
+
+      expect(component.isEditing()).toBe(true);
+      expect(component.editingMessage()?.id).toBe('msg-own-1');
+      expect(component.messageInput()).toBe('Original content');
+    });
+
+    it('should clear editing state on cancelEdit', () => {
+      component.messages.set([ownMessage]);
+      component.startEdit(ownMessage);
+      component.cancelEdit();
+
+      expect(component.isEditing()).toBe(false);
+      expect(component.editingMessage()).toBeNull();
+      expect(component.messageInput()).toBe('');
+    });
+
+    it('should cancel edit on Escape keydown', () => {
+      component.messages.set([ownMessage]);
+      component.startEdit(ownMessage);
+
+      const escEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      component.onKeydown(escEvent);
+
+      expect(component.isEditing()).toBe(false);
+      expect(component.messageInput()).toBe('');
+    });
+
+    it('should send edit request and update message optimistically on save', () => {
+      component.messages.set([ownMessage]);
+      component.startEdit(ownMessage);
+      component.messageInput.set('Updated content');
+
+      messageServiceMock.editMessage.mockReturnValue(of({
+        id: 'msg-own-1',
+        conversationId: 'conv-test-1',
+        senderId: 'my-user-id',
+        senderName: 'Satyam Kumar',
+        type: 'TEXT',
+        content: 'Updated content',
+        deleted: false,
+        edited: true,
+        editedAt: '2026-10-24T09:05:00Z',
+        createdAt: '2026-10-24T09:00:00Z'
+      }));
+
+      component.sendMessage();
+
+      expect(messageServiceMock.editMessage).toHaveBeenCalledWith('conv-test-1', 'msg-own-1', 'Updated content');
+      expect(component.isEditing()).toBe(false);
+      const updated = component.messages().find(m => m.id === 'msg-own-1');
+      expect(updated?.content).toBe('Updated content');
+      expect(updated?.edited).toBe(true);
+    });
+
+    it('should handle real-time message edit event from websocket', () => {
+      component.messages.set([ownMessage]);
+
+      component.handleEditedMessage({
+        messageId: 'msg-own-1',
+        content: 'Edited via STOMP',
+        editedAt: '2026-10-24T09:06:00Z'
+      });
+
+      const updated = component.messages().find(m => m.id === 'msg-own-1');
+      expect(updated?.content).toBe('Edited via STOMP');
+      expect(updated?.edited).toBe(true);
+    });
+
+    it('should render edited label when message has edited: true', () => {
+      component.messages.set([{
+        ...ownMessage,
+        edited: true,
+        editedAt: '2026-10-24T09:05:00Z'
+      }]);
+      fixture.detectChanges();
+
+      const editedIndicator = fixture.nativeElement.querySelector('.edited-indicator');
+      expect(editedIndicator).toBeTruthy();
+      expect(editedIndicator.textContent.trim()).toBe('edited');
+    });
+  });
+
+  describe('Delete Message Functionality', () => {
+    const ownMessage = {
+      id: 'msg-del-1',
+      conversationId: 'conv-test-1',
+      senderId: 'my-user-id',
+      senderName: 'Satyam Kumar',
+      type: 'TEXT' as const,
+      content: 'Message to delete',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-24T09:00:00Z',
+      deliveryStatus: 'DELIVERED' as const
+    };
+
+    const peerMessage = {
+      id: 'msg-peer-del',
+      conversationId: 'conv-test-1',
+      senderId: 'peer-user-1',
+      senderName: 'Ananya Roy',
+      type: 'TEXT' as const,
+      content: 'Peer message',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-24T09:01:00Z'
+    };
+
+    it('should open and close delete modal dialog', () => {
+      component.openDeleteModal(ownMessage);
+      expect(component.deleteModalMessage()?.id).toBe('msg-del-1');
+
+      component.closeDeleteModal();
+      expect(component.deleteModalMessage()).toBeNull();
+    });
+
+    it('should confirm delete with FOR_EVERYONE and mark message as deleted placeholder', () => {
+      component.messages.set([ownMessage]);
+      component.openDeleteModal(ownMessage);
+
+      messageServiceMock.deleteMessage.mockReturnValue(of(undefined));
+      component.confirmDelete('FOR_EVERYONE');
+
+      expect(messageServiceMock.deleteMessage).toHaveBeenCalledWith('conv-test-1', 'msg-del-1', 'FOR_EVERYONE');
+      expect(component.deleteModalMessage()).toBeNull();
+
+      const msg = component.messages().find(m => m.id === 'msg-del-1');
+      expect(msg?.deleted).toBe(true);
+      expect(msg?.content).toBe('');
+    });
+
+    it('should confirm delete with FOR_ME and completely remove message from local list', () => {
+      component.messages.set([ownMessage, peerMessage]);
+      component.openDeleteModal(ownMessage);
+
+      messageServiceMock.deleteMessage.mockReturnValue(of(undefined));
+      component.confirmDelete('FOR_ME');
+
+      expect(messageServiceMock.deleteMessage).toHaveBeenCalledWith('conv-test-1', 'msg-del-1', 'FOR_ME');
+      expect(component.deleteModalMessage()).toBeNull();
+      expect(component.messages().length).toBe(1);
+      expect(component.messages().find(m => m.id === 'msg-del-1')).toBeUndefined();
+    });
+
+    it('should handle real-time message deleted event from websocket', () => {
+      component.messages.set([ownMessage]);
+
+      component.handleDeletedMessage({
+        messageId: 'msg-del-1'
+      });
+
+      const deleted = component.messages().find(m => m.id === 'msg-del-1');
+      expect(deleted?.deleted).toBe(true);
+      expect(deleted?.content).toBe('');
+    });
+  });
+
+  describe('Mobile Touch Interaction', () => {
+    it('should trigger active action bar on 500ms long press and dismiss on document click', () => {
+      vi.useFakeTimers();
+      const testMsg = {
+        id: 'msg-touch-1',
+        conversationId: 'conv-test-1',
+        senderId: 'my-user-id',
+        senderName: 'Satyam Kumar',
+        type: 'TEXT' as const,
+        content: 'Touch target',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-24T09:00:00Z'
+      };
+
+      component.onTouchStart(testMsg, {} as TouchEvent);
+      expect(component.activeActionMessageId()).toBeNull();
+
+      vi.advanceTimersByTime(500);
+      expect(component.activeActionMessageId()).toBe('msg-touch-1');
+
+      // Click outside dismisses
+      component.onDocumentClick();
+      expect(component.activeActionMessageId()).toBeNull();
+
+      vi.useRealTimers();
+    });
   });
 });

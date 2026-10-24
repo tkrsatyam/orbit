@@ -162,4 +162,76 @@ describe('MessageService', () => {
     webSocketServiceMock.isConnected.mockReturnValue(false);
     expect(service.isWebSocketConnected()).toBe(false);
   });
+
+  it('should edit message via PATCH with withCredentials', () => {
+    const mockResponse: MessageResponse = {
+      id: 'msg-1',
+      conversationId: 'conv-123',
+      senderId: 'user-1',
+      senderName: 'Satyam',
+      type: 'TEXT',
+      content: 'Updated content',
+      deleted: false,
+      edited: true,
+      editedAt: '2026-10-24T12:00:00Z',
+      createdAt: '2026-10-24T10:00:00Z'
+    };
+
+    let result: MessageResponse | undefined;
+    service.editMessage('conv-123', 'msg-1', 'Updated content').subscribe(res => {
+      result = res;
+    });
+
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toEqual({ content: 'Updated content' });
+    expect(req.request.withCredentials).toBe(true);
+
+    req.flush(mockResponse);
+    expect(result).toEqual(mockResponse);
+  });
+
+  it('should delete message with FOR_EVERYONE via DELETE with mode param', () => {
+    service.deleteMessage('conv-123', 'msg-1', 'FOR_EVERYONE').subscribe();
+
+    const req = httpTesting.expectOne(
+      r => r.url === `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1`
+    );
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.params.get('mode')).toBe('FOR_EVERYONE');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null);
+  });
+
+  it('should delete message with FOR_ME via DELETE with mode param', () => {
+    service.deleteMessage('conv-123', 'msg-1', 'FOR_ME').subscribe();
+
+    const req = httpTesting.expectOne(
+      r => r.url === `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1`
+    );
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.params.get('mode')).toBe('FOR_ME');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null);
+  });
+
+  it('should subscribe to edits on /topic/conversations/{id}/messages/edited', () => {
+    const callback = vi.fn();
+    service.subscribeToEdits('conv-123', callback);
+
+    expect(webSocketServiceMock.subscribe).toHaveBeenCalledWith(
+      '/topic/conversations/conv-123/messages/edited',
+      callback
+    );
+  });
+
+  it('should subscribe to deletes on /topic/conversations/{id}/messages/deleted', () => {
+    const callback = vi.fn();
+    service.subscribeToDeletes('conv-123', callback);
+
+    expect(webSocketServiceMock.subscribe).toHaveBeenCalledWith(
+      '/topic/conversations/conv-123/messages/deleted',
+      callback
+    );
+  });
 });

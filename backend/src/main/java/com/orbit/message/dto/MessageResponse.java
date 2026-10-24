@@ -34,6 +34,9 @@ public record MessageResponse(
         @Schema(description = "Edited indicator", example = "false")
         boolean edited,
 
+        @Schema(description = "Timestamp when message was edited, or null if unedited")
+        Instant editedAt,
+
         @Schema(description = "Timestamp when message was created")
         Instant createdAt,
 
@@ -43,7 +46,13 @@ public record MessageResponse(
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, createdAt, MessageDeliveryStatus.DELIVERED);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED);
+    }
+
+    public MessageResponse(String id, String conversationId, String senderId, String senderName,
+                           MessageType type, String content, boolean deleted, boolean edited,
+                           Instant createdAt, MessageDeliveryStatus deliveryStatus) {
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus);
     }
 
     public static MessageResponse from(Message message) {
@@ -61,6 +70,7 @@ public record MessageResponse(
                 content,
                 message.isDeleted(),
                 message.isEdited(),
+                message.getEditedAt(),
                 message.getCreatedAt(),
                 deliveryStatus
         );
@@ -81,6 +91,7 @@ public record MessageResponse(
                 content,
                 message.isDeleted(),
                 message.isEdited(),
+                message.getEditedAt(),
                 message.getCreatedAt(),
                 deliveryStatus
         );

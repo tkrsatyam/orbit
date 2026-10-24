@@ -1,8 +1,10 @@
 package com.orbit.message;
 
+import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.SendMessageRequest;
+import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -141,5 +143,72 @@ class MessageControllerTest {
         assertThat(responseEntity.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(responseEntity.getBody()).isEqualTo(expectedHistory);
         verify(messageService).getConversationMessages(conversationId, senderId, 50, "msg-cursor");
+    }
+
+    @Test
+    @DisplayName("REST editMessage delegates to MessageService and returns 200 OK")
+    void shouldEditMessage_AndReturnOk() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        EditMessageRequest editRequest = new EditMessageRequest("Updated content text");
+        MessageResponse editedResponse = new MessageResponse(
+                "msg-1",
+                conversationId,
+                senderId,
+                "Satyam Kumar",
+                MessageType.TEXT,
+                "Updated content text",
+                false,
+                true,
+                Instant.now(),
+                Instant.now(),
+                com.orbit.message.model.MessageDeliveryStatus.DELIVERED
+        );
+
+        when(messageService.editMessage(eq(conversationId), eq("msg-1"), eq(senderId), any(EditMessageRequest.class)))
+                .thenReturn(editedResponse);
+
+        ResponseEntity<MessageResponse> response = messageController.editMessage(
+                conversationId,
+                "msg-1",
+                editRequest,
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isEqualTo(editedResponse);
+        verify(messageService).editMessage(conversationId, "msg-1", senderId, editRequest);
+    }
+
+    @Test
+    @DisplayName("REST deleteMessage with FOR_EVERYONE delegates to MessageService and returns 204 No Content")
+    void shouldDeleteMessageForEveryone_AndReturnNoContent() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        ResponseEntity<Void> response = messageController.deleteMessage(
+                conversationId,
+                "msg-1",
+                MessageDeleteMode.FOR_EVERYONE,
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).deleteMessage(conversationId, "msg-1", senderId, MessageDeleteMode.FOR_EVERYONE);
+    }
+
+    @Test
+    @DisplayName("REST deleteMessage with FOR_ME delegates to MessageService and returns 204 No Content")
+    void shouldDeleteMessageForMe_AndReturnNoContent() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        ResponseEntity<Void> response = messageController.deleteMessage(
+                conversationId,
+                "msg-1",
+                MessageDeleteMode.FOR_ME,
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).deleteMessage(conversationId, "msg-1", senderId, MessageDeleteMode.FOR_ME);
     }
 }
