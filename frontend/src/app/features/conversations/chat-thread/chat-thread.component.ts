@@ -619,14 +619,31 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     }, 50);
   }
 
+  private scrollToBottomIfNearBottom(): void {
+    setTimeout(() => {
+      const viewport = this.messagesScrollContainer?.nativeElement;
+      if (viewport) {
+        const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+        if (distanceFromBottom <= 150) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      }
+    }, 50);
+  }
+
   handleTypingEvent(event: TypingEventPayload): void {
     if (!event || event.userId === this.currentUserId()) {
       return;
     }
 
     if (event.typing) {
+      const wasTyping = this.isPeerTyping();
       this.isPeerTyping.set(true);
       this.typingPeerName.set(event.displayName || this.peerName() || 'Orbit User');
+
+      if (!wasTyping) {
+        this.scrollToBottomIfNearBottom();
+      }
 
       // Flow B: 5-second self-clearing safety net independent of explicit false event
       if (this.typingSafetyTimer) {
