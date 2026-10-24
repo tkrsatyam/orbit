@@ -43,42 +43,42 @@ Identify high-impact issues in the submitted pull request:
 - **DO NOT** comment on missing comments or documentation unless an exported API is completely incomprehensible.
 - **DO NOT** comment on trivial variable or function names unless a name is actively misleading.
 - **DO NOT** restate or narrate what the code does line-by-line. Focus only on actionable issues.
-- If a section contains no issues, simply output: `No major issues identified.`
 
 ## Output Schema
-Produce clean, concise GitHub-flavored markdown adhering to this format:
+You MUST respond strictly with a valid JSON object matching the following structure. Do NOT wrap in conversational prose or markdown formatting outside the JSON object:
 
-### Summary of Changes
-*(Include this section ONLY for initial reviews where `<pr_context>` contains NO previous review feedback or developer comments)*
-Provide a 2-3 sentence technical overview of what this pull request introduces.
+```json
+{
+  "domain": "Backend",
+  "status": "PASS",
+  "summary": "2-3 sentence technical overview of what this pull request introduces. Provide ONLY for initial reviews where <pr_context> contains no prior review feedback; leave as empty string on follow-up reviews.",
+  "reviewOfUpdates": "Direct assessment in prose summarizing verified technical changes in the latest commit, acknowledging resolved items, and noting any remaining concerns. Provide ONLY for follow-up reviews; leave as empty string on initial reviews.",
+  "issues": [
+    {
+      "severity": "[Critical]",
+      "location": "root/.../subpackage/FileName.ext#L123",
+      "description": "Concise explanation of the bug or risk.",
+      "suggestedFix": "Inline backtick code snippet or brief actionable guidance."
+    }
+  ],
+  "verification": {
+    "architecture": "1-2 sentences summarizing verified state transitions, lifecycle handling, and component boundary contracts across the behavioral delta.",
+    "security": "1-2 sentences summarizing verified authentication/authorization checks, thread safety, race condition prevention, and clean resource disposal."
+  }
+}
+```
 
-### Review of Updates
-*(Include this section ONLY for follow-up reviews where `<pr_context>` contains previous review feedback or developer comments)*
-DO NOT repeat the high-level PR summary. Lead directly with this section. Provide a direct, natural assessment in prose:
-1. Summarize the specific technical changes introduced in the latest commit.
-2. Acknowledge items that the author resolved or adequately justified.
-3. Note any previous concerns that remain unaddressed or regressions introduced.
-
-### Issues Identified
-If issues are found, present them in a markdown table:
-
-| Severity | Issue & Location | Suggested Fix |
-|---|---|---|
-| `[Warning]` | `backend/.../websocket/StompHandshakeInterceptor.java#L85`<br>Concise explanation of the bug or risk. | Inline code snippet or brief actionable guidance. |
-
-Table formatting rules:
-- **Location**: Format as `root/.../subpackage/FileName.ext#L123`<br> (e.g. `backend/.../websocket/StompHandshakeInterceptor.java#L85`<br> or `frontend/.../websocket/websocket.service.ts#L189`<br>). Truncate boilerplate middle directories (e.g. `src/main/java/com/orbit/` or `src/app/core/services/`) to `...` and always separate the location from the description with `<br>`.
-- **Severity Criteria**:
-  - `[Critical]`: Definite runtime exceptions, authentication or authorization bypasses, data loss, resource leaks, or build failures.
-  - `[Warning]`: Concurrency hazards, race conditions, memory leaks (such as unmanaged subscriptions), unhandled disconnections, or state corruption under load.
-  - `[Suggestion]`: Defensive coding improvements, architectural idioms, or configuration hardening.
-- **Formatting**: Keep description and suggested fix concise to fit table cells cleanly. Use inline backticks for code symbols (e.g. `try-catch`, `Optional.ofNullable`), never multiline code fences or raw newlines that break markdown table syntax.
-- **No One-Click Suggestion Blocks**: Strictly DO NOT generate GitHub ````suggestion` blocks. One-click suggestions trigger immediate remote commits, cause review storms, and bypass local compiler verification (`javac`, `ng build`) and local test suites (`mvn test`, `ng test`). Provide brief inline code snippets using backticks (e.g. `Optional.ofNullable(...)`) or concise guidance inside table cells.
-
-If no issues are found, DO NOT output a table or a generic one-liner. Instead, output the following verification confirmation:
-
-✅ **No major issues identified.**
-
-### Verification Checklist
-- **Architecture & Protocol Verification**: Verified state transitions, connection lifecycle handling, and component boundary contracts across the behavioral delta.
-- **Security & Concurrency Verification**: Verified authentication/authorization checks, thread safety, race condition prevention, and clean resource disposal.
+Field Requirements and Constraints:
+- **`domain`**: Set to `"Backend"` for backend reviews, or `"Frontend"` for frontend reviews.
+- **`status`**: Must be strictly `"PASS"` (0 issues identified), `"WARNING"` (contains `[Warning]` or `[Suggestion]` issues), or `"FAIL"` (contains `[Critical]` issues).
+- **`summary`**: Used only on initial reviews. Leave as `""` on follow-up reviews.
+- **`reviewOfUpdates`**: Used only on follow-up reviews. Leave as `""` on initial reviews.
+- **`issues`**: Empty array `[]` if no issues are identified. If issues exist, each item must strictly adhere to:
+  - **`location`**: Format as `root/.../subpackage/FileName.ext#L123` (e.g. `backend/.../websocket/StompHandshakeInterceptor.java#L85` or `frontend/.../websocket/websocket.service.ts#L189`). Truncate boilerplate middle directories to `...`.
+  - **`severity`**: Must be strictly one of `"[Critical]"`, `"[Warning]"`, or `"[Suggestion]"`.
+    - `[Critical]`: Definite runtime exceptions, authentication or authorization bypasses, data loss, resource leaks, or build failures.
+    - `[Warning]`: Concurrency hazards, race conditions, memory leaks (such as unmanaged subscriptions), unhandled disconnections, or state corruption under load.
+    - `[Suggestion]`: Defensive coding improvements, architectural idioms, or configuration hardening.
+  - **`description`**: Concise explanation. Use inline backticks for code symbols (e.g. `try-catch`, `Optional.ofNullable`), never multiline code fences or raw newlines.
+  - **`suggestedFix`**: Concise fix or code snippet. Strictly DO NOT generate GitHub ````suggestion` blocks.
+- **`verification`**: Both `architecture` and `security` fields are MANDATORY in every response, confirming the positive architectural and security invariants verified in the code.

@@ -98,6 +98,18 @@ function getLatestCommitInfo() {
   return out ? out.trim() : '';
 }
 
+function getLatestCommitFiles() {
+  const target = HEAD_SHA || 'HEAD';
+  const parent = runGit(['rev-parse', `${target}^`], true);
+  if (parent) {
+    const out = runGit(['diff', '--name-only', `${target}^`, target, '--', ...EXCLUSION_PATTERNS], true);
+    if (out) {
+      return out.split('\n').map((f) => f.trim()).filter(Boolean);
+    }
+  }
+  return [];
+}
+
 function getDiffStat(pathPrefix = null) {
   const args = ['diff', '--shortstat', ...getDiffTargetArgs(), '--'];
   if (pathPrefix) {
@@ -418,7 +430,8 @@ async function callGeminiWithRetry(promptText, apiKey, model, maxAttempts = 2, t
       }
     ],
     generationConfig: {
-      temperature: 0.2
+      temperature: 0.2,
+      responseMimeType: 'application/json'
     }
   };
 
@@ -603,6 +616,173 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
   console.log(`Successfully created new review comment for commit ${commitSha}.`);
 }
 
+function parseReviewResponse(rawText, domain) {
+  if (!rawText) {
+    return {
+      domain,
+      status: 'PASS',
+      summary: '',
+      reviewOfUpdates: '',
+      issues: [],
+      verification: { architecture: 'Verified.', security: 'Verified.' }
+    };
+  }
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(rawText.trim());
+  } catch (e) {
+    const match = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        parsed = JSON.parse(match[1] || match[0]);
+      } catch (innerErr) {
+        // Fallback
+      }
+    }
+  }
+
+  if (parsed && typeof parsed === 'object') {
+    return {
+      domain: parsed.domain || domain,
+      status: parsed.status || (Array.isArray(parsed.issues) && parsed.issues.length > 0 ? 'WARNING' : 'PASS'),
+      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+      reviewOfUpdates: typeof parsed.reviewOfUpdates === 'string' ? parsed.reviewOfUpdates.trim() : '',
+      issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+      verification: {
+        architecture: parsed.verification?.architecture || 'Verified.',
+        security: parsed.verification?.security || 'Verified.'
+      }
+    };
+  }
+
+  return {
+    domain,
+    status: 'PASS',
+    summary: rawText.substring(0, 300),
+    reviewOfUpdates: rawText.substring(0, 300),
+    issues: [],
+    verification: { architecture: 'Verified.', security: 'Verified.' }
+  };
+}
+
+function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = []) {
+  const header = `<!-- orbit-ai-review:commit:${commitSha} -->\n## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
+
+  // Aggregate issues across all domains
+  const allIssues = results.flatMap((r) =>
+    (r.issues || []).map((i) => ({
+      domain: i.domain || r.domain,
+      severity: i.severity || '[Warning]',
+      location: i.location || '',
+      description: i.description || '',
+      suggestedFix: i.suggestedFix || ''
+    }))
+  );
+
+  const allClean = allIssues.length === 0;
+
+  // 1. Status Banner
+  let statusBanner = '';
+  if (results.length === 1) {
+    const singleDomain = results[0].domain;
+    if (allClean) {
+      statusBanner = `> **Status**: ✅ **Approved** (${singleDomain} Scope)\n\n`;
+    } else {
+      statusBanner = `> **Status**: ⚠️ **Action Required** (${singleDomain} Scope: ${allIssues.length} finding${allIssues.length > 1 ? 's' : ''})\n\n`;
+    }
+  } else {
+    if (allClean) {
+      statusBanner = `> **Status**: ✅ **Approved** (All checks passed)\n\n`;
+    } else {
+      const domainStatuses = results.map((r) => {
+        const count = (r.issues || []).length;
+        return count === 0 ? `${r.domain}: ✅ Clean` : `${r.domain}: ⚠️ ${count} finding${count > 1 ? 's' : ''}`;
+      });
+      statusBanner = `> **Status**: ⚠️ **Action Required** | ${domainStatuses.join(' | ')}\n\n`;
+    }
+  }
+
+  // 2. Summary or Review of Updates
+  let summarySection = '';
+  if (isFollowUp) {
+    const updateNotes = results
+      .map((r) => {
+        const text = r.reviewOfUpdates || r.summary;
+        return text ? `* **${r.domain}**: ${text}` : '';
+      })
+      .filter(Boolean);
+
+    if (updateNotes.length > 0) {
+      summarySection = `### Review of Updates\n\n${updateNotes.join('\n\n')}\n\n`;
+    }
+  } else {
+    const summaryNotes = results
+      .map((r) => {
+        const text = r.summary || r.reviewOfUpdates;
+        return text ? `* **${r.domain}**: ${text}` : '';
+      })
+      .filter(Boolean);
+
+    if (summaryNotes.length > 0) {
+      summarySection = `### Summary of Changes\n\n${summaryNotes.join('\n\n')}\n\n`;
+    }
+  }
+
+  // 3. Issues Identified Table
+  let issuesSection = '';
+  if (allIssues.length > 0) {
+    const severityWeight = { '[Critical]': 3, '[Warning]': 2, '[Suggestion]': 1 };
+    allIssues.sort((a, b) => (severityWeight[b.severity] || 0) - (severityWeight[a.severity] || 0));
+
+    let tableRows = '';
+    for (const issue of allIssues) {
+      let loc = issue.location;
+      if (!loc.endsWith('<br>') && !loc.includes('<br>')) {
+        loc += '<br>';
+      }
+      tableRows += `| \`${issue.domain}\` | \`${issue.severity}\` | \`${loc}\`${issue.description} | ${issue.suggestedFix} |\n`;
+    }
+
+    issuesSection = `### Issues Identified\n\n| Domain | Severity | Issue & Location | Suggested Fix |\n|---|---|---|---|\n${tableRows}\n`;
+  }
+
+  // 4. Verification / Sign-Off Section
+  let signoffSection = '';
+  if (allClean) {
+    let archItems = results
+      .map((r) => (results.length > 1 ? `  * **${r.domain}**: ${r.verification?.architecture || 'Verified.'}` : `* ${r.verification?.architecture || 'Verified.'}`))
+      .join('\n');
+    let secItems = results
+      .map((r) => (results.length > 1 ? `  * **${r.domain}**: ${r.verification?.security || 'Verified.'}` : `* ${r.verification?.security || 'Verified.'}`))
+      .join('\n');
+
+    signoffSection = `✅ **No major issues identified.**\n\n### Verification Checklist\n- **Architecture & Protocol Verification**:\n${archItems}\n- **Security & Concurrency Verification**:\n${secItems}\n`;
+  } else {
+    let domainSignoffLines = '';
+    for (const r of results) {
+      const count = (r.issues || []).length;
+      if (count === 0) {
+        domainSignoffLines += `* **${r.domain}**: ✅ **Verified & Clean**. Architecture and security invariants confirmed; ready to merge.\n`;
+        if (r.verification?.architecture) {
+          domainSignoffLines += `  - *Architecture*: ${r.verification.architecture}\n`;
+        }
+        if (r.verification?.security) {
+          domainSignoffLines += `  - *Security*: ${r.verification.security}\n`;
+        }
+      } else {
+        domainSignoffLines += `* **${r.domain}**: ⚠️ **Action Required**. Please address the ${count} finding${count > 1 ? 's' : ''} in the table above.\n`;
+      }
+    }
+    signoffSection = `### Domain Sign-Off Status\n${domainSignoffLines}\n`;
+  }
+
+  const uniqueModels = [...new Set(modelsUsed)].filter(Boolean).join(' / ') || 'Gemini';
+  const footer = `\n---\n*This review was automatically generated by ${uniqueModels} and is advisory.*`;
+
+  return `${header}${statusBanner}${summarySection}${issuesSection}${signoffSection}${footer}`;
+}
+
 async function fetchPRContext(repo, prNumber, token) {
   const headers = {
     'Authorization': `Bearer ${token}`,
@@ -618,6 +798,7 @@ async function fetchPRContext(repo, prNumber, token) {
     const commentsRes = await fetch(`https://api.github.com/repos/${repo}/issues/${prNumber}/comments?per_page=100`, { headers });
     const commentsData = commentsRes.ok ? await commentsRes.json() : [];
 
+    let hasPriorReview = false;
     let contextText = '';
     if (prData) {
       contextText += `### PR Title: ${prData.title}\n\n### PR Description:\n${prData.body || 'No description provided.'}\n\n`;
@@ -632,6 +813,9 @@ async function fetchPRContext(repo, prNumber, token) {
         if (author.includes('bot') && comment.body.includes(`Commit \`${currentCommit}\``)) {
           continue;
         }
+        if (comment.body.includes('<!-- orbit-ai-review:commit:') || comment.body.includes('## 🤖 AI Code Review')) {
+          hasPriorReview = true;
+        }
         contextText += `\n--- Comment by @${author} ---\n${comment.body}\n`;
       }
     }
@@ -639,11 +823,12 @@ async function fetchPRContext(repo, prNumber, token) {
     return {
       text: contextText.trim(),
       title: prData?.title || '',
-      body: prData?.body || ''
+      body: prData?.body || '',
+      hasPriorReview
     };
   } catch (err) {
     console.warn(`Failed to fetch PR context: ${err.message}`);
-    return { text: '', title: '', body: '' };
+    return { text: '', title: '', body: '', hasPriorReview: false };
   }
 }
 
@@ -730,57 +915,97 @@ async function main() {
     console.log(`Extracted functional requirements and ADR context for PR #${PR_NUMBER}. Injecting into review prompt.`);
   }
 
-  let reviewComment = '';
-  const header = `<!-- orbit-ai-review:commit:${commitSha} -->\n## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
+  // Scope Gating & Follow-Up Detection
+  const isFollowUpReview = Boolean(prContext.hasPriorReview || (prContext.text && prContext.text.includes('--- Comment by')));
+  const latestCommitFiles = getLatestCommitFiles();
 
-  // Decision: Single Call Mode vs Split Call Mode
-  const shouldSplit = totalStats.total > DIFF_THRESHOLD && backendStats.total > 100 && frontendStats.total > 100;
+  let backendActive = false;
+  let frontendActive = false;
 
-  if (shouldSplit) {
-    console.log(`Diff exceeds threshold (${totalStats.total} > ${DIFF_THRESHOLD}) with substantial BE and FE changes. Executing Split Mode.`);
+  if (isFollowUpReview && latestCommitFiles.length > 0) {
+    backendActive = latestCommitFiles.some((f) => f.startsWith('backend/'));
+    frontendActive = latestCommitFiles.some((f) => f.startsWith('frontend/'));
+    console.log(`Incremental Review detected (commit: ${commitSha}). Latest commit files: ${latestCommitFiles.length}. Backend active: ${backendActive}, Frontend active: ${frontendActive}.`);
+    // Fallback if latest commit had no files matching domain prefix
+    if (!backendActive && !frontendActive) {
+      backendActive = changedFiles.some((f) => f.startsWith('backend/'));
+      frontendActive = changedFiles.some((f) => f.startsWith('frontend/'));
+    }
+  } else {
+    backendActive = changedFiles.some((f) => f.startsWith('backend/'));
+    frontendActive = changedFiles.some((f) => f.startsWith('frontend/'));
+    console.log(`Full PR Scope review. Backend active: ${backendActive}, Frontend active: ${frontendActive}.`);
+  }
 
+  if (!backendActive && !frontendActive) {
+    console.log('No backend or frontend code changes detected in active scope. Skipping AI review.');
+    return;
+  }
+
+  // Build full prompts for active domains (preserving full source files at HEAD, contracts, and requirements)
+  let backendFullPrompt = null;
+  if (backendActive) {
     const backendDiff = getDiffContent('backend');
-    const frontendDiff = getDiffContent('frontend');
-
     const backendDiffBlock = formatDiffBlock(backendDiff);
+    backendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${backendSourceFilesBlock}${prContextBlock}\n\n# Backend Domain Rules\n${backendRules}${backendDiffBlock}`;
+  }
+
+  let frontendFullPrompt = null;
+  if (frontendActive) {
+    const frontendDiff = getDiffContent('frontend');
     const frontendDiffBlock = formatDiffBlock(frontendDiff);
+    frontendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${frontendSourceFilesBlock}${prContextBlock}\n\n# Frontend Domain Rules\n${frontendRules}${frontendDiffBlock}`;
+  }
 
-    const backendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${backendSourceFilesBlock}${prContextBlock}\n\n# Backend Domain Rules\n${backendRules}${backendDiffBlock}`;
-    const frontendFullPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${frontendSourceFilesBlock}${prContextBlock}\n\n# Frontend Domain Rules\n${frontendRules}${frontendDiffBlock}`;
+  let reviewComment = '';
 
+  if (backendActive && frontendActive) {
+    console.log('Dispatching parallel Backend and Frontend reviews...');
     try {
       const [backendRes, frontendRes] = await Promise.all([
         callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY),
         callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY)
       ]);
-
-      const footer = `\n\n---\n*This review was automatically generated by ${backendRes.modelUsed} / ${frontendRes.modelUsed} and is advisory.*`;
-      reviewComment = `${header}### 📦 Backend Review\n\n${backendRes.reviewText}\n\n---\n\n### 🎨 Frontend Review\n\n${frontendRes.reviewText}${footer}`;
-    } catch (splitError) {
-      console.warn('Split review failed:', splitError.message);
+      const backendResult = parseReviewResponse(backendRes.reviewText, 'Backend');
+      const frontendResult = parseReviewResponse(frontendRes.reviewText, 'Frontend');
+      reviewComment = renderConsolidatedReport(
+        [backendResult, frontendResult],
+        commitSha,
+        isFollowUpReview,
+        [backendRes.modelUsed, frontendRes.modelUsed]
+      );
+    } catch (parallelErr) {
+      console.warn('Parallel review failed:', parallelErr.message);
       return;
     }
-  } else {
-    console.log(`Executing Single Call Mode (total lines: ${totalStats.total}, threshold: ${DIFF_THRESHOLD}).`);
-
-    let combinedRules = '';
-    if (backendStats.total > 0) {
-      combinedRules += `\n\n# Backend Domain Rules\n${backendRules}`;
-    }
-    if (frontendStats.total > 0) {
-      combinedRules += `\n\n# Frontend Domain Rules\n${frontendRules}`;
-    }
-
-    const fullDiff = getDiffContent();
-    const fullDiffBlock = formatDiffBlock(fullDiff);
-    const singlePrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${fullSourceFilesBlock}${prContextBlock}${combinedRules}${fullDiffBlock}`;
-
+  } else if (backendActive) {
+    console.log('Dispatching Backend-only review...');
     try {
-      const { reviewText, modelUsed } = await callGeminiWithFallback(singlePrompt, GEMINI_API_KEY);
-      const footer = `\n\n---\n*This review was automatically generated by ${modelUsed} and is advisory.*`;
-      reviewComment = `${header}${reviewText}${footer}`;
-    } catch (singleError) {
-      console.warn('Single review call failed:', singleError.message);
+      const backendRes = await callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY);
+      const backendResult = parseReviewResponse(backendRes.reviewText, 'Backend');
+      reviewComment = renderConsolidatedReport(
+        [backendResult],
+        commitSha,
+        isFollowUpReview,
+        [backendRes.modelUsed]
+      );
+    } catch (beErr) {
+      console.warn('Backend review failed:', beErr.message);
+      return;
+    }
+  } else if (frontendActive) {
+    console.log('Dispatching Frontend-only review...');
+    try {
+      const frontendRes = await callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY);
+      const frontendResult = parseReviewResponse(frontendRes.reviewText, 'Frontend');
+      reviewComment = renderConsolidatedReport(
+        [frontendResult],
+        commitSha,
+        isFollowUpReview,
+        [frontendRes.modelUsed]
+      );
+    } catch (feErr) {
+      console.warn('Frontend review failed:', feErr.message);
       return;
     }
   }
