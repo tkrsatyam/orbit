@@ -30,6 +30,13 @@ export const routes: Routes = [
           )
       },
       {
+        path: 'conversations/:id',
+        loadComponent: () =>
+          import('./features/conversations/chat-thread/chat-thread.component').then(
+            (m) => m.ChatThreadComponent
+          )
+      },
+      {
         path: 'groups/:id',
         loadComponent: () => import('./features/group/group.component').then((m) => m.GroupComponent)
       },

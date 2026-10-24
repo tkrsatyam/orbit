@@ -152,6 +152,97 @@
   cursor: pointer;
 }
 
+.chat-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+
+  &:hover {
+    background-color: var(--orbit-elevated, #27272a);
+  }
+
+  &.active {
+    background-color: var(--orbit-elevated, #27272a);
+    border-left: 3px solid var(--orbit-accent, #f59e0b);
+  }
+}
+
+.chat-item-avatar {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  color: var(--orbit-text-primary, #ededef);
+  font-size: 0.875rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  .online-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background-color: #22c55e;
+    border: 2px solid var(--orbit-surface, #18181b);
+  }
+}
+
+.chat-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chat-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-item-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--orbit-text-primary, #ededef);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chat-item-status {
+  font-size: 0.6875rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+
+  &.online {
+    color: #22c55e;
+  }
+}
+
+.chat-item-bottom {
+  display: flex;
+  align-items: center;
+}
+
+.chat-item-preview {
+  font-size: 0.75rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .group-list-item {
   display: flex;
   align-items: center;
@@ -418,5 +509,37 @@
   100% {
     transform: scale(0.9);
     opacity: 0.6;
+  }
+}
+
+// ----------------------------------------------------
+// 4. Mobile Responsive Parity (390x844) per Penpot
+// ----------------------------------------------------
+@media (max-width: 768px) {
+  .orbit-workstation-layout {
+    app-navigation-rail {
+      display: none;
+    }
+
+    .workstation-sidebar {
+      width: 100%;
+      min-width: 100%;
+    }
+
+    .workstation-main {
+      display: none;
+    }
+
+    &.has-active-chat {
+      .workstation-sidebar {
+        display: none;
+      }
+
+      .workstation-main {
+        display: block;
+        width: 100%;
+        min-width: 100%;
+      }
+    }
   }
 }
