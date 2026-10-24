@@ -23,9 +23,14 @@ const DIFF_THRESHOLD = parseInt(process.env.DIFF_THRESHOLD || '2000', 10);
 const DEFAULT_MODEL_CHAIN = [
   'gemini-3.8-flash',
   'gemini-3.6-flash',
+  'gemini-3-flash-preview',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite'
 ];
+
+function isLiteModel(modelName) {
+  return typeof modelName === 'string' && (modelName.includes('flash-lite') || modelName.includes('-lite'));
+}
 
 const MODEL_CHAIN = process.env.GEMINI_MODELS
   ? process.env.GEMINI_MODELS.split(',').map((m) => m.trim()).filter(Boolean)
@@ -467,12 +472,17 @@ async function callGeminiWithRetry(promptText, apiKey, model, maxAttempts = 2, t
       const errorText = await response.text();
       lastError = new Error(`Gemini API error (status ${status}): ${errorText}`);
 
-      // Retry on 429 (Rate Limit) and 503 (High Demand / Unavailable)
-      if (status === 429 || status === 503) {
+      // Immediate fallback on 429; retry with backoff only on 503
+      if (status === 429) {
+        console.warn(`Model ${model} hit rate limit (HTTP 429). Advancing immediately to next model in fallback chain.`);
+        throw lastError;
+      }
+
+      if (status === 503) {
         if (attempt < maxAttempts) {
           const jitter = Math.floor(Math.random() * 800);
           const delayMs = Math.pow(2, attempt) * 2000 + jitter;
-          console.warn(`Encountered HTTP ${status}. Retrying in ${delayMs}ms...`);
+          console.warn(`Encountered HTTP 503 on ${model}. Retrying in ${delayMs}ms...`);
           await sleep(delayMs);
           continue;
         }
@@ -669,6 +679,8 @@ function parseReviewResponse(rawText, domain) {
 function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = []) {
   const header = `<!-- orbit-ai-review:commit:${commitSha} -->\n## 🤖 AI Code Review | Commit \`${commitSha}\`\n\n`;
 
+  const usedLiteModels = [...new Set(modelsUsed.filter(isLiteModel))];
+
   // Aggregate issues across all domains
   const allIssues = results.flatMap((r) =>
     (r.issues || []).map((i) => ({
@@ -682,24 +694,34 @@ function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = [
 
   const allClean = allIssues.length === 0;
 
-  // 1. Status Banner
+  // 1. Status Banner (Merged - single notification source)
   let statusBanner = '';
   if (results.length === 1) {
     const singleDomain = results[0].domain;
     if (allClean) {
-      statusBanner = `> **Status**: ✅ **Approved** (${singleDomain} Scope)\n\n`;
+      if (usedLiteModels.length > 0) {
+        statusBanner = `> **Status**: ⚠️ **Provisional Approval** (${singleDomain} Scope — Evaluated by lightweight fallback \`${usedLiteModels.join(', ')}\` due to primary model rate limits; manual verification recommended)\n\n`;
+      } else {
+        statusBanner = `> **Status**: ✅ **Approved** (${singleDomain} Scope)\n\n`;
+      }
     } else {
-      statusBanner = `> **Status**: ⚠️ **Action Required** (${singleDomain} Scope: ${allIssues.length} finding${allIssues.length > 1 ? 's' : ''})\n\n`;
+      const liteSuffix = usedLiteModels.length > 0 ? ` — Fallback: \`${usedLiteModels.join(', ')}\`` : '';
+      statusBanner = `> **Status**: ⚠️ **Action Required** (${singleDomain} Scope: ${allIssues.length} finding${allIssues.length > 1 ? 's' : ''}${liteSuffix})\n\n`;
     }
   } else {
     if (allClean) {
-      statusBanner = `> **Status**: ✅ **Approved** (All checks passed)\n\n`;
+      if (usedLiteModels.length > 0) {
+        statusBanner = `> **Status**: ⚠️ **Provisional Approval** (Evaluated by lightweight fallback \`${usedLiteModels.join(', ')}\` due to primary model rate limits; manual verification recommended)\n\n`;
+      } else {
+        statusBanner = `> **Status**: ✅ **Approved** (All checks passed)\n\n`;
+      }
     } else {
       const domainStatuses = results.map((r) => {
         const count = (r.issues || []).length;
         return count === 0 ? `${r.domain}: ✅ Clean` : `${r.domain}: ⚠️ ${count} finding${count > 1 ? 's' : ''}`;
       });
-      statusBanner = `> **Status**: ⚠️ **Action Required** | ${domainStatuses.join(' | ')}\n\n`;
+      const liteSuffix = usedLiteModels.length > 0 ? ` — Fallback: \`${usedLiteModels.join(', ')}\`` : '';
+      statusBanner = `> **Status**: ⚠️ **Action Required** | ${domainStatuses.join(' | ')}${liteSuffix}\n\n`;
     }
   }
 
@@ -737,11 +759,21 @@ function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = [
 
     let tableRows = '';
     for (const issue of allIssues) {
-      let loc = issue.location;
-      if (!loc.endsWith('<br>') && !loc.includes('<br>')) {
-        loc += '<br>';
-      }
-      tableRows += `| \`${issue.domain}\` | \`${issue.severity}\` | \`${loc}\`${issue.description} | ${issue.suggestedFix} |\n`;
+      const cleanLoc = (issue.location || '')
+        .trim()
+        .replace(/^`+|`+$/g, '')
+        .replace(/<br\s*\/?>/gi, '')
+        .trim();
+      const cleanDesc = (issue.description || '')
+        .trim()
+        .replace(/\r?\n/g, ' ')
+        .replace(/\|/g, '\\|');
+      const cleanFix = (issue.suggestedFix || '')
+        .trim()
+        .replace(/\r?\n/g, ' ')
+        .replace(/\|/g, '\\|');
+      const locFormatted = cleanLoc ? `\`${cleanLoc}\`<br>` : '';
+      tableRows += `| \`${issue.domain}\` | \`${issue.severity}\` | ${locFormatted}${cleanDesc} | ${cleanFix} |\n`;
     }
 
     issuesSection = `### Issues Identified\n\n| Domain | Severity | Issue & Location | Suggested Fix |\n|---|---|---|---|\n${tableRows}\n`;
@@ -785,7 +817,7 @@ function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = [
   const uniqueModels = [...new Set(modelsUsed)].filter(Boolean).join(' / ') || 'Gemini';
   const footer = `\n---\n*This review was automatically generated by ${uniqueModels} and is advisory.*`;
 
-  return `${header}${statusBanner}${summarySection}${issuesSection}${signoffSection}${footer}`;
+  return sanitizeReviewMarkdown(`${header}${statusBanner}${summarySection}${issuesSection}${signoffSection}${footer}`);
 }
 
 async function fetchPRContext(repo, prNumber, token) {
@@ -965,12 +997,12 @@ async function main() {
   let reviewComment = '';
 
   if (backendActive && frontendActive) {
-    console.log('Dispatching parallel Backend and Frontend reviews...');
+    console.log('Dispatching staggered Backend and Frontend reviews...');
     try {
-      const [backendRes, frontendRes] = await Promise.all([
-        callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY),
-        callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY)
-      ]);
+      const backendPromise = callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY);
+      await sleep(1500);
+      const frontendPromise = callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY);
+      const [backendRes, frontendRes] = await Promise.all([backendPromise, frontendPromise]);
       const backendResult = parseReviewResponse(backendRes.reviewText, 'Backend');
       const frontendResult = parseReviewResponse(frontendRes.reviewText, 'Frontend');
       reviewComment = renderConsolidatedReport(
