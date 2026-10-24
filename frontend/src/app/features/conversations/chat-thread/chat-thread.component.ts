@@ -59,15 +59,17 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       }
     });
 
-    this.route.queryParamMap.subscribe(queryParams => {
-      const pName = queryParams.get('peerName');
-      const pId = queryParams.get('peerId');
-      if (pName) this.peerName.set(pName);
-      if (pId) {
-        this.peerId.set(pId);
-        this.checkBlockStatus(pId);
-      }
-    });
+    this.routeSub.add(
+      this.route.queryParamMap.subscribe(queryParams => {
+        const pName = queryParams.get('peerName');
+        const pId = queryParams.get('peerId');
+        if (pName) this.peerName.set(pName);
+        if (pId) {
+          this.peerId.set(pId);
+          this.checkBlockStatus(pId);
+        }
+      })
+    );
   }
 
   ngOnDestroy(): void {

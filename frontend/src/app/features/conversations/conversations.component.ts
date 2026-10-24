@@ -1,6 +1,6 @@
-import { Component, computed, ElementRef, HostListener, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
-import { filter } from 'rxjs';
+import { filter, Subscription } from 'rxjs';
 import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
@@ -20,7 +20,7 @@ import { parseTopicTags } from '../../shared/utils/tag-utils';
   templateUrl: './conversations.component.html',
   styleUrl: './conversations.component.scss'
 })
-export class ConversationsComponent implements OnInit {
+export class ConversationsComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
   private readonly elementRef = inject(ElementRef);
@@ -28,6 +28,8 @@ export class ConversationsComponent implements OnInit {
   readonly contactService = inject(ContactService);
   readonly groupService = inject(GroupService);
   readonly webSocketService = inject(WebSocketService);
+
+  private routerSub?: Subscription;
 
   readonly isMenuOpen = signal<boolean>(false);
   readonly isProfileOpen = signal<boolean>(false);
@@ -70,7 +72,7 @@ export class ConversationsComponent implements OnInit {
     this.syncRouteState();
     this.webSocketService.connect();
 
-    this.router.events
+    this.routerSub = this.router.events
       .pipe(filter((event): event is NavigationEnd => event instanceof NavigationEnd))
       .subscribe(() => {
         this.syncRouteState();
@@ -93,6 +95,10 @@ export class ConversationsComponent implements OnInit {
         // Silently handle initial load failure
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    this.routerSub?.unsubscribe();
   }
 
   syncRouteState(): void {
