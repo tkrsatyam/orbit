@@ -3,6 +3,19 @@
   <header class="group-top-bar">
     @if (group()) {
       <div class="header-group-summary">
+        <button
+          type="button"
+          class="btn-mobile-back"
+          (click)="navigateBack()"
+          aria-label="Back to conversations"
+          data-testid="group-mobile-back-btn"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="19" y1="12" x2="5" y2="12" />
+            <polyline points="12 19 5 12 12 5" />
+          </svg>
+        </button>
+
         <div class="group-avatar" aria-hidden="true">
           <span>{{ group()!.name.charAt(0).toUpperCase() }}</span>
         </div>
@@ -125,18 +138,142 @@
           </div>
         }
 
-        <!-- Placeholder Chat Feed (Phase 2 Ready) -->
-        <div class="chat-placeholder-feed" data-testid="chat-placeholder-feed">
-          <div class="feed-welcome">
-            <div class="welcome-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        <!-- Group Message Feed (ORDM-52, ORDM-53) -->
+        <div
+          class="group-messages-viewport"
+          #messagesScroll
+          (scroll)="onScroll()"
+          data-testid="group-messages-viewport"
+        >
+          @if (isLoadingOlder()) {
+            <div class="loading-older-indicator" data-testid="loading-older-indicator">
+              <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
               </svg>
+              <span>Loading older messages...</span>
             </div>
-            <h3>Welcome to {{ group()!.name }}</h3>
-            <p>This is the start of the {{ group()!.name }} group discussion.</p>
-          </div>
+          } @else if (hasMore()) {
+            <div class="load-older-banner">
+              <button
+                type="button"
+                class="btn-load-older"
+                (click)="loadOlderMessages()"
+                data-testid="load-older-btn"
+              >
+                Load older messages
+              </button>
+            </div>
+          }
+
+          @if (isLoadingInitial()) {
+            <div class="group-loading-state" data-testid="group-chat-loading">
+              <div class="spinner" aria-hidden="true"></div>
+              <p>Loading messages...</p>
+            </div>
+          } @else if (messages().length === 0) {
+            <div class="group-empty-state" data-testid="group-chat-empty">
+              <div class="empty-icon-circle">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <h3>Welcome to {{ group()!.name }}</h3>
+              <p>This is the start of the {{ group()!.name }} group discussion. Send a message to start the conversation.</p>
+            </div>
+          } @else {
+            <div class="group-messages-stream" data-testid="group-messages-stream">
+              @for (msg of messages(); track msg.id) {
+                <div
+                  class="group-message-row"
+                  [class.outgoing]="msg.senderId === currentUserId()"
+                  [class.incoming]="msg.senderId !== currentUserId()"
+                  [attr.data-testid]="'message-row-' + msg.id"
+                >
+                  @if (msg.senderId !== currentUserId()) {
+                    <div class="incoming-avatar" aria-hidden="true">
+                      <span>{{ (msg.senderName || 'U').charAt(0).toUpperCase() }}</span>
+                    </div>
+
+                    <div class="incoming-bubble-group">
+                      <div class="sender-name-label" data-testid="message-sender-name">
+                        {{ msg.senderName || 'Orbit User' }}
+                        @if (isGroupAdmin(msg.senderId)) {
+                          <span class="admin-badge">Admin</span>
+                        }
+                      </div>
+
+                      <div class="group-message-bubble incoming" [attr.data-testid]="'message-bubble-' + msg.id">
+                        <div class="bubble-text">{{ msg.content }}</div>
+                        <div class="bubble-meta">
+                          @if (msg.edited && !msg.deleted) {
+                            <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                          }
+                          <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  } @else {
+                    <div
+                      class="group-message-bubble outgoing"
+                      [class.failed]="msg.deliveryStatus === 'FAILED'"
+                      [attr.data-testid]="'message-bubble-' + msg.id"
+                    >
+                      <div class="bubble-text">{{ msg.content }}</div>
+                      <div class="bubble-meta">
+                        @if (msg.edited && !msg.deleted) {
+                          <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                        }
+                        <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
+                        @if (msg.deliveryStatus === 'SENDING') {
+                          <span class="status-indicator-sending" title="Sending...">•</span>
+                        } @else if (msg.deliveryStatus === 'FAILED') {
+                          <span class="status-indicator-failed" title="Failed to deliver">!</span>
+                        } @else {
+                          <span class="status-receipt-icon" title="Delivered">
+                            <svg class="check-icon single-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          </span>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          }
         </div>
+
+        <!-- Group Composer -->
+        <footer class="group-composer-container" data-testid="group-composer">
+          <div class="composer-inner-wrapper">
+            <textarea
+              #composerTextarea
+              class="composer-textarea"
+              rows="1"
+              [placeholder]="'Message #' + group()!.name + '...'"
+              [(ngModel)]="messageInput"
+              (keydown)="onKeydown($event)"
+              data-testid="group-message-input"
+              aria-label="Group message text"
+            ></textarea>
+
+            <button
+              type="button"
+              class="btn-composer-send"
+              (click)="sendMessage()"
+              [disabled]="!messageInput().trim() || isSending()"
+              data-testid="group-send-btn"
+              aria-label="Send message"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13" />
+                <polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+              <span>Send</span>
+            </button>
+          </div>
+        </footer>
       }
     </main>
 

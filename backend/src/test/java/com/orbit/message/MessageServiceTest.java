@@ -51,9 +51,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -908,5 +910,126 @@ class MessageServiceTest {
 
         assertThatThrownBy(() -> messageService.markMessageAsRead(conversationId, "msg-read-1", "user-stranger"))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    @DisplayName("sendMessage in GROUP conversation bypasses block check, updates lastMessage, notifies all group members, and publishes to Kafka (P1-28)")
+    void sendMessage_WhenGroupConversation_BypassesBlockCheckAndNotifiesAllRecipients() {
+        when(rateLimiter.tryConsume(anyString(), anyInt())).thenReturn(ConsumptionResult.success());
+        String recipient2 = "user-member-3";
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.GROUP)
+                .groupId("group-test-1")
+                .participantIds(List.of(senderId, recipientId, recipient2))
+                .build();
+
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(userRepository.findById(senderId)).thenReturn(Optional.of(
+                User.builder().id(senderId).displayName("Alice Builder").build()
+        ));
+
+        Message savedMsg = Message.builder()
+                .id("msg-group-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .senderName("Alice Builder")
+                .type(MessageType.TEXT)
+                .content("Welcome to group discussion!")
+                .createdAt(Instant.now())
+                .build();
+        when(messageRepository.save(any(Message.class))).thenReturn(savedMsg);
+
+        SendMessageRequest request = new SendMessageRequest("Welcome to group discussion!", MessageType.TEXT, "idemp-group-1");
+        MessageResponse response = messageService.sendMessage(conversationId, senderId, request);
+
+        assertThat(response.id()).isEqualTo("msg-group-1");
+        assertThat(response.content()).isEqualTo("Welcome to group discussion!");
+        assertThat(response.senderName()).isEqualTo("Alice Builder");
+
+        // Divergence from 1:1: Block check is strictly bypassed for GROUP conversations (ADR 007)
+        verify(contactService, never()).isBlockedBy(any(), any());
+
+        // Notifications incremented in bulk for all recipients except sender (O(1) round-trip)
+        verify(notificationRepository).incrementUnreadCounts(argThat(list -> list.containsAll(List.of(recipientId, recipient2)) && list.size() == 2), eq(conversationId));
+        verify(notificationRepository, never()).incrementUnreadCount(anyString(), anyString());
+
+        // Kafka fan-out published with all group recipients
+        ArgumentCaptor<com.orbit.message.kafka.MessageDeliveryEvent> captor = ArgumentCaptor.forClass(com.orbit.message.kafka.MessageDeliveryEvent.class);
+        verify(kafkaMessageProducer).publishMessage(captor.capture());
+        com.orbit.message.kafka.MessageDeliveryEvent publishedEvent = captor.getValue();
+        assertThat(publishedEvent.conversationId()).isEqualTo(conversationId);
+        assertThat(publishedEvent.senderId()).isEqualTo(senderId);
+        assertThat(publishedEvent.recipientIds()).containsExactlyInAnyOrder(recipientId, recipient2);
+
+        // Conversation snapshot updated
+        verify(conversationRepository).save(conversation);
+        assertThat(conversation.getLastMessage()).isNotNull();
+        assertThat(conversation.getLastMessage().getContent()).isEqualTo("Welcome to group discussion!");
+        assertThat(conversation.getLastMessage().getSenderName()).isEqualTo("Alice Builder");
+    }
+
+    @Test
+    @DisplayName("getConversationMessages in GROUP conversation returns messages in chronological order with cursor (P1-29)")
+    void getConversationMessages_WhenGroupConversation_ReturnsChronologicalMessages() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.GROUP)
+                .groupId("group-test-1")
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Instant now = Instant.now();
+        Message msg1 = Message.builder().id("msg-g1").conversationId(conversationId).senderId(senderId).senderName("Alice").content("First").createdAt(now.minusSeconds(10)).build();
+        Message msg2 = Message.builder().id("msg-g2").conversationId(conversationId).senderId(recipientId).senderName("Bob").content("Second").createdAt(now.minusSeconds(5)).build();
+
+        when(messageRepository.findByConversationIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any()))
+                .thenReturn(List.of(msg2, msg1));
+        when(blockedMessageRepository.findByConversationIdAndSenderIdAndNotDeletedForOrderByCreatedAtDesc(eq(conversationId), eq(senderId), any()))
+                .thenReturn(List.of());
+
+        MessageHistoryResponse history = messageService.getConversationMessages(conversationId, senderId, 50, null);
+
+        assertThat(history.content()).hasSize(2);
+        // Returned in chronological order (oldest first)
+        assertThat(history.content().get(0).id()).isEqualTo("msg-g1");
+        assertThat(history.content().get(1).id()).isEqualTo("msg-g2");
+        assertThat(history.hasMore()).isFalse();
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead marks multiple messages in bulk and publishes read events")
+    void markMessagesAsRead_MarksAllAndPublishesEvents() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message msg1 = Message.builder()
+                .id("m1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .readBy(new ArrayList<>())
+                .build();
+        Message msg2 = Message.builder()
+                .id("m2")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .readBy(new ArrayList<>())
+                .build();
+        when(messageRepository.findAllById(List.of("m1", "m2"))).thenReturn(List.of(msg1, msg2));
+
+        messageService.markMessagesAsRead(conversationId, List.of("m1", "m2"), senderId);
+
+        verify(notificationRepository).markConversationAsRead(senderId, conversationId);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<Message>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(messageRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).containsExactlyInAnyOrder(msg1, msg2);
+
+        verify(kafkaMessageProducer, times(2)).publishMessageRead(any());
     }
 }

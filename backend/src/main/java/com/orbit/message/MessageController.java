@@ -1,5 +1,6 @@
 package com.orbit.message;
 
+import com.orbit.message.dto.BatchReadRequest;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
@@ -194,6 +195,28 @@ public class MessageController {
 
         String currentUserId = authentication.getName();
         messageService.markMessageAsRead(conversationId, messageId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * REST endpoint for marking multiple messages as read in bulk.
+     * Prevents N-request performance hazards during conversation load or high-volume incoming streams.
+     */
+    @Operation(summary = "Mark messages as read in bulk", description = "Marks multiple messages as read by the authenticated user in a single request.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Messages marked as read successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not a conversation participant"),
+            @ApiResponse(responseCode = "404", description = "Conversation not found")
+    })
+    @PostMapping("/api/v1/conversations/{id}/messages/read-batch")
+    public ResponseEntity<Void> markMessagesAsReadBatch(
+            @PathVariable("id") String conversationId,
+            @RequestBody @Valid BatchReadRequest request,
+            Authentication authentication) {
+
+        String currentUserId = authentication.getName();
+        messageService.markMessagesAsRead(conversationId, request.messageIds(), currentUserId);
         return ResponseEntity.noContent().build();
     }
 

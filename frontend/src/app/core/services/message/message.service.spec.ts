@@ -279,6 +279,18 @@ describe('MessageService', () => {
     req.flush(null);
   });
 
+  it('should mark messages as read in bulk via REST read-batch endpoint', () => {
+    service.markMessagesAsRead('conv-123', ['msg-1', 'msg-2']).subscribe();
+
+    const req = httpTesting.expectOne(
+      `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/read-batch`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ messageIds: ['msg-1', 'msg-2'] });
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null);
+  });
+
   it('should subscribe to read receipts on /topic/conversations/{id}/read', () => {
     const callback = vi.fn();
     service.subscribeToReadReceipts('conv-123', callback);

@@ -180,7 +180,9 @@ export class ConversationsComponent implements OnInit, OnDestroy {
                 senderDisplayName: msg.senderName,
                 sentAt: msg.createdAt
               });
-              if (this.activeConversationId() !== c.id && msg.senderId !== this.authService.currentUser()?.id) {
+              const isGroupActive = c.type === 'GROUP' && c.group?.id === this.activeGroupId();
+              const isConvActive = this.activeConversationId() === c.id || isGroupActive;
+              if (!isConvActive && msg.senderId !== this.authService.currentUser()?.id) {
                 this.conversationService.incrementUnreadCount(c.id);
               }
             }

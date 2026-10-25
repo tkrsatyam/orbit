@@ -496,6 +496,35 @@ paths:
           description: Forbidden - user is not a conversation participant
         "404":
           description: Conversation or message not found
+  /api/v1/conversations/{id}/messages/read-batch:
+    post:
+      tags:
+      - Messages
+      summary: Mark messages as read in bulk
+      description: Marks multiple messages as read by the authenticated user in a
+        single request.
+      operationId: markMessagesAsReadBatch
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BatchReadRequest"
+        required: true
+      responses:
+        "204":
+          description: Messages marked as read successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - user is not a conversation participant
+        "404":
+          description: Conversation not found
   /api/v1/contacts/requests:
     get:
       tags:
@@ -1600,6 +1629,22 @@ components:
           description: User IDs who have read this message
           items:
             type: string
+        idempotencyKey:
+          type: string
+          description: Client idempotency key if provided
+          example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    BatchReadRequest:
+      type: object
+      description: Payload to mark multiple messages as read in bulk
+      properties:
+        messageIds:
+          type: array
+          description: List of message IDs to mark as read
+          items:
+            type: string
+          minItems: 1
+      required:
+      - messageIds
     SendRequestDto:
       type: object
       properties:

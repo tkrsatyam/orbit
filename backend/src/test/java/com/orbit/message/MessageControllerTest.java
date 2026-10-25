@@ -1,5 +1,6 @@
 package com.orbit.message;
 
+import com.orbit.message.dto.BatchReadRequest;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
@@ -237,5 +238,21 @@ class MessageControllerTest {
         messageController.markStompMessageAsRead(conversationId, request, principal);
 
         verify(messageService).markMessageAsRead(conversationId, "msg-1", senderId);
+    }
+
+    @Test
+    @DisplayName("REST markMessagesAsReadBatch delegates to MessageService and returns 204 No Content")
+    void shouldMarkMessagesAsReadBatch_AndReturnNoContent() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        BatchReadRequest request = new BatchReadRequest(java.util.List.of("msg-1", "msg-2"));
+        ResponseEntity<Void> response = messageController.markMessagesAsReadBatch(
+                conversationId,
+                request,
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).markMessagesAsRead(conversationId, java.util.List.of("msg-1", "msg-2"), senderId);
     }
 }

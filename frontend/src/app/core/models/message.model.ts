@@ -18,6 +18,7 @@ export interface MessageResponse {
   createdAt: string;
   readBy?: string[];
   deliveryStatus?: MessageDeliveryStatus;
+  idempotencyKey?: string;
 }
 
 export interface MessageHistoryResponse {
