@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { environment } from '../../../../environments/environment';
 import {
   EditMessagePayload,
@@ -243,6 +243,21 @@ export class MessageService {
     return this.http.post<void>(
       `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}/read`,
       {},
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Marks multiple messages as read in bulk in a single request.
+   * REST POST to /api/v1/conversations/{id}/messages/read-batch.
+   */
+  markMessagesAsRead(conversationId: string, messageIds: string[]): Observable<void> {
+    if (!messageIds || messageIds.length === 0) {
+      return of(undefined);
+    }
+    return this.http.post<void>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/read-batch`,
+      { messageIds },
       { withCredentials: true }
     );
   }

@@ -46,24 +46,34 @@ public record MessageResponse(
         MessageDeliveryStatus deliveryStatus,
 
         @Schema(description = "User IDs who have read this message")
-        List<String> readBy
+        List<String> readBy,
+
+        @Schema(description = "Client idempotency key if provided", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+        String idempotencyKey
 ) {
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED, List.of());
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED, List.of(), null);
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt, MessageDeliveryStatus deliveryStatus) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus, List.of());
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus, List.of(), null);
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, List.of());
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, List.of(), null);
+    }
+
+    public MessageResponse(String id, String conversationId, String senderId, String senderName,
+                           MessageType type, String content, boolean deleted, boolean edited,
+                           Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus,
+                           List<String> readBy) {
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, readBy, null);
     }
 
     public static MessageResponse from(Message message) {
@@ -91,7 +101,8 @@ public record MessageResponse(
                 message.getEditedAt(),
                 message.getCreatedAt(),
                 effectiveStatus,
-                readBy
+                readBy,
+                message.getIdempotencyKey()
         );
     }
 
@@ -113,7 +124,8 @@ public record MessageResponse(
                 message.getEditedAt(),
                 message.getCreatedAt(),
                 deliveryStatus,
-                List.of()
+                List.of(),
+                message.getIdempotencyKey()
         );
     }
 }

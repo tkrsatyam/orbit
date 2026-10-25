@@ -1,4 +1,4 @@
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { GroupComponent } from './group.component';
@@ -36,6 +36,7 @@ describe('GroupComponent', () => {
     sendMessageRest: ReturnType<typeof vi.fn>;
     isWebSocketConnected: ReturnType<typeof vi.fn>;
     markMessageAsRead: ReturnType<typeof vi.fn>;
+    markMessagesAsRead: ReturnType<typeof vi.fn>;
   };
   let mockConversationService: {
     resetUnreadCount: ReturnType<typeof vi.fn>;
@@ -126,7 +127,8 @@ describe('GroupComponent', () => {
         createdAt: new Date().toISOString(),
         deliveryStatus: 'SENT'
       })),
-      markMessageAsRead: vi.fn().mockReturnValue(of(void 0))
+      markMessageAsRead: vi.fn().mockReturnValue(of(void 0)),
+      markMessagesAsRead: vi.fn().mockReturnValue(of(void 0))
     };
 
     mockConversationService = {
@@ -504,7 +506,7 @@ describe('GroupComponent', () => {
     expect(component.messages()[0].content).toBe('Hello group!');
     expect(component.hasMore()).toBe(true);
     expect(component.nextCursor()).toBe('msg-1');
-    expect(mockMessageService.markMessageAsRead).toHaveBeenCalledWith('conv-101', 'msg-1');
+    expect(mockMessageService.markMessagesAsRead).toHaveBeenCalledWith('conv-101', ['msg-1']);
     expect(mockConversationService.resetUnreadCount).toHaveBeenCalledWith('conv-101');
   });
 
@@ -627,7 +629,8 @@ describe('GroupComponent', () => {
     expect(component.hasMore()).toBe(false);
   });
 
-  it('should handle incoming real-time message and mark as read (ORDM-52)', async () => {
+  it('should handle incoming real-time message and buffer mark as read (ORDM-52)', async () => {
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
     await setupComponent();
     let messageCallback: (msg: MessageResponse) => void = () => {};
     mockMessageService.subscribeToConversation.mockImplementation((convId, cb) => {
@@ -654,6 +657,54 @@ describe('GroupComponent', () => {
     fixture.detectChanges();
 
     expect(component.messages().some(m => m.id === 'msg-stream-1')).toBe(true);
-    expect(mockMessageService.markMessageAsRead).toHaveBeenCalledWith('conv-101', 'msg-stream-1');
+    await new Promise(resolve => setTimeout(resolve, 550));
+    expect(mockMessageService.markMessagesAsRead).toHaveBeenCalledWith('conv-101', ['msg-stream-1']);
+  });
+
+  it('should reconcile optimistic message using idempotencyKey (ORDM-52)', async () => {
+    await setupComponent();
+    let messageCallback: (msg: MessageResponse) => void = () => {};
+    mockMessageService.subscribeToConversation.mockImplementation((convId, cb) => {
+      messageCallback = cb;
+      return () => {};
+    });
+
+    component['setupGroupMessaging']('conv-101');
+    component.messages.set([
+      {
+        id: 'temp-key-123',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT',
+        content: 'Same content',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-21T12:15:00Z',
+        deliveryStatus: 'SENDING',
+        idempotencyKey: 'key-123'
+      }
+    ]);
+
+    const incoming: MessageResponse = {
+      id: 'msg-confirmed-1',
+      conversationId: 'conv-101',
+      senderId: 'u-1',
+      senderName: 'Lead Admin',
+      type: 'TEXT',
+      content: 'Same content',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-21T12:15:00Z',
+      deliveryStatus: 'DELIVERED',
+      idempotencyKey: 'key-123'
+    };
+
+    messageCallback(incoming);
+    fixture.detectChanges();
+
+    expect(component.messages().length).toBe(1);
+    expect(component.messages()[0].id).toBe('msg-confirmed-1');
+    expect(component.messages()[0].deliveryStatus).toBe('DELIVERED');
   });
 });

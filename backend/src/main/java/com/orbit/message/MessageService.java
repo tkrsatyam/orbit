@@ -200,9 +200,11 @@ public class MessageService {
         conversation.setLastMessage(snapshot);
         conversationRepository.save(conversation);
 
-        // 7. Upsert unread notification counts for all recipients
-        for (String recipientId : recipientIds) {
-            notificationRepository.incrementUnreadCount(recipientId, conversationId);
+        // 7. Upsert unread notification counts for all recipients (bulk write when multiple)
+        if (recipientIds.size() == 1) {
+            notificationRepository.incrementUnreadCount(recipientIds.get(0), conversationId);
+        } else if (recipientIds.size() > 1) {
+            notificationRepository.incrementUnreadCounts(recipientIds, conversationId);
         }
 
         // 8. Publish MessageDeliveryEvent to Kafka chat.messages
@@ -580,6 +582,55 @@ public class MessageService {
             MessageReadEvent event = new MessageReadEvent(conversationId, messageId, userId, now);
             kafkaMessageProducer.publishMessageRead(event);
             log.debug("Message {} in conversation {} marked as read by user {}", messageId, conversationId, userId);
+        }
+    }
+
+    /**
+     * Marks multiple messages as read in bulk in a single request.
+     * Enforces participant membership and clears the user's unread notifications once.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageIds     list of message identifiers to mark as read
+     * @param userId         the user marking the messages as read
+     */
+    public void markMessagesAsRead(String conversationId, List<String> messageIds, String userId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageIds == null || messageIds.isEmpty()) {
+            return;
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(userId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        // Always reset conversation unread count for this user
+        notificationRepository.markConversationAsRead(userId, conversationId);
+
+        Instant now = Instant.now();
+        List<Message> messages = messageRepository.findAllById(messageIds);
+        for (Message message : messages) {
+            if (!conversationId.equals(message.getConversationId()) || userId.equals(message.getSenderId())) {
+                continue;
+            }
+            if (message.getReadBy() == null) {
+                message.setReadBy(new ArrayList<>());
+            }
+            boolean alreadyRead = message.getReadBy().stream().anyMatch(r -> userId.equals(r.getUserId()));
+            if (!alreadyRead) {
+                message.getReadBy().add(new ReadReceipt(userId, now));
+                messageRepository.save(message);
+
+                MessageReadEvent event = new MessageReadEvent(conversationId, message.getId(), userId, now);
+                kafkaMessageProducer.publishMessageRead(event);
+            }
         }
     }
 }

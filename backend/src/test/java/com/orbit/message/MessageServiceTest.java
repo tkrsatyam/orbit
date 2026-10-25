@@ -51,9 +51,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -948,10 +950,9 @@ class MessageServiceTest {
         // Divergence from 1:1: Block check is strictly bypassed for GROUP conversations (ADR 007)
         verify(contactService, never()).isBlockedBy(any(), any());
 
-        // Notifications incremented for all recipients except sender
-        verify(notificationRepository).incrementUnreadCount(recipientId, conversationId);
-        verify(notificationRepository).incrementUnreadCount(recipient2, conversationId);
-        verify(notificationRepository, never()).incrementUnreadCount(senderId, conversationId);
+        // Notifications incremented in bulk for all recipients except sender (O(1) round-trip)
+        verify(notificationRepository).incrementUnreadCounts(argThat(list -> list.containsAll(List.of(recipientId, recipient2)) && list.size() == 2), eq(conversationId));
+        verify(notificationRepository, never()).incrementUnreadCount(anyString(), anyString());
 
         // Kafka fan-out published with all group recipients
         ArgumentCaptor<com.orbit.message.kafka.MessageDeliveryEvent> captor = ArgumentCaptor.forClass(com.orbit.message.kafka.MessageDeliveryEvent.class);
@@ -995,5 +996,36 @@ class MessageServiceTest {
         assertThat(history.content().get(0).id()).isEqualTo("msg-g1");
         assertThat(history.content().get(1).id()).isEqualTo("msg-g2");
         assertThat(history.hasMore()).isFalse();
+    }
+
+    @Test
+    @DisplayName("markMessagesAsRead marks multiple messages in bulk and publishes read events")
+    void markMessagesAsRead_MarksAllAndPublishesEvents() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message msg1 = Message.builder()
+                .id("m1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .readBy(new ArrayList<>())
+                .build();
+        Message msg2 = Message.builder()
+                .id("m2")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .readBy(new ArrayList<>())
+                .build();
+        when(messageRepository.findAllById(List.of("m1", "m2"))).thenReturn(List.of(msg1, msg2));
+
+        messageService.markMessagesAsRead(conversationId, List.of("m1", "m2"), senderId);
+
+        verify(notificationRepository).markConversationAsRead(senderId, conversationId);
+        verify(messageRepository).save(msg1);
+        verify(messageRepository).save(msg2);
+        verify(kafkaMessageProducer, times(2)).publishMessageRead(any());
     }
 }

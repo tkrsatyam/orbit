@@ -1,7 +1,10 @@
-import { Component, computed, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { bufferTime, filter } from 'rxjs/operators';
 import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
@@ -25,6 +28,8 @@ export class GroupComponent implements OnInit, OnDestroy {
   private readonly messageService = inject(MessageService);
   private readonly conversationService = inject(ConversationService);
   private readonly fb = inject(FormBuilder);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly incomingReadSubject = new Subject<string>();
 
   @ViewChild('messagesScroll') private messagesScrollContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('composerTextarea') private composerTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -121,6 +126,21 @@ export class GroupComponent implements OnInit, OnDestroy {
         // Silently handle
       }
     });
+
+    // Buffer read receipts in 500ms windows to prevent high-volume network storms
+    this.incomingReadSubject.pipe(
+      bufferTime(500),
+      filter(ids => ids.length > 0),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(ids => {
+      const convId = this.activeConversationId();
+      if (!convId || (typeof document !== 'undefined' && !document.hasFocus())) return;
+      const uniqueIds = Array.from(new Set(ids));
+      this.messageService.markMessagesAsRead(convId, uniqueIds).subscribe({
+        error: () => {}
+      });
+      this.conversationService.resetUnreadCount(convId);
+    });
   }
 
   ngOnDestroy(): void {
@@ -197,12 +217,13 @@ export class GroupComponent implements OnInit, OnDestroy {
         this.isLoadingInitial.set(false);
         this.scrollToBottom();
 
-        // Mark unread incoming messages as read
+        // Mark unread incoming messages as read in bulk
         const unreadIncoming = history.content.filter(
           m => m.senderId !== currentUid && (!m.readBy || !m.readBy.includes(currentUid || ''))
         );
-        for (const msg of unreadIncoming) {
-          this.messageService.markMessageAsRead(conversationId, msg.id).subscribe({
+        if (unreadIncoming.length > 0) {
+          const unreadIds = unreadIncoming.map(m => m.id);
+          this.messageService.markMessagesAsRead(conversationId, unreadIds).subscribe({
             error: () => {}
           });
         }
@@ -323,9 +344,10 @@ export class GroupComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // If this matches an optimistic message by content/sender, replace it
+    // Match by idempotencyKey first to prevent collisions from rapid identical messages, with content/sender fallback
     const optimisticIndex = this.messages().findIndex(
-      m => m.deliveryStatus === 'SENDING' && m.senderId === incoming.senderId && m.content === incoming.content
+      m => (incoming.idempotencyKey && m.idempotencyKey === incoming.idempotencyKey) ||
+           (m.deliveryStatus === 'SENDING' && m.senderId === incoming.senderId && m.content === incoming.content)
     );
     if (optimisticIndex !== -1) {
       this.messages.update(current => {
@@ -343,13 +365,9 @@ export class GroupComponent implements OnInit, OnDestroy {
 
     this.scrollToBottom();
 
-    // If message from someone else, mark as read
-    const convId = this.activeConversationId();
-    if (convId && incoming.senderId !== currentUid) {
-      this.messageService.markMessageAsRead(convId, incoming.id).subscribe({
-        error: () => {}
-      });
-      this.conversationService.resetUnreadCount(convId);
+    // Buffer read receipt for incoming message if from another member and window has focus
+    if (incoming.senderId !== currentUid && typeof document !== 'undefined' && document.hasFocus()) {
+      this.incomingReadSubject.next(incoming.id);
     }
   }
 
