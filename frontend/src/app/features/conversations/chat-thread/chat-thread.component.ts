@@ -8,7 +8,8 @@ import {
   MessageDeleteMode,
   MessageDeletedEventPayload,
   MessageEditedEventPayload,
-  MessageResponse
+  MessageResponse,
+  TypingEventPayload
 } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContactService } from '../../../core/services/contact.service';
@@ -60,6 +61,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   readonly deleteModalMessage = signal<ChatMessageItem | null>(null);
   readonly isDeleting = signal<boolean>(false);
 
+  // Typing indicator state
+  readonly isPeerTyping = signal<boolean>(false);
+  readonly typingPeerName = signal<string>('');
+
   readonly currentUserId = computed(() => this.authService.currentUser()?.id ?? '');
 
   /**
@@ -72,8 +77,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private unsubscribeReceipts?: () => void;
   private unsubscribeEdits?: () => void;
   private unsubscribeDeletes?: () => void;
+  private unsubscribeTyping?: () => void;
   private routeSub?: Subscription;
   private touchTimer?: ReturnType<typeof setTimeout>;
+  private stopTypingTimer?: ReturnType<typeof setTimeout>;
+  private typingSafetyTimer?: ReturnType<typeof setTimeout>;
+  private isActivelyTyping = false;
+  private lastTypingSentAt = 0;
 
   ngOnInit(): void {
     this.routeSub = this.route.paramMap.subscribe(params => {
@@ -113,6 +123,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.editingMessage.set(null);
     this.activeActionMessageId.set(null);
     this.deleteModalMessage.set(null);
+    this.isPeerTyping.set(false);
+    this.typingPeerName.set('');
+    this.isActivelyTyping = false;
+    this.lastTypingSentAt = 0;
 
     this.loadInitialHistory(id);
 
@@ -134,6 +148,11 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     // Subscribe to message deletions
     this.unsubscribeDeletes = this.messageService.subscribeToDeletes(id, (deleted: MessageDeletedEventPayload) => {
       this.handleDeletedMessage(deleted);
+    });
+
+    // Subscribe to typing indicator signals
+    this.unsubscribeTyping = this.messageService.subscribeToTyping(id, (event: TypingEventPayload) => {
+      this.handleTypingEvent(event);
     });
   }
 
@@ -219,6 +238,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   }
 
   private cleanupSubscriptions(): void {
+    this.sendStopTyping();
     if (this.unsubscribeTopic) {
       this.unsubscribeTopic();
       this.unsubscribeTopic = undefined;
@@ -235,10 +255,23 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       this.unsubscribeDeletes();
       this.unsubscribeDeletes = undefined;
     }
+    if (this.unsubscribeTyping) {
+      this.unsubscribeTyping();
+      this.unsubscribeTyping = undefined;
+    }
     if (this.touchTimer) {
       clearTimeout(this.touchTimer);
       this.touchTimer = undefined;
     }
+    if (this.stopTypingTimer) {
+      clearTimeout(this.stopTypingTimer);
+      this.stopTypingTimer = undefined;
+    }
+    if (this.typingSafetyTimer) {
+      clearTimeout(this.typingSafetyTimer);
+      this.typingSafetyTimer = undefined;
+    }
+    this.isPeerTyping.set(false);
   }
 
   checkBlockStatus(peerId: string): void {
@@ -277,6 +310,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   toggleActions(msg: ChatMessageItem, event: MouseEvent): void {
     event.stopPropagation();
     this.activeActionMessageId.update(curr => curr === msg.id ? null : msg.id);
+  }
+
+  onContextMenu(msg: ChatMessageItem, event: MouseEvent): void {
+    if (msg.deleted) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeActionMessageId.set(msg.id);
   }
 
   onTouchStart(msg: ChatMessageItem, _event: TouchEvent): void {
@@ -357,6 +397,48 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     });
   }
 
+  onComposerInput(value: string): void {
+    this.messageInput.set(value);
+    const convId = this.conversationId();
+    if (!convId || this.isPeerBlockedByMe()) {
+      return;
+    }
+
+    if (!value || value.trim().length === 0) {
+      this.sendStopTyping();
+      return;
+    }
+
+    const now = Date.now();
+    // Flow B: Throttle typing: true every 2 seconds while typing continues
+    if (!this.isActivelyTyping || (now - this.lastTypingSentAt >= 2000)) {
+      this.messageService.sendTyping(convId, true);
+      this.lastTypingSentAt = now;
+      this.isActivelyTyping = true;
+    }
+
+    // 3-second debounce to emit typing: false when user pauses
+    if (this.stopTypingTimer) {
+      clearTimeout(this.stopTypingTimer);
+    }
+    this.stopTypingTimer = setTimeout(() => {
+      this.sendStopTyping();
+    }, 3000);
+  }
+
+  sendStopTyping(): void {
+    if (this.stopTypingTimer) {
+      clearTimeout(this.stopTypingTimer);
+      this.stopTypingTimer = undefined;
+    }
+    const convId = this.conversationId();
+    if (convId && this.isActivelyTyping) {
+      this.isActivelyTyping = false;
+      this.messageService.sendTyping(convId, false);
+    }
+    this.lastTypingSentAt = 0;
+  }
+
   onKeydown(event: KeyboardEvent): void {
     if (event.key === 'Escape' && this.isEditing()) {
       event.preventDefault();
@@ -430,6 +512,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
     this.messages.update(list => [...list, optimisticMessage]);
     this.messageInput.set('');
+    this.sendStopTyping();
     this.scrollToBottom();
 
     if (this.messageService.isWebSocketConnected()) {
@@ -503,6 +586,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       // Incoming message from peer
       return [...list, { ...incoming, deliveryStatus: 'DELIVERED' }];
     });
+    if (incoming.senderId !== this.currentUserId()) {
+      this.isPeerTyping.set(false);
+      if (this.typingSafetyTimer) {
+        clearTimeout(this.typingSafetyTimer);
+        this.typingSafetyTimer = undefined;
+      }
+    }
     this.scrollToBottom();
   }
 
@@ -534,6 +624,48 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
           this.messagesScrollContainer.nativeElement.scrollHeight;
       }
     }, 50);
+  }
+
+  private scrollToBottomIfNearBottom(): void {
+    setTimeout(() => {
+      const viewport = this.messagesScrollContainer?.nativeElement;
+      if (viewport) {
+        const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
+        if (distanceFromBottom <= 150) {
+          viewport.scrollTop = viewport.scrollHeight;
+        }
+      }
+    }, 50);
+  }
+
+  handleTypingEvent(event: TypingEventPayload): void {
+    if (!event || event.userId === this.currentUserId()) {
+      return;
+    }
+
+    if (event.typing) {
+      const wasTyping = this.isPeerTyping();
+      this.isPeerTyping.set(true);
+      this.typingPeerName.set(event.displayName || this.peerName() || 'Orbit User');
+
+      if (!wasTyping) {
+        this.scrollToBottomIfNearBottom();
+      }
+
+      // Flow B: 5-second self-clearing safety net independent of explicit false event
+      if (this.typingSafetyTimer) {
+        clearTimeout(this.typingSafetyTimer);
+      }
+      this.typingSafetyTimer = setTimeout(() => {
+        this.isPeerTyping.set(false);
+      }, 5000);
+    } else {
+      this.isPeerTyping.set(false);
+      if (this.typingSafetyTimer) {
+        clearTimeout(this.typingSafetyTimer);
+        this.typingSafetyTimer = undefined;
+      }
+    }
   }
 
   handleEditedMessage(edited: MessageEditedEventPayload): void {

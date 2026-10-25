@@ -6,8 +6,8 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "Request payload to edit a text message")
 public record EditMessageRequest(
-        @Schema(description = "Updated text content", example = "Hey! Have you checked the latest ADR? It's updated.")
+        @Schema(description = "Updated text content", example = "Hey! Have you checked the latest ADR? It's updated.", minLength = 1)
         @NotBlank(message = "Message content cannot be blank")
-        @Size(max = 4000, message = "Message content must not exceed 4000 characters")
+        @Size(min = 1, max = 4000, message = "Message content must not exceed 4000 characters")
         String content
 ) {}

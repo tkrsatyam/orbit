@@ -23,6 +23,8 @@ describe('ChatThreadComponent', () => {
     subscribeToReceipts: ReturnType<typeof vi.fn>;
     subscribeToEdits: ReturnType<typeof vi.fn>;
     subscribeToDeletes: ReturnType<typeof vi.fn>;
+    subscribeToTyping: ReturnType<typeof vi.fn>;
+    sendTyping: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
     sendMessageRest: ReturnType<typeof vi.fn>;
     editMessage: ReturnType<typeof vi.fn>;
@@ -52,6 +54,7 @@ describe('ChatThreadComponent', () => {
   let receiptCallback: ((receipt: MessageResponse) => void) | undefined;
   let editCallback: ((edited: any) => void) | undefined;
   let deleteCallback: ((deleted: any) => void) | undefined;
+  let typingCallback: ((typing: any) => void) | undefined;
 
   beforeEach(async () => {
     authServiceMock = {
@@ -75,6 +78,11 @@ describe('ChatThreadComponent', () => {
         deleteCallback = cb;
         return () => {};
       }),
+      subscribeToTyping: vi.fn().mockImplementation((_convId: string, cb: (typing: any) => void) => {
+        typingCallback = cb;
+        return () => {};
+      }),
+      sendTyping: vi.fn(),
       sendMessageStomp: vi.fn(),
       sendMessageRest: vi.fn(),
       editMessage: vi.fn().mockReturnValue(of({ id: 'msg-1', content: 'Updated content', edited: true, editedAt: '2026-10-24T10:00:00Z' })),
@@ -708,6 +716,194 @@ describe('ChatThreadComponent', () => {
       expect(component.activeActionMessageId()).toBeNull();
 
       vi.useRealTimers();
+    });
+  });
+
+  describe('Typing Indicator', () => {
+    it('should send typing: true on composer input and debounce typing: false after 3 seconds', () => {
+      vi.useFakeTimers();
+
+      component.onComposerInput('Hello peer');
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', true);
+
+      // Fast typing within 2s interval shouldn't spam typing: true
+      component.onComposerInput('Hello peer, how are');
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledTimes(1);
+
+      // Advance 3s idle debounce
+      vi.advanceTimersByTime(3000);
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', false);
+
+      vi.useRealTimers();
+    });
+
+    it('should send typing: false immediately if input is cleared', () => {
+      component.onComposerInput('Hello');
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', true);
+
+      component.onComposerInput('');
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', false);
+    });
+
+    it('should send typing: false immediately on message submission', () => {
+      component.onComposerInput('Hello world');
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', true);
+
+      component.sendMessage();
+      expect(messageServiceMock.sendTyping).toHaveBeenCalledWith('conv-test-1', false);
+    });
+
+    it('should display typing indicator pill with peer name when peer sends typing: true', () => {
+      expect(component.isPeerTyping()).toBe(false);
+
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+
+      expect(component.isPeerTyping()).toBe(true);
+      expect(component.typingPeerName()).toBe('Ananya Roy');
+    });
+
+    it('should ignore typing events originating from current user', () => {
+      component.handleTypingEvent({
+        userId: 'my-user-id',
+        displayName: 'Satyam Kumar',
+        typing: true
+      });
+
+      expect(component.isPeerTyping()).toBe(false);
+    });
+
+    it('should hide typing indicator pill when peer sends typing: false', () => {
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+      expect(component.isPeerTyping()).toBe(true);
+
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: false
+      });
+      expect(component.isPeerTyping()).toBe(false);
+    });
+
+    it('should auto-clear typing indicator after 5-second safety timer', () => {
+      vi.useFakeTimers();
+
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+      expect(component.isPeerTyping()).toBe(true);
+
+      vi.advanceTimersByTime(5000);
+      expect(component.isPeerTyping()).toBe(false);
+
+      vi.useRealTimers();
+    });
+
+    it('should clear peer typing indicator when incoming message from peer arrives', () => {
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+      expect(component.isPeerTyping()).toBe(true);
+
+      // Incoming message from peer
+      if (conversationCallback) {
+        conversationCallback({
+          id: 'msg-incoming-1',
+          conversationId: 'conv-test-1',
+          senderId: 'peer-user-1',
+          senderName: 'Ananya Roy',
+          type: 'TEXT',
+          content: 'Here is my reply!',
+          deleted: false,
+          edited: false,
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      expect(component.isPeerTyping()).toBe(false);
+    });
+
+    it('should render incoming-avatar with peerInitial alongside typing bubble in the message stream', () => {
+      component.handleTypingEvent({
+        userId: 'peer-user-1',
+        displayName: 'Ananya Roy',
+        typing: true
+      });
+      fixture.detectChanges();
+
+      const typingRow = fixture.nativeElement.querySelector('[data-testid="typing-indicator-row"]');
+      expect(typingRow).toBeTruthy();
+
+      const avatar = typingRow.querySelector('.incoming-avatar');
+      expect(avatar).toBeTruthy();
+      expect(avatar.textContent.trim()).toBe(component.peerInitial());
+
+      const bubble = typingRow.querySelector('[data-testid="typing-bubble"]');
+      expect(bubble).toBeTruthy();
+      const dots = bubble.querySelectorAll('.typing-dot');
+      expect(dots.length).toBe(3);
+    });
+
+    it('should open message action bar on chevron click', () => {
+      const mockMsg = {
+        id: 'msg-test-chevron',
+        conversationId: 'conv-test-1',
+        senderId: 'user-me-1',
+        senderName: 'Satyam',
+        type: 'TEXT',
+        content: 'Testing chevron action trigger',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      (component as any).messages.set([mockMsg]);
+      fixture.detectChanges();
+
+      const chevron = fixture.nativeElement.querySelector('[data-testid="message-chevron-btn-msg-test-chevron"]');
+      expect(chevron).toBeTruthy();
+
+      chevron.click();
+      fixture.detectChanges();
+
+      expect(component.activeActionMessageId()).toBe('msg-test-chevron');
+      const actionsBar = fixture.nativeElement.querySelector('[data-testid="message-actions-msg-test-chevron"]');
+      expect(actionsBar.classList.contains('visible')).toBe(true);
+    });
+
+    it('should open message action bar on contextmenu (right-click)', () => {
+      const mockMsg = {
+        id: 'msg-test-contextmenu',
+        conversationId: 'conv-test-1',
+        senderId: 'peer-user-1',
+        senderName: 'Ananya',
+        type: 'TEXT',
+        content: 'Testing contextmenu trigger',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      (component as any).messages.set([mockMsg]);
+      fixture.detectChanges();
+
+      const bubble = fixture.nativeElement.querySelector('.message-bubble.incoming');
+      expect(bubble).toBeTruthy();
+
+      const event = new MouseEvent('contextmenu', { cancelable: true });
+      bubble.dispatchEvent(event);
+      fixture.detectChanges();
+
+      expect(component.activeActionMessageId()).toBe('msg-test-contextmenu');
     });
   });
 });

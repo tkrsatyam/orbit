@@ -234,4 +234,30 @@ describe('MessageService', () => {
       callback
     );
   });
+
+  it('should send typing indicator over STOMP to /app/conversations/{id}/typing', () => {
+    service.sendTyping('conv-123', true);
+
+    expect(webSocketServiceMock.publish).toHaveBeenCalledWith(
+      '/app/conversations/conv-123/typing',
+      { typing: true }
+    );
+
+    service.sendTyping('conv-123', false);
+
+    expect(webSocketServiceMock.publish).toHaveBeenCalledWith(
+      '/app/conversations/conv-123/typing',
+      { typing: false }
+    );
+  });
+
+  it('should subscribe to typing indicators on /topic/conversations/{id}/typing', () => {
+    const callback = vi.fn();
+    service.subscribeToTyping('conv-123', callback);
+
+    expect(webSocketServiceMock.subscribe).toHaveBeenCalledWith(
+      '/topic/conversations/conv-123/typing',
+      callback
+    );
+  });
 });

@@ -5,6 +5,8 @@ import com.orbit.message.dto.MessageEditedNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.presence.dto.TypingEvent;
+import com.orbit.presence.dto.TypingNotification;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -85,5 +87,22 @@ public class KafkaWebSocketBridge {
         String destination = "/topic/conversations/" + event.conversationId() + "/messages/deleted";
         messagingTemplate.convertAndSend(destination,
                 new MessageDeletedNotification(event.messageId()));
+    }
+
+    /**
+     * Consumes typing events from Kafka topic 'chat.presence' and delivers to
+     * /topic/conversations/{conversationId}/typing.
+     */
+    @KafkaListener(topics = "chat.presence", groupId = "orbit-websocket-group")
+    public void handleTyping(TypingEvent event) {
+        if (event == null || event.conversationId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time typing indicator to subscribers: conversationId={}, userId={}, typing={}",
+                event.conversationId(), event.userId(), event.typing());
+        String destination = "/topic/conversations/" + event.conversationId() + "/typing";
+        messagingTemplate.convertAndSend(destination,
+                new TypingNotification(event.userId(), event.displayName(), event.typing()));
     }
 }

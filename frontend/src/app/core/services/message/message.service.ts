@@ -9,7 +9,9 @@ import {
   MessageEditedEventPayload,
   MessageHistoryResponse,
   MessageResponse,
-  SendMessagePayload
+  SendMessagePayload,
+  TypingEventPayload,
+  TypingRequestPayload
 } from '../../models/message.model';
 import { WebSocketService } from '../websocket/websocket.service';
 
@@ -199,5 +201,33 @@ export class MessageService {
         withCredentials: true
       }
     );
+  }
+
+  /**
+   * Publishes ephemeral typing indicator over STOMP WebSocket.
+   * Destination: /app/conversations/{conversationId}/typing
+   *
+   * @param conversationId destination conversation ID
+   * @param typing true if user is actively typing, false if stopped
+   */
+  sendTyping(conversationId: string, typing: boolean): void {
+    const payload: TypingRequestPayload = { typing };
+    this.webSocketService.publish(`/app/conversations/${conversationId}/typing`, payload);
+  }
+
+  /**
+   * Subscribes to real-time typing indicators for a conversation.
+   * Destination: /topic/conversations/{conversationId}/typing
+   *
+   * @param conversationId destination conversation ID
+   * @param callback handler invoked when typing events arrive
+   * @returns unsubscription cleanup function
+   */
+  subscribeToTyping(
+    conversationId: string,
+    callback: (event: TypingEventPayload) => void
+  ): () => void {
+    const destination = `/topic/conversations/${conversationId}/typing`;
+    return this.webSocketService.subscribe<TypingEventPayload>(destination, callback);
   }
 }

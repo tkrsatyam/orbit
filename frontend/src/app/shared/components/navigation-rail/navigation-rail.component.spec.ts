@@ -96,4 +96,24 @@ describe('NavigationRailComponent', () => {
     expect(signedOut).toBe(true);
     expect(component.isMenuOpen()).toBe(false);
   });
+
+  it('should toggle theme when theme toggle button is clicked', () => {
+    const themeBtn = fixture.nativeElement.querySelector('[data-testid="theme-toggle-btn"]');
+    expect(themeBtn).toBeTruthy();
+
+    const initialTheme = component.isDark();
+    themeBtn.click();
+    fixture.detectChanges();
+
+    expect(component.isDark()).toBe(!initialTheme);
+  });
+
+  it('should display light logo in light mode and dark logo in dark mode', () => {
+    const img = fixture.nativeElement.querySelector('.rail-brand-icon') as HTMLImageElement;
+    if (component.isDark()) {
+      expect(img.src).toContain('brand/orbit-icon.svg');
+    } else {
+      expect(img.src).toContain('brand/orbit-icon-light.svg');
+    }
+  });
 });
