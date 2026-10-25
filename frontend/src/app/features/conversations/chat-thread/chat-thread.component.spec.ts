@@ -2,10 +2,13 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
+import { signal } from '@angular/core';
 import { BehaviorSubject, of, throwError } from 'rxjs';
+import { ConversationItem } from '../../../core/models/conversation.model';
 import { MessageResponse } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContactService } from '../../../core/services/contact.service';
+import { ConversationService } from '../../../core/services/conversation.service';
 import { MessageService } from '../../../core/services/message/message.service';
 import { UserService } from '../../../core/services/user.service';
 import { WebSocketService } from '../../../core/services/websocket/websocket.service';
@@ -31,10 +34,20 @@ describe('ChatThreadComponent', () => {
     deleteMessage: ReturnType<typeof vi.fn>;
     getConversationMessages: ReturnType<typeof vi.fn>;
     isWebSocketConnected: ReturnType<typeof vi.fn>;
+    subscribeToReadReceipts: ReturnType<typeof vi.fn>;
+    markMessageAsRead: ReturnType<typeof vi.fn>;
+  };
+  let conversationServiceMock: {
+    conversations: ReturnType<typeof signal<ConversationItem[]>>;
+    updatePresence: ReturnType<typeof vi.fn>;
+    resetUnreadCount: ReturnType<typeof vi.fn>;
+    incrementUnreadCount: ReturnType<typeof vi.fn>;
+    updateLastMessage: ReturnType<typeof vi.fn>;
   };
   let contactServiceMock: {
     contacts: ReturnType<typeof vi.fn>;
     loadContacts: ReturnType<typeof vi.fn>;
+    updatePresence: ReturnType<typeof vi.fn>;
   };
   let userServiceMock: {
     getUserProfile: ReturnType<typeof vi.fn>;
@@ -45,6 +58,7 @@ describe('ChatThreadComponent', () => {
     disconnect: ReturnType<typeof vi.fn>;
     isConnected: ReturnType<typeof vi.fn>;
     showReconnectAlert: ReturnType<typeof vi.fn>;
+    subscribe: ReturnType<typeof vi.fn>;
   };
 
   const paramMap$ = new BehaviorSubject(convertToParamMap({ id: 'conv-test-1' }));
@@ -88,12 +102,23 @@ describe('ChatThreadComponent', () => {
       editMessage: vi.fn().mockReturnValue(of({ id: 'msg-1', content: 'Updated content', edited: true, editedAt: '2026-10-24T10:00:00Z' })),
       deleteMessage: vi.fn().mockReturnValue(of(undefined)),
       getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
-      isWebSocketConnected: vi.fn().mockReturnValue(true)
+      isWebSocketConnected: vi.fn().mockReturnValue(true),
+      subscribeToReadReceipts: vi.fn().mockReturnValue(() => {}),
+      markMessageAsRead: vi.fn().mockReturnValue(of(undefined))
+    };
+
+    conversationServiceMock = {
+      conversations: signal<ConversationItem[]>([]),
+      updatePresence: vi.fn(),
+      resetUnreadCount: vi.fn(),
+      incrementUnreadCount: vi.fn(),
+      updateLastMessage: vi.fn()
     };
 
     contactServiceMock = {
       contacts: vi.fn().mockReturnValue([]),
-      loadContacts: vi.fn().mockReturnValue(of({ content: [] }))
+      loadContacts: vi.fn().mockReturnValue(of({ content: [] })),
+      updatePresence: vi.fn()
     };
 
     userServiceMock = {
@@ -105,7 +130,8 @@ describe('ChatThreadComponent', () => {
       connect: vi.fn(),
       disconnect: vi.fn(),
       isConnected: vi.fn().mockReturnValue(true),
-      showReconnectAlert: vi.fn().mockReturnValue(false)
+      showReconnectAlert: vi.fn().mockReturnValue(false),
+      subscribe: vi.fn().mockReturnValue(() => {})
     };
 
     await TestBed.configureTestingModule({
@@ -116,6 +142,7 @@ describe('ChatThreadComponent', () => {
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: MessageService, useValue: messageServiceMock },
+        { provide: ConversationService, useValue: conversationServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
         { provide: UserService, useValue: userServiceMock },
         { provide: WebSocketService, useValue: webSocketServiceMock },

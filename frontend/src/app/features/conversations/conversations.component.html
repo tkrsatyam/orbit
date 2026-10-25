@@ -94,33 +94,46 @@
       }
 
       <div class="sidebar-list" data-testid="conversations-sidebar-list">
-        @if (contactService.contacts().length === 0) {
+        @if (conversationService.conversations().length === 0) {
           <p class="empty-list-notice">
             No conversations yet. Open New Chat to connect with someone.
           </p>
         } @else {
-          @for (contact of contactService.contacts(); track contact.id) {
+          @for (conv of conversationService.conversations(); track conv.id) {
             <div
               class="chat-list-item"
-              [class.active]="activeConversationId() === contact.conversationId"
-              (click)="navigateToConversation(contact)"
-              [attr.data-testid]="'conversation-item-' + contact.conversationId"
+              [class.active]="activeConversationId() === conv.id"
+              (click)="onSelectConversationItem(conv)"
+              [attr.data-testid]="'conversation-item-' + conv.id"
             >
               <div class="chat-item-avatar">
-                <span>{{ contact.displayName.charAt(0).toUpperCase() }}</span>
-                @if (contact.online) {
-                  <span class="online-dot" aria-hidden="true"></span>
+                @if (conv.type === 'DIRECT') {
+                  <span>{{ (conv.participant?.displayName || 'U').charAt(0).toUpperCase() }}</span>
+                  @if (conv.participant?.online) {
+                    <span class="online-dot" aria-hidden="true" data-testid="online-presence-dot"></span>
+                  }
+                } @else {
+                  <span>{{ (conv.group?.name || 'G').charAt(0).toUpperCase() }}</span>
                 }
               </div>
               <div class="chat-item-content">
                 <div class="chat-item-top">
-                  <span class="chat-item-name">{{ contact.displayName }}</span>
-                  <span class="chat-item-status" [class.online]="contact.online">
-                    {{ contact.online ? 'Online' : 'Offline' }}
+                  <span class="chat-item-name">
+                    {{ conv.type === 'DIRECT' ? (conv.participant?.displayName || 'Orbit User') : (conv.group?.name || 'Group') }}
                   </span>
+                  @if (conv.lastMessage?.sentAt) {
+                    <span class="chat-item-time">{{ formatTime(conv.lastMessage?.sentAt) }}</span>
+                  }
                 </div>
                 <div class="chat-item-bottom">
-                  <span class="chat-item-preview">{{ contact.bio || 'Direct Message' }}</span>
+                  <span class="chat-item-preview">
+                    {{ conv.lastMessage?.content || (conv.type === 'DIRECT' ? 'Direct Message' : 'Group') }}
+                  </span>
+                  @if (conv.unreadCount > 0) {
+                    <span class="unread-badge" [attr.data-testid]="'unread-badge-' + conv.id">
+                      {{ conv.unreadCount }}
+                    </span>
+                  }
                 </div>
               </div>
             </div>

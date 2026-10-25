@@ -5,6 +5,7 @@ import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
 import com.orbit.message.kafka.KafkaMessageProducer;
+import com.orbit.presence.dto.PresenceEvent;
 import com.orbit.presence.dto.TypingEvent;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
@@ -174,6 +175,60 @@ class PresenceServiceTest {
 
             verify(conversationRepository, never()).findById(any());
             verify(kafkaMessageProducer, never()).publishTyping(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("Presence Connect & Disconnect")
+    class PresenceLifecycleTests {
+
+        @Test
+        @DisplayName("handleConnect sets user online and publishes PresenceEvent")
+        void handleConnect_setsOnlineAndPublishesEvent() {
+            when(userRepository.findById("user-1")).thenReturn(Optional.of(testUser));
+
+            presenceService.handleConnect("user-1");
+
+            assertThat(testUser.isOnline()).isTrue();
+            assertThat(testUser.getLastSeen()).isNotNull();
+            verify(userRepository).save(testUser);
+
+            ArgumentCaptor<PresenceEvent> captor = ArgumentCaptor.forClass(PresenceEvent.class);
+            verify(kafkaMessageProducer).publishPresence(captor.capture());
+            assertThat(captor.getValue().userId()).isEqualTo("user-1");
+            assertThat(captor.getValue().online()).isTrue();
+            assertThat(captor.getValue().lastSeen()).isEqualTo(testUser.getLastSeen());
+        }
+
+        @Test
+        @DisplayName("handleDisconnect sets user offline and publishes PresenceEvent")
+        void handleDisconnect_setsOfflineAndPublishesEvent() {
+            testUser.setOnline(true);
+            when(userRepository.findById("user-1")).thenReturn(Optional.of(testUser));
+
+            presenceService.handleDisconnect("user-1");
+
+            assertThat(testUser.isOnline()).isFalse();
+            assertThat(testUser.getLastSeen()).isNotNull();
+            verify(userRepository).save(testUser);
+
+            ArgumentCaptor<PresenceEvent> captor = ArgumentCaptor.forClass(PresenceEvent.class);
+            verify(kafkaMessageProducer).publishPresence(captor.capture());
+            assertThat(captor.getValue().userId()).isEqualTo("user-1");
+            assertThat(captor.getValue().online()).isFalse();
+            assertThat(captor.getValue().lastSeen()).isEqualTo(testUser.getLastSeen());
+        }
+
+        @Test
+        @DisplayName("handleConnect and handleDisconnect ignore null or blank userId")
+        void handleConnectAndDisconnect_ignoreNullOrBlank() {
+            presenceService.handleConnect(null);
+            presenceService.handleConnect("   ");
+            presenceService.handleDisconnect(null);
+            presenceService.handleDisconnect("   ");
+
+            verify(userRepository, never()).findById(any());
+            verify(kafkaMessageProducer, never()).publishPresence(any());
         }
     }
 }

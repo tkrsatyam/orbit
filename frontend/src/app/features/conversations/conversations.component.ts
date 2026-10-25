@@ -1,9 +1,12 @@
-import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
+import { ConversationItem } from '../../core/models/conversation.model';
+import { MessageResponse, PresenceEventPayload } from '../../core/models/message.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { ConversationService } from '../../core/services/conversation.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
 import { WebSocketService } from '../../core/services/websocket/websocket.service';
@@ -26,10 +29,13 @@ export class ConversationsComponent implements OnInit, OnDestroy {
   private readonly elementRef = inject(ElementRef);
   private readonly userService = inject(UserService);
   readonly contactService = inject(ContactService);
+  readonly conversationService = inject(ConversationService);
   readonly groupService = inject(GroupService);
   readonly webSocketService = inject(WebSocketService);
 
   private routerSub?: Subscription;
+  private readonly presenceUnsubs = new Map<string, () => void>();
+  private readonly messageUnsubs = new Map<string, () => void>();
 
   readonly isMenuOpen = signal<boolean>(false);
   readonly isProfileOpen = signal<boolean>(false);
@@ -68,6 +74,15 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     return groups;
   });
 
+  constructor() {
+    effect(() => {
+      const convs = this.conversationService.conversations();
+      if (convs) {
+        this.subscribeToConversationStreams();
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.syncRouteState();
     this.webSocketService.connect();
@@ -95,10 +110,85 @@ export class ConversationsComponent implements OnInit, OnDestroy {
         // Silently handle initial load failure
       }
     });
+
+    this.conversationService.loadConversations().subscribe({
+      error: () => {
+        // Silently handle initial load failure
+      }
+    });
   }
 
   ngOnDestroy(): void {
     this.routerSub?.unsubscribe();
+    for (const unsub of this.presenceUnsubs.values()) {
+      unsub();
+    }
+    this.presenceUnsubs.clear();
+    for (const unsub of this.messageUnsubs.values()) {
+      unsub();
+    }
+    this.messageUnsubs.clear();
+  }
+
+  subscribeToConversationStreams(): void {
+    const convs = this.conversationService.conversations();
+    const activeConvIds = new Set(convs.map(c => c.id));
+    const activePeerIds = new Set(
+      convs.filter(c => c.type === 'DIRECT' && c.participant?.id).map(c => c.participant!.id)
+    );
+
+    // Prune removed message subscriptions
+    for (const [convId, unsub] of this.messageUnsubs.entries()) {
+      if (!activeConvIds.has(convId)) {
+        unsub();
+        this.messageUnsubs.delete(convId);
+      }
+    }
+
+    // Prune removed presence subscriptions
+    for (const [peerId, unsub] of this.presenceUnsubs.entries()) {
+      if (!activePeerIds.has(peerId)) {
+        unsub();
+        this.presenceUnsubs.delete(peerId);
+      }
+    }
+
+    for (const c of convs) {
+      if (c.type === 'DIRECT' && c.participant?.id) {
+        const peerId = c.participant.id;
+        if (!this.presenceUnsubs.has(peerId)) {
+          const unsub = this.webSocketService.subscribe<PresenceEventPayload>(
+            `/topic/presence/${peerId}`,
+            presence => {
+              this.conversationService.updatePresence(peerId, presence.online);
+              this.contactService.updatePresence(peerId, presence.online);
+            }
+          );
+          this.presenceUnsubs.set(peerId, unsub);
+        }
+      }
+
+      if (!this.messageUnsubs.has(c.id)) {
+        const unsub = this.webSocketService.subscribe<MessageResponse>(
+          `/topic/conversations/${c.id}/messages`,
+          msg => {
+            if (msg) {
+              this.conversationService.updateLastMessage(c.id, {
+                messageId: msg.id,
+                content: msg.content,
+                senderId: msg.senderId,
+                senderDisplayName: msg.senderName,
+                sentAt: msg.createdAt
+              });
+              if (this.activeConversationId() !== c.id && msg.senderId !== this.authService.currentUser()?.id) {
+                this.conversationService.incrementUnreadCount(c.id);
+              }
+            }
+          }
+        );
+        this.messageUnsubs.set(c.id, unsub);
+      }
+    }
   }
 
   syncRouteState(): void {
@@ -186,6 +276,37 @@ export class ConversationsComponent implements OnInit, OnDestroy {
 
   navigateToGroup(groupId: string): void {
     this.router.navigate(['/groups', groupId]);
+  }
+
+  formatTime(isoString?: string | null): string {
+    if (!isoString) return '';
+    try {
+      const date = new Date(isoString);
+      const now = new Date();
+      const isToday = date.toDateString() === now.toDateString();
+      if (isToday) {
+        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      }
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return '';
+    }
+  }
+
+  onSelectConversationItem(conv: ConversationItem): void {
+    this.conversationService.resetUnreadCount(conv.id);
+    if (conv.type === 'DIRECT' && conv.participant) {
+      this.router.navigate(['/conversations', conv.id], {
+        queryParams: {
+          peerId: conv.participant.id,
+          peerName: conv.participant.displayName
+        }
+      });
+    } else if (conv.type === 'GROUP' && conv.group) {
+      this.router.navigate(['/groups', conv.group.id]);
+    } else {
+      this.router.navigate(['/conversations', conv.id]);
+    }
   }
 
   navigateToConversation(contact: ContactResponse): void {

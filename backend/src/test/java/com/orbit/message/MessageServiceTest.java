@@ -22,11 +22,13 @@ import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
 import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
@@ -809,5 +811,102 @@ class MessageServiceTest {
         assertThat(blocked.getDeletedFor()).containsExactly(senderId);
         verify(blockedMessageRepository).save(blocked);
         verify(kafkaMessageProducer, never()).publishMessageDeleted(any());
+    }
+
+    @Test
+    @DisplayName("markMessageAsRead adds recipient to readBy, marks notification read, and publishes Kafka event")
+    void markMessageAsRead_success() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-read-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .readBy(new ArrayList<>())
+                .build();
+        when(messageRepository.findById("msg-read-1")).thenReturn(Optional.of(message));
+
+        messageService.markMessageAsRead(conversationId, "msg-read-1", recipientId);
+
+        assertThat(message.getReadBy()).hasSize(1);
+        assertThat(message.getReadBy().get(0).getUserId()).isEqualTo(recipientId);
+        verify(messageRepository).save(message);
+        verify(notificationRepository).markConversationAsRead(recipientId, conversationId);
+
+        ArgumentCaptor<MessageReadEvent> captor = ArgumentCaptor.forClass(MessageReadEvent.class);
+        verify(kafkaMessageProducer).publishMessageRead(captor.capture());
+        assertThat(captor.getValue().conversationId()).isEqualTo(conversationId);
+        assertThat(captor.getValue().messageId()).isEqualTo("msg-read-1");
+        assertThat(captor.getValue().userId()).isEqualTo(recipientId);
+    }
+
+    @Test
+    @DisplayName("markMessageAsRead is idempotent when user already read the message")
+    void markMessageAsRead_idempotent() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-read-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .readBy(new ArrayList<>(List.of(new ReadReceipt(recipientId, Instant.now()))))
+                .build();
+        when(messageRepository.findById("msg-read-1")).thenReturn(Optional.of(message));
+
+        messageService.markMessageAsRead(conversationId, "msg-read-1", recipientId);
+
+        assertThat(message.getReadBy()).hasSize(1);
+        verify(messageRepository, never()).save(any());
+        verify(kafkaMessageProducer, never()).publishMessageRead(any());
+        verify(notificationRepository).markConversationAsRead(recipientId, conversationId);
+    }
+
+    @Test
+    @DisplayName("markMessageAsRead ignores call if user is the sender")
+    void markMessageAsRead_senderIgnored() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-read-1")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .readBy(new ArrayList<>())
+                .build();
+        when(messageRepository.findById("msg-read-1")).thenReturn(Optional.of(message));
+
+        messageService.markMessageAsRead(conversationId, "msg-read-1", senderId);
+
+        assertThat(message.getReadBy()).isEmpty();
+        verify(messageRepository, never()).save(any());
+        verify(kafkaMessageProducer, never()).publishMessageRead(any());
+    }
+
+    @Test
+    @DisplayName("markMessageAsRead throws ForbiddenException if user is not a participant")
+    void markMessageAsRead_nonParticipantThrows() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        assertThatThrownBy(() -> messageService.markMessageAsRead(conversationId, "msg-read-1", "user-stranger"))
+                .isInstanceOf(ForbiddenException.class);
     }
 }

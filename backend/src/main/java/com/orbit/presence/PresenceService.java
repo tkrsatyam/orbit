@@ -5,6 +5,7 @@ import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
 import com.orbit.message.kafka.KafkaMessageProducer;
+import com.orbit.presence.dto.PresenceEvent;
 import com.orbit.presence.dto.TypingEvent;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
@@ -12,12 +13,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 /**
  * Handles online/offline state transitions and ephemeral typing indicators.
- * Follows docs/architecture/sequences/presence_flow.md Flow B.
+ * Follows docs/architecture/sequences/presence_flow.md.
  */
 @Service
 public class PresenceService {
@@ -37,6 +39,54 @@ public class PresenceService {
         this.userRepository = userRepository;
         this.contactService = contactService;
         this.kafkaMessageProducer = kafkaMessageProducer;
+    }
+
+    /**
+     * Handles user coming online (first WebSocket session connected).
+     * Updates users.online = true, sets lastSeen = now, and publishes PresenceEvent to Kafka.
+     * Follows Flow A from docs/architecture/sequences/presence_flow.md.
+     *
+     * @param userId user ID who connected
+     */
+    public void handleConnect(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setOnline(true);
+            user.setLastSeen(now);
+            userRepository.save(user);
+            log.info("User {} marked online", userId);
+        });
+
+        PresenceEvent event = new PresenceEvent(userId, true, now);
+        kafkaMessageProducer.publishPresence(event);
+    }
+
+    /**
+     * Handles user going offline (last WebSocket session disconnected).
+     * Updates users.online = false, sets lastSeen = now, and publishes PresenceEvent to Kafka.
+     * Follows Flow C from docs/architecture/sequences/presence_flow.md.
+     *
+     * @param userId user ID who disconnected
+     */
+    public void handleDisconnect(String userId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+
+        Instant now = Instant.now();
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setOnline(false);
+            user.setLastSeen(now);
+            userRepository.save(user);
+            log.info("User {} marked offline, lastSeen={}", userId, now);
+        });
+
+        PresenceEvent event = new PresenceEvent(userId, false, now);
+        kafkaMessageProducer.publishPresence(event);
     }
 
     /**

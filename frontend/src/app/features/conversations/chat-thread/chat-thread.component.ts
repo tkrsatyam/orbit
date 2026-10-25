@@ -7,12 +7,16 @@ import {
   ChatMessageItem,
   MessageDeleteMode,
   MessageDeletedEventPayload,
+  MessageDeliveryStatus,
   MessageEditedEventPayload,
   MessageResponse,
+  PresenceEventPayload,
+  ReadReceiptEventPayload,
   TypingEventPayload
 } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { ContactService } from '../../../core/services/contact.service';
+import { ConversationService } from '../../../core/services/conversation.service';
 import { MessageService } from '../../../core/services/message/message.service';
 import { UserService } from '../../../core/services/user.service';
 import { WebSocketService } from '../../../core/services/websocket/websocket.service';
@@ -30,6 +34,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   private readonly contactService = inject(ContactService);
+  private readonly conversationService = inject(ConversationService);
   private readonly userService = inject(UserService);
   readonly webSocketService = inject(WebSocketService);
 
@@ -75,9 +80,11 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
 
   private unsubscribeTopic?: () => void;
   private unsubscribeReceipts?: () => void;
+  private unsubscribeReadReceipts?: () => void;
   private unsubscribeEdits?: () => void;
   private unsubscribeDeletes?: () => void;
   private unsubscribeTyping?: () => void;
+  private unsubscribePresence?: () => void;
   private routeSub?: Subscription;
   private touchTimer?: ReturnType<typeof setTimeout>;
   private stopTypingTimer?: ReturnType<typeof setTimeout>;
@@ -102,6 +109,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         if (pId) {
           this.peerId.set(pId);
           this.checkBlockStatus(pId);
+          this.setupPeerPresence(pId);
         }
       })
     );
@@ -154,6 +162,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.unsubscribeTyping = this.messageService.subscribeToTyping(id, (event: TypingEventPayload) => {
       this.handleTypingEvent(event);
     });
+
+    // Subscribe to read receipts
+    this.unsubscribeReadReceipts = this.messageService.subscribeToReadReceipts(id, (event: ReadReceiptEventPayload) => {
+      this.handleReadReceipt(event);
+    });
+
+    this.conversationService.resetUnreadCount(id);
   }
 
   loadInitialHistory(id: string): void {
@@ -161,17 +176,32 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       next: (history) => {
         if (this.conversationId() !== id) return;
 
-        const items: ChatMessageItem[] = history.content.map(m => ({
-          ...m,
-          deliveryStatus: m.senderId === this.currentUserId()
-            ? (m.deliveryStatus ?? 'DELIVERED')
-            : undefined
-        }));
+        const items: ChatMessageItem[] = history.content.map(m => {
+          const isMe = m.senderId === this.currentUserId();
+          const isRead = (m.readBy && m.readBy.length > 0) || m.deliveryStatus === 'READ';
+          return {
+            ...m,
+            deliveryStatus: isMe
+              ? (isRead ? 'READ' : (m.deliveryStatus ?? 'DELIVERED'))
+              : undefined
+          };
+        });
         this.messages.set(items);
         this.hasMore.set(history.hasMore);
         this.nextCursor.set(history.nextCursor ?? null);
         this.isLoadingInitial.set(false);
         this.scrollToBottom();
+
+        // Mark unread incoming messages as read
+        const unreadIncoming = history.content.filter(
+          m => m.senderId !== this.currentUserId() && (!m.readBy || !m.readBy.includes(this.currentUserId()))
+        );
+        for (const msg of unreadIncoming) {
+          this.messageService.markMessageAsRead(id, msg.id).subscribe({
+            error: () => {}
+          });
+        }
+        this.conversationService.resetUnreadCount(id);
       },
       error: (err) => {
         console.error('Failed to load conversation history', err);
@@ -196,12 +226,16 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       next: (history) => {
         if (this.conversationId() !== convId) return;
 
-        const olderItems: ChatMessageItem[] = history.content.map(m => ({
-          ...m,
-          deliveryStatus: m.senderId === this.currentUserId()
-            ? (m.deliveryStatus ?? 'DELIVERED')
-            : undefined
-        }));
+        const olderItems: ChatMessageItem[] = history.content.map(m => {
+          const isMe = m.senderId === this.currentUserId();
+          const isRead = (m.readBy && m.readBy.length > 0) || m.deliveryStatus === 'READ';
+          return {
+            ...m,
+            deliveryStatus: isMe
+              ? (isRead ? 'READ' : (m.deliveryStatus ?? 'DELIVERED'))
+              : undefined
+          };
+        });
 
         this.messages.update(existing => {
           const existingIds = new Set(existing.map(m => m.id));
@@ -259,6 +293,14 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       this.unsubscribeTyping();
       this.unsubscribeTyping = undefined;
     }
+    if (this.unsubscribeReadReceipts) {
+      this.unsubscribeReadReceipts();
+      this.unsubscribeReadReceipts = undefined;
+    }
+    if (this.unsubscribePresence) {
+      this.unsubscribePresence();
+      this.unsubscribePresence = undefined;
+    }
     if (this.touchTimer) {
       clearTimeout(this.touchTimer);
       this.touchTimer = undefined;
@@ -272,6 +314,27 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       this.typingSafetyTimer = undefined;
     }
     this.isPeerTyping.set(false);
+  }
+
+  private setupPeerPresence(peerId: string): void {
+    if (this.unsubscribePresence) {
+      this.unsubscribePresence();
+      this.unsubscribePresence = undefined;
+    }
+    const existing = this.conversationService.conversations().find(c => c.participant?.id === peerId);
+    if (existing?.participant?.online !== undefined) {
+      this.peerOnline.set(existing.participant.online);
+    }
+    this.unsubscribePresence = this.webSocketService.subscribe<PresenceEventPayload>(
+      `/topic/presence/${peerId}`,
+      event => {
+        if (event && event.userId === peerId) {
+          this.peerOnline.set(event.online);
+          this.conversationService.updatePresence(peerId, event.online);
+          this.contactService.updatePresence(peerId, event.online);
+        }
+      }
+    );
   }
 
   checkBlockStatus(peerId: string): void {
@@ -547,24 +610,39 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       const idx = list.findIndex(m => m.id === 'temp-' + receipt.id || (m.idempotencyKey && m.content === receipt.content && m.deliveryStatus === 'SENDING'));
       if (idx !== -1) {
         const updated = [...list];
-        // If already promoted to DELIVERED by topic event, keep DELIVERED, otherwise set SENT
         const currentStatus = updated[idx].deliveryStatus;
-        const newStatus = currentStatus === 'DELIVERED' ? 'DELIVERED' : 'SENT';
+        const isRead = (receipt.readBy && receipt.readBy.length > 0) || receipt.deliveryStatus === 'READ';
+        const newStatus = isRead ? 'READ' : (currentStatus === 'DELIVERED' || currentStatus === 'READ' ? currentStatus : 'SENT');
         updated[idx] = { ...receipt, deliveryStatus: newStatus };
         return updated;
       }
       return list;
     });
+
+    this.conversationService.updateLastMessage(this.conversationId(), {
+      messageId: receipt.id,
+      content: receipt.content,
+      senderId: receipt.senderId,
+      senderDisplayName: receipt.senderName,
+      sentAt: receipt.createdAt
+    });
   }
 
   private handleIncomingMessage(incoming: MessageResponse): void {
+    const isMe = incoming.senderId === this.currentUserId();
+    const isRead = (incoming.readBy && incoming.readBy.length > 0) || incoming.deliveryStatus === 'READ';
+
     this.messages.update(list => {
       // If already present by server ID (e.g. from receipt)
       const existingIdx = list.findIndex(m => m.id === incoming.id);
       if (existingIdx !== -1) {
-        if (list[existingIdx].senderId === this.currentUserId()) {
+        if (isMe) {
           const updated = [...list];
-          updated[existingIdx] = { ...list[existingIdx], deliveryStatus: 'DELIVERED' };
+          updated[existingIdx] = {
+            ...list[existingIdx],
+            ...incoming,
+            deliveryStatus: isRead ? 'READ' : 'DELIVERED'
+          };
           return updated;
         }
         return list;
@@ -578,37 +656,79 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       );
       if (pendingIdx !== -1) {
         const updated = [...list];
-        const status = incoming.senderId === this.currentUserId() ? 'DELIVERED' : 'SENT';
+        const status = isMe ? (isRead ? 'READ' : 'DELIVERED') : undefined;
         updated[pendingIdx] = { ...incoming, deliveryStatus: status };
         return updated;
       }
 
       // Incoming message from peer
-      return [...list, { ...incoming, deliveryStatus: 'DELIVERED' }];
+      return [...list, { ...incoming, deliveryStatus: isMe ? (isRead ? 'READ' : 'DELIVERED') : 'DELIVERED' }];
     });
-    if (incoming.senderId !== this.currentUserId()) {
+
+    if (!isMe) {
       this.isPeerTyping.set(false);
       if (this.typingSafetyTimer) {
         clearTimeout(this.typingSafetyTimer);
         this.typingSafetyTimer = undefined;
       }
+      this.messageService.markMessageAsRead(this.conversationId(), incoming.id).subscribe({
+        error: () => {}
+      });
+      this.conversationService.resetUnreadCount(this.conversationId());
     }
+
+    this.conversationService.updateLastMessage(this.conversationId(), {
+      messageId: incoming.id,
+      content: incoming.content,
+      senderId: incoming.senderId,
+      senderDisplayName: incoming.senderName,
+      sentAt: incoming.createdAt
+    });
+
     this.scrollToBottom();
   }
 
   private confirmMessage(idempotencyKey: string, serverMsg: MessageResponse): void {
+    const isRead = (serverMsg.readBy && serverMsg.readBy.length > 0) || serverMsg.deliveryStatus === 'READ';
     this.messages.update(list => {
       const idx = list.findIndex(m => m.idempotencyKey === idempotencyKey);
       if (idx !== -1) {
         const updated = [...list];
         const currentStatus = updated[idx].deliveryStatus;
-        const newStatus = currentStatus === 'DELIVERED' ? 'DELIVERED' : 'SENT';
+        const newStatus = isRead ? 'READ' : (currentStatus === 'DELIVERED' ? 'DELIVERED' : 'SENT');
         updated[idx] = { ...serverMsg, deliveryStatus: newStatus };
         return updated;
       }
       return list;
     });
+
+    this.conversationService.updateLastMessage(this.conversationId(), {
+      messageId: serverMsg.id,
+      content: serverMsg.content,
+      senderId: serverMsg.senderId,
+      senderDisplayName: serverMsg.senderName,
+      sentAt: serverMsg.createdAt
+    });
+
     this.scrollToBottom();
+  }
+
+  handleReadReceipt(event: ReadReceiptEventPayload): void {
+    if (!event || !event.messageId) return;
+    this.messages.update(list => list.map(m => {
+      if (m.id === event.messageId) {
+        const readBy = m.readBy ? [...m.readBy] : [];
+        if (!readBy.includes(event.userId)) {
+          readBy.push(event.userId);
+        }
+        return {
+          ...m,
+          readBy,
+          deliveryStatus: 'READ'
+        };
+      }
+      return m;
+    }));
   }
 
   private updateMessageStatus(idempotencyKey: string, status: 'SENDING' | 'SENT' | 'DELIVERED' | 'FAILED'): void {

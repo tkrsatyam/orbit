@@ -118,4 +118,13 @@ export class ContactService {
       })
     );
   }
+
+  /**
+   * Updates the online presence status for a contact in real-time.
+   */
+  updatePresence(userId: string, online: boolean): void {
+    this.contacts.update(list =>
+      list.map(c => (c.userId === userId ? { ...c, online } : c))
+    );
+  }
 }

@@ -16,6 +16,7 @@ export interface MessageResponse {
   edited: boolean;
   editedAt?: string | null;
   createdAt: string;
+  readBy?: string[];
   deliveryStatus?: MessageDeliveryStatus;
 }
 
@@ -45,6 +46,16 @@ export interface MessageDeletedEventPayload {
   messageId: string;
 }
 
+export interface ReadReceiptRequestPayload {
+  messageId: string;
+}
+
+export interface ReadReceiptEventPayload {
+  messageId: string;
+  userId: string;
+  readAt: string;
+}
+
 export interface TypingRequestPayload {
   typing: boolean;
 }
@@ -53,6 +64,12 @@ export interface TypingEventPayload {
   userId: string;
   displayName: string;
   typing: boolean;
+}
+
+export interface PresenceEventPayload {
+  userId: string;
+  online: boolean;
+  lastSeen?: string | null;
 }
 
 export interface ChatMessageItem extends MessageResponse {

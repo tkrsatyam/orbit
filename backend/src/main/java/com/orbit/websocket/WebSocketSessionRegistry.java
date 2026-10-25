@@ -97,6 +97,13 @@ public class WebSocketSessionRegistry {
     }
 
     /**
+     * Alias for isOnline.
+     */
+    public boolean isUserOnline(String userId) {
+        return isOnline(userId);
+    }
+
+    /**
      * Returns an unmodifiable snapshot of currently online user IDs.
      */
     public Set<String> getOnlineUserIds() {

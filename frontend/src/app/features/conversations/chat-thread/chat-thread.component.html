@@ -18,12 +18,12 @@
           <span>{{ peerInitial() }}</span>
         </div>
         @if (peerOnline()) {
-          <span class="status-indicator online" aria-label="Online"></span>
+          <span class="status-indicator online" aria-label="Online" data-testid="chat-header-online-indicator"></span>
         }
       </div>
       <div class="peer-info">
         <h2 class="peer-name" data-testid="peer-name">{{ peerName() }}</h2>
-        <span class="peer-status" [class.online]="peerOnline()">
+        <span class="peer-status" [class.online]="peerOnline()" data-testid="chat-header-peer-status">
           {{ peerOnline() ? 'Online' : 'Offline' }}
         </span>
       </div>
@@ -168,14 +168,14 @@
                     </div>
                   } @else if (msg.deliveryStatus === 'SENT') {
                     <!-- SENT: Single checkmark (✓). Persisted on server, recipient has not received yet -->
-                    <span class="delivery-status sent" title="Sent (server acknowledged)">
+                    <span class="delivery-status sent" title="Sent (server acknowledged)" [attr.data-testid]="'delivery-status-' + msg.id">
                       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <polyline points="20 6 9 17 4 12" />
                       </svg>
                     </span>
                   } @else {
                     <!-- DELIVERED / READ: Double checkmark (✓✓) per Lucide standard -->
-                    <span class="delivery-status delivered" [class.read]="msg.deliveryStatus === 'READ'" title="Delivered">
+                    <span class="delivery-status delivered" [class.read]="msg.deliveryStatus === 'READ'" [title]="msg.deliveryStatus === 'READ' ? 'Read' : 'Delivered'" [attr.data-testid]="'delivery-status-' + msg.id">
                       <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M18 6 7 17l-5-5" />
                         <path d="m22 10-7.5 7.5L13 16" />
