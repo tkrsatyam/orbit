@@ -10,6 +10,7 @@ import { ConversationService } from '../../core/services/conversation.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
 import { WebSocketService } from '../../core/services/websocket/websocket.service';
+import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
 import { CreateGroupModalComponent } from '../../shared/components/create-group-modal/create-group-modal.component';
 import { NavigationRailComponent } from '../../shared/components/navigation-rail/navigation-rail.component';
 import { NewChatModalComponent } from '../../shared/components/new-chat-modal/new-chat-modal.component';
@@ -19,7 +20,14 @@ import { parseTopicTags } from '../../shared/utils/tag-utils';
 @Component({
   selector: 'app-conversations',
   standalone: true,
-  imports: [RouterOutlet, NavigationRailComponent, SelfProfileModalComponent, NewChatModalComponent, CreateGroupModalComponent],
+  imports: [
+    RouterOutlet,
+    NavigationRailComponent,
+    SelfProfileModalComponent,
+    NewChatModalComponent,
+    CreateGroupModalComponent,
+    AvatarComponent
+  ],
   templateUrl: './conversations.component.html',
   styleUrl: './conversations.component.scss'
 })

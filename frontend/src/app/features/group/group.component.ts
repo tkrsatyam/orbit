@@ -9,6 +9,11 @@ import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/ser
 import { AuthService } from '../../core/services/auth.service';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
 import { PublicProfileModalComponent } from '../../shared/components/public-profile-modal/public-profile-modal.component';
+import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
+import { MessageActionsBarComponent } from '../../shared/components/message-actions-bar/message-actions-bar.component';
+import { ComposerEditingBannerComponent } from '../../shared/components/composer-editing-banner/composer-editing-banner.component';
+import { DeleteMessageModalComponent } from '../../shared/components/delete-message-modal/delete-message-modal.component';
+import { TypingIndicatorComponent } from '../../shared/components/typing-indicator/typing-indicator.component';
 import {
   ChatMessageItem,
   MessageDeleteMode,
@@ -25,7 +30,18 @@ import { WebSocketService } from '../../core/services/websocket/websocket.servic
 @Component({
   selector: 'app-group',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, FormsModule, PublicProfileModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    FormsModule,
+    PublicProfileModalComponent,
+    AvatarComponent,
+    MessageActionsBarComponent,
+    ComposerEditingBannerComponent,
+    DeleteMessageModalComponent,
+    TypingIndicatorComponent
+  ],
   templateUrl: './group.component.html',
   styleUrl: './group.component.scss'
 })

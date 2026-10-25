@@ -127,13 +127,12 @@
               @for (contact of contactService.contacts(); track contact.id) {
                 <div class="contact-card" [attr.data-testid]="'contact-card-' + contact.id">
                   <div class="avatar-wrapper">
-                    <div class="avatar-badge" aria-hidden="true">
-                      @if (contact.avatarUrl) {
-                        <img [src]="contact.avatarUrl" [alt]="contact.displayName" class="avatar-image" />
-                      } @else {
-                        {{ contact.displayName.charAt(0).toUpperCase() }}
-                      }
-                    </div>
+                    <app-avatar
+                      [name]="contact.displayName"
+                      [imageUrl]="contact.avatarUrl"
+                      size="md"
+                      [showPresence]="false"
+                    />
                     <span
                       class="presence-dot"
                       [class.online]="contact.online"
@@ -377,9 +376,7 @@
               <div class="people-list">
                 @for (user of suggestedUsers(); track user.id) {
                   <div class="person-card" [attr.data-testid]="'person-card-' + user.id">
-                    <div class="avatar-badge" aria-hidden="true">
-                      {{ user.initials || 'U' }}
-                    </div>
+                    <app-avatar [name]="user.displayName" size="md" />
 
                     <div class="person-info">
                       <span class="person-name">{{ user.displayName }}</span>

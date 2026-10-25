@@ -21,6 +21,7 @@
     <span
       class="presence-indicator"
       [class.online]="isOnline()"
+      [class.online-indicator]="isOnline()"
       [class.offline]="!isOnline()"
       [attr.title]="isOnline() ? 'Online' : 'Offline'"
       data-testid="avatar-presence"

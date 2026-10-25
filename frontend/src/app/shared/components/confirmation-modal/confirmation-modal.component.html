@@ -1,0 +1,46 @@
+@if (isOpen()) {
+  <div class="modal-backdrop" (click)="onBackdropClick($event)" data-testid="confirmation-modal-backdrop">
+    <div class="modal-card confirmation-card" (click)="$event.stopPropagation()" data-testid="confirmation-modal">
+      <header class="modal-header">
+        <div class="icon-circle" [class.danger]="danger()" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h3 class="modal-title" data-testid="confirmation-modal-title">{{ title() }}</h3>
+      </header>
+
+      <div class="modal-body">
+        <p class="modal-desc" data-testid="confirmation-modal-desc">{{ description() }}</p>
+      </div>
+
+      <footer class="modal-footer">
+        <button
+          type="button"
+          class="btn-cancel"
+          (click)="cancel.emit()"
+          [disabled]="isLoading()"
+          data-testid="cancel-confirm-btn"
+        >
+          {{ cancelText() }}
+        </button>
+        <button
+          type="button"
+          [class]="danger() ? 'btn-confirm-danger' : 'btn-confirm-primary'"
+          (click)="confirm.emit()"
+          [disabled]="isLoading()"
+          data-testid="action-confirm-btn"
+        >
+          @if (isLoading()) {
+            <span class="btn-spinner" aria-hidden="true"></span>
+            <span>Loading...</span>
+          } @else {
+            <span>{{ confirmText() }}</span>
+          }
+        </button>
+      </footer>
+    </div>
+  </div>
+}

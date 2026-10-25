@@ -5,10 +5,12 @@ import { ContactService } from '../../../core/services/contact.service';
 import { UserService } from '../../../core/services/user.service';
 import { SuggestedUser } from '../../../core/models/user.model';
 
+import { AvatarComponent } from '../avatar/avatar.component';
+
 @Component({
   selector: 'app-new-chat-modal',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, AvatarComponent],
   templateUrl: './new-chat-modal.component.html',
   styleUrl: './new-chat-modal.component.scss'
 })

@@ -1,0 +1,20 @@
+@if (mode() === 'bar') {
+  <div class="group-typing-bar typing-bar" data-testid="group-typing-bar">
+    <div class="typing-dots-animation" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    @if (text()) {
+      <span class="typing-text-label" data-testid="group-typing-text">{{ text() }}</span>
+    }
+  </div>
+} @else {
+  <div class="typing-bubble message-bubble" data-testid="typing-bubble">
+    <div class="typing-dots" aria-hidden="true">
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+      <span class="typing-dot"></span>
+    </div>
+  </div>
+}
