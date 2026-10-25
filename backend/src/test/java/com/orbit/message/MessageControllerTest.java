@@ -3,6 +3,7 @@ package com.orbit.message;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReadReceiptRequest;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageType;
@@ -210,5 +211,31 @@ class MessageControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(messageService).deleteMessage(conversationId, "msg-1", senderId, MessageDeleteMode.FOR_ME);
+    }
+
+    @Test
+    @DisplayName("REST markMessageAsRead delegates to MessageService and returns 204 No Content")
+    void shouldMarkMessageAsRead_AndReturnNoContent() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        ResponseEntity<Void> response = messageController.markMessageAsRead(
+                conversationId,
+                "msg-1",
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).markMessageAsRead(conversationId, "msg-1", senderId);
+    }
+
+    @Test
+    @DisplayName("STOMP markStompMessageAsRead delegates to MessageService")
+    void shouldMarkStompMessageAsRead() {
+        when(principal.getName()).thenReturn(senderId);
+
+        ReadReceiptRequest request = new ReadReceiptRequest("msg-1");
+        messageController.markStompMessageAsRead(conversationId, request, principal);
+
+        verify(messageService).markMessageAsRead(conversationId, "msg-1", senderId);
     }
 }

@@ -4,9 +4,11 @@ import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.message.model.ReadReceipt;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;
+import java.util.List;
 
 @Schema(description = "Response representation of a message")
 public record MessageResponse(
@@ -41,18 +43,27 @@ public record MessageResponse(
         Instant createdAt,
 
         @Schema(description = "Delivery status of the message", example = "DELIVERED")
-        MessageDeliveryStatus deliveryStatus
+        MessageDeliveryStatus deliveryStatus,
+
+        @Schema(description = "User IDs who have read this message")
+        List<String> readBy
 ) {
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED, List.of());
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt, MessageDeliveryStatus deliveryStatus) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus, List.of());
+    }
+
+    public MessageResponse(String id, String conversationId, String senderId, String senderName,
+                           MessageType type, String content, boolean deleted, boolean edited,
+                           Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus) {
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, List.of());
     }
 
     public static MessageResponse from(Message message) {
@@ -61,6 +72,13 @@ public record MessageResponse(
 
     public static MessageResponse from(Message message, MessageDeliveryStatus deliveryStatus) {
         String content = message.isDeleted() ? null : message.getContent();
+        List<String> readBy = message.getReadBy() != null
+                ? message.getReadBy().stream().map(ReadReceipt::getUserId).toList()
+                : List.of();
+        MessageDeliveryStatus effectiveStatus = deliveryStatus;
+        if (effectiveStatus == MessageDeliveryStatus.DELIVERED && !readBy.isEmpty()) {
+            effectiveStatus = MessageDeliveryStatus.READ;
+        }
         return new MessageResponse(
                 message.getId(),
                 message.getConversationId(),
@@ -72,7 +90,8 @@ public record MessageResponse(
                 message.isEdited(),
                 message.getEditedAt(),
                 message.getCreatedAt(),
-                deliveryStatus
+                effectiveStatus,
+                readBy
         );
     }
 
@@ -93,7 +112,8 @@ public record MessageResponse(
                 message.isEdited(),
                 message.getEditedAt(),
                 message.getCreatedAt(),
-                deliveryStatus
+                deliveryStatus,
+                List.of()
         );
     }
 }

@@ -62,6 +62,9 @@ public class Message {
 
     private Instant editedAt;
 
+    @Builder.Default
+    private List<ReadReceipt> readBy = new ArrayList<>();
+
     @Indexed(sparse = true)
     private String idempotencyKey;
 

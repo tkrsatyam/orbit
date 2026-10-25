@@ -2,11 +2,16 @@ package com.orbit.websocket;
 
 import com.orbit.message.dto.MessageDeletedNotification;
 import com.orbit.message.dto.MessageEditedNotification;
+import com.orbit.message.dto.ReadReceiptNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReadEvent;
+import com.orbit.presence.dto.PresenceEvent;
+import com.orbit.presence.dto.PresenceNotification;
 import com.orbit.presence.dto.TypingEvent;
 import com.orbit.presence.dto.TypingNotification;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -14,7 +19,8 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Consumes events from Kafka (chat.messages, chat.presence) and forwards them to local WebSocket sessions.
+ * Consumes events from Kafka (chat.messages, chat.messages.edited, chat.messages.deleted,
+ * chat.messages.read, chat.presence) and forwards them to local WebSocket sessions.
  * Follows Flow D (Multi-Instance Fan-Out) from docs/architecture/sequences/message_send_flow.md.
  */
 @Component
@@ -90,10 +96,39 @@ public class KafkaWebSocketBridge {
     }
 
     /**
-     * Consumes typing events from Kafka topic 'chat.presence' and delivers to
-     * /topic/conversations/{conversationId}/typing.
+     * Consumes message read events and fans out to /topic/conversations/{conversationId}/read.
+     */
+    @KafkaListener(topics = "chat.messages.read", groupId = "orbit-websocket-group")
+    public void handleMessageRead(MessageReadEvent event) {
+        if (event == null || event.conversationId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time read receipt to subscribers: conversationId={}, messageId={}, userId={}",
+                event.conversationId(), event.messageId(), event.userId());
+        String destination = "/topic/conversations/" + event.conversationId() + "/read";
+        messagingTemplate.convertAndSend(destination,
+                new ReadReceiptNotification(event.messageId(), event.userId(), event.readAt()));
+    }
+
+    /**
+     * Consumes presence and typing events from Kafka topic 'chat.presence'.
      */
     @KafkaListener(topics = "chat.presence", groupId = "orbit-websocket-group")
+    public void handlePresenceOrTyping(Object event) {
+        Object payload = event;
+        if (event instanceof ConsumerRecord<?, ?> record) {
+            payload = record.value();
+        }
+        if (payload instanceof TypingEvent typingEvent) {
+            handleTyping(typingEvent);
+        } else if (payload instanceof PresenceEvent presenceEvent) {
+            handlePresence(presenceEvent);
+        } else {
+            log.warn("Unrecognized event type on chat.presence topic: {}", payload != null ? payload.getClass().getName() : "null");
+        }
+    }
+
     public void handleTyping(TypingEvent event) {
         if (event == null || event.conversationId() == null) {
             return;
@@ -104,5 +139,17 @@ public class KafkaWebSocketBridge {
         String destination = "/topic/conversations/" + event.conversationId() + "/typing";
         messagingTemplate.convertAndSend(destination,
                 new TypingNotification(event.userId(), event.displayName(), event.typing()));
+    }
+
+    public void handlePresence(PresenceEvent event) {
+        if (event == null || event.userId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time presence update: userId={}, online={}",
+                event.userId(), event.online());
+        String destination = "/topic/presence/" + event.userId();
+        messagingTemplate.convertAndSend(destination,
+                new PresenceNotification(event.userId(), event.online(), event.lastSeen()));
     }
 }

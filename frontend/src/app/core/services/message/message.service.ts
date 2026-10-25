@@ -9,6 +9,7 @@ import {
   MessageEditedEventPayload,
   MessageHistoryResponse,
   MessageResponse,
+  ReadReceiptEventPayload,
   SendMessagePayload,
   TypingEventPayload,
   TypingRequestPayload
@@ -229,5 +230,32 @@ export class MessageService {
   ): () => void {
     const destination = `/topic/conversations/${conversationId}/typing`;
     return this.webSocketService.subscribe<TypingEventPayload>(destination, callback);
+  }
+
+  /**
+   * Marks a message as read.
+   * Sends via STOMP destination /app/conversations/{id}/read and falls back to REST POST.
+   */
+  markMessageAsRead(conversationId: string, messageId: string): Observable<void> {
+    if (this.isWebSocketConnected()) {
+      this.webSocketService.publish(`/app/conversations/${conversationId}/read`, { messageId });
+    }
+    return this.http.post<void>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}/read`,
+      {},
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Subscribes to real-time read receipts for a conversation.
+   * Destination: /topic/conversations/{conversationId}/read
+   */
+  subscribeToReadReceipts(
+    conversationId: string,
+    callback: (event: ReadReceiptEventPayload) => void
+  ): () => void {
+    const destination = `/topic/conversations/${conversationId}/read`;
+    return this.webSocketService.subscribe<ReadReceiptEventPayload>(destination, callback);
   }
 }

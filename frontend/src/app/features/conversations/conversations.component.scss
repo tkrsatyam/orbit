@@ -233,6 +233,30 @@
 .chat-item-bottom {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.chat-item-time {
+  font-size: 0.6875rem;
+  color: var(--orbit-text-muted, #a1a1aa);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  background-color: var(--orbit-accent, #f59e0b);
+  color: #121214;
+  flex-shrink: 0;
 }
 
 .chat-item-preview {

@@ -19,6 +19,8 @@ tags:
   description: User profile management
 - name: Auth
   description: Authentication and session management
+- name: Conversations
+  description: Conversation listing and metadata
 paths:
   /api/v1/users/{userId}/block:
     post:
@@ -467,6 +469,33 @@ paths:
             '*/*':
               schema:
                 $ref: "#/components/schemas/MessageResponse"
+  /api/v1/conversations/{id}/messages/{messageId}/read:
+    post:
+      tags:
+      - Messages
+      summary: Mark message as read
+      description: Marks a message as read by the authenticated user.
+      operationId: markMessageAsRead
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Message marked as read successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - user is not a conversation participant
+        "404":
+          description: Conversation or message not found
   /api/v1/contacts/requests:
     get:
       tags:
@@ -1216,6 +1245,27 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
       security:
       - bearerAuth: []
+  /api/v1/conversations:
+    get:
+      tags:
+      - Conversations
+      summary: Get user conversations
+      description: "Get all conversations for the authenticated user (DMs and groups),\
+        \ ordered by most recent message."
+      operationId: getConversations
+      responses:
+        "200":
+          description: Conversations retrieved successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversationListResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ConversationListResponse"
   /api/v1/contacts:
     get:
       tags:
@@ -1545,6 +1595,11 @@ components:
           - READ
           - FAILED
           example: DELIVERED
+        readBy:
+          type: array
+          description: User IDs who have read this message
+          items:
+            type: string
     SendRequestDto:
       type: object
       properties:
@@ -1898,6 +1953,109 @@ components:
           description: List of group members
           items:
             $ref: "#/components/schemas/GroupMemberResponse"
+    ConversationListResponse:
+      type: object
+      description: List of conversations for authenticated user
+      properties:
+        content:
+          type: array
+          description: Array of conversation items
+          items:
+            $ref: "#/components/schemas/ConversationResponse"
+    ConversationResponse:
+      type: object
+      description: Conversation list item representation
+      properties:
+        id:
+          type: string
+          description: Conversation ID
+          example: 60c72b2f9b1d8b2bad000001
+        type:
+          type: string
+          description: "Conversation type: DIRECT or GROUP"
+          enum:
+          - DIRECT
+          - GROUP
+          example: DIRECT
+        participant:
+          $ref: "#/components/schemas/ParticipantSummary"
+          description: Participant summary for DIRECT conversations
+        group:
+          $ref: "#/components/schemas/GroupSummary"
+          description: Group summary for GROUP conversations
+        lastMessage:
+          $ref: "#/components/schemas/LastMessageResponse"
+          description: Last message snapshot
+        unreadCount:
+          type: integer
+          format: int32
+          description: Server-side unread message count
+          example: 3
+        muted:
+          type: boolean
+          description: Mute status for current user
+          example: false
+    GroupSummary:
+      type: object
+      description: Group summary in group conversation
+      properties:
+        id:
+          type: string
+          description: Group ID
+          example: 60c72b2f9b1d8b2bad000002
+        name:
+          type: string
+          description: Group name
+          example: FAANG Interview Prep
+        avatarUrl:
+          type: string
+          description: "Group avatar URL, or null"
+          example: https://...
+        memberCount:
+          type: integer
+          format: int32
+          description: Member count
+          example: 24
+    LastMessageResponse:
+      type: object
+      description: Last message snapshot in conversation
+      properties:
+        content:
+          type: string
+          description: Message content
+          example: Have you tried the system design mock?
+        senderId:
+          type: string
+          description: Sender user ID (for direct messages)
+          example: 60c72b2f9b1d8b2bad000001
+        senderDisplayName:
+          type: string
+          description: Sender display name (for group messages)
+          example: Priya
+        sentAt:
+          type: string
+          format: date-time
+          description: Timestamp when sent
+    ParticipantSummary:
+      type: object
+      description: Participant summary in direct conversation
+      properties:
+        id:
+          type: string
+          description: Participant user ID
+          example: 60c72b2f9b1d8b2bad000001
+        displayName:
+          type: string
+          description: Display name
+          example: Rahul
+        avatarUrl:
+          type: string
+          description: "Avatar URL, or null"
+          example: https://...
+        online:
+          type: boolean
+          description: Live online presence flag
+          example: true
     MessageHistoryResponse:
       type: object
       description: Paginated message history envelope

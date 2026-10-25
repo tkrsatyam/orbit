@@ -3,6 +3,7 @@ package com.orbit.message;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReadReceiptRequest;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageDeleteMode;
 import io.swagger.v3.oas.annotations.Operation;
@@ -172,5 +173,45 @@ public class MessageController {
 
         String senderId = principal.getName();
         return messageService.sendMessage(conversationId, senderId, request);
+    }
+
+    /**
+     * REST endpoint for marking a message as read.
+     * Enforces P1-18: Adds the authenticated user to message readBy and broadcasts read receipt.
+     */
+    @Operation(summary = "Mark message as read", description = "Marks a message as read by the authenticated user.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Message marked as read successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Forbidden - user is not a conversation participant"),
+            @ApiResponse(responseCode = "404", description = "Conversation or message not found")
+    })
+    @PostMapping("/api/v1/conversations/{id}/messages/{messageId}/read")
+    public ResponseEntity<Void> markMessageAsRead(
+            @PathVariable("id") String conversationId,
+            @PathVariable("messageId") String messageId,
+            Authentication authentication) {
+
+        String currentUserId = authentication.getName();
+        messageService.markMessageAsRead(conversationId, messageId, currentUserId);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * STOMP endpoint for marking a message as read.
+     * Destination: /app/conversations/{id}/read
+     */
+    @MessageMapping("/conversations/{id}/read")
+    public void markStompMessageAsRead(
+            @DestinationVariable("id") String conversationId,
+            @Payload @Valid ReadReceiptRequest request,
+            Principal principal) {
+
+        if (principal == null) {
+            throw new IllegalArgumentException("Unauthenticated STOMP session");
+        }
+
+        String currentUserId = principal.getName();
+        messageService.markMessageAsRead(conversationId, request.messageId(), currentUserId);
     }
 }

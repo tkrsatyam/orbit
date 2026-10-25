@@ -21,11 +21,13 @@ import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
 import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
@@ -510,5 +512,74 @@ public class MessageService {
         }
 
         throw new ResourceNotFoundException("Message not found");
+    }
+
+    /**
+     * Marks a message as read by the specified user.
+     * Enforces P1-18: Adds the user's ID and timestamp to the message's readBy list if not present,
+     * resets the unread count in NotificationRepository for this conversation,
+     * and publishes a MessageReadEvent to Kafka topic 'chat.messages.read' for WebSocket fan-out.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageId      the message identifier
+     * @param userId         the user marking the message as read
+     */
+    public void markMessageAsRead(String conversationId, String messageId, String userId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Message ID cannot be blank");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(userId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        // Always reset conversation unread count for this user
+        notificationRepository.markConversationAsRead(userId, conversationId);
+
+        Optional<Message> messageOpt = messageRepository.findById(messageId);
+        if (messageOpt.isEmpty()) {
+            Optional<BlockedMessage> blockedOpt = blockedMessageRepository.findById(messageId);
+            if (blockedOpt.isPresent() && conversationId.equals(blockedOpt.get().getConversationId())) {
+                // Blocked messages do not have read receipts per ADR 007
+                return;
+            }
+            throw new ResourceNotFoundException("Message not found: " + messageId);
+        }
+
+        Message message = messageOpt.get();
+        if (!conversationId.equals(message.getConversationId())) {
+            throw new ResourceNotFoundException("Message not found in conversation: " + messageId);
+        }
+
+        // Sender cannot generate read receipts for their own message
+        if (userId.equals(message.getSenderId())) {
+            return;
+        }
+
+        if (message.getReadBy() == null) {
+            message.setReadBy(new ArrayList<>());
+        }
+
+        boolean alreadyRead = message.getReadBy().stream()
+                .anyMatch(r -> userId.equals(r.getUserId()));
+
+        if (!alreadyRead) {
+            Instant now = Instant.now();
+            message.getReadBy().add(new ReadReceipt(userId, now));
+            messageRepository.save(message);
+
+            MessageReadEvent event = new MessageReadEvent(conversationId, messageId, userId, now);
+            kafkaMessageProducer.publishMessageRead(event);
+            log.debug("Message {} in conversation {} marked as read by user {}", messageId, conversationId, userId);
+        }
     }
 }

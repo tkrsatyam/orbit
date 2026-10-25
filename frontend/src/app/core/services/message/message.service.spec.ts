@@ -260,4 +260,32 @@ describe('MessageService', () => {
       callback
     );
   });
+
+  it('should mark message as read via STOMP when connected and fallback to REST', () => {
+    webSocketServiceMock.isConnected.mockReturnValue(true);
+
+    service.markMessageAsRead('conv-123', 'msg-1').subscribe();
+
+    expect(webSocketServiceMock.publish).toHaveBeenCalledWith(
+      '/app/conversations/conv-123/read',
+      { messageId: 'msg-1' }
+    );
+
+    const req = httpTesting.expectOne(
+      `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1/read`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null);
+  });
+
+  it('should subscribe to read receipts on /topic/conversations/{id}/read', () => {
+    const callback = vi.fn();
+    service.subscribeToReadReceipts('conv-123', callback);
+
+    expect(webSocketServiceMock.subscribe).toHaveBeenCalledWith(
+      '/topic/conversations/conv-123/read',
+      callback
+    );
+  });
 });

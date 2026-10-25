@@ -3,11 +3,15 @@ package com.orbit.websocket;
 import com.orbit.message.dto.MessageDeletedNotification;
 import com.orbit.message.dto.MessageEditedNotification;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReadReceiptNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.presence.dto.PresenceEvent;
+import com.orbit.presence.dto.PresenceNotification;
 import com.orbit.presence.dto.TypingEvent;
 import com.orbit.presence.dto.TypingNotification;
 import org.junit.jupiter.api.DisplayName;
@@ -46,7 +50,7 @@ class KafkaWebSocketBridgeTest {
     void shouldFanOutTypingEvent() {
         TypingEvent event = new TypingEvent("conv-123", "user-1", "Satyam", true);
 
-        bridge.handleTyping(event);
+        bridge.handlePresenceOrTyping(event);
 
         ArgumentCaptor<TypingNotification> captor = ArgumentCaptor.forClass(TypingNotification.class);
         verify(messagingTemplate).convertAndSend(eq("/topic/conversations/conv-123/typing"), captor.capture());
@@ -60,10 +64,27 @@ class KafkaWebSocketBridgeTest {
     @Test
     @DisplayName("Should ignore typing event if event or conversationId is null")
     void shouldIgnoreNullTypingEvent() {
-        bridge.handleTyping(null);
-        bridge.handleTyping(new TypingEvent(null, "user-1", "Satyam", true));
+        bridge.handlePresenceOrTyping(null);
+        bridge.handlePresenceOrTyping(new TypingEvent(null, "user-1", "Satyam", true));
 
         verify(messagingTemplate, never()).convertAndSend(any(String.class), any(Object.class));
+    }
+
+    @Test
+    @DisplayName("Should fan out presence event to /topic/presence/{userId}")
+    void shouldFanOutPresenceEvent() {
+        Instant now = Instant.now();
+        PresenceEvent event = new PresenceEvent("user-1", true, now);
+
+        bridge.handlePresenceOrTyping(event);
+
+        ArgumentCaptor<PresenceNotification> captor = ArgumentCaptor.forClass(PresenceNotification.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/presence/user-1"), captor.capture());
+
+        PresenceNotification notification = captor.getValue();
+        assertThat(notification.userId()).isEqualTo("user-1");
+        assertThat(notification.online()).isTrue();
+        assertThat(notification.lastSeen()).isEqualTo(now);
     }
 
     @Test
@@ -128,5 +149,22 @@ class KafkaWebSocketBridgeTest {
 
         MessageDeletedNotification notification = captor.getValue();
         assertThat(notification.messageId()).isEqualTo("msg-1");
+    }
+
+    @Test
+    @DisplayName("Should fan out message read event to /topic/conversations/{id}/read")
+    void shouldFanOutMessageReadEvent() {
+        Instant now = Instant.now();
+        MessageReadEvent event = new MessageReadEvent("conv-123", "msg-1", "user-2", now);
+
+        bridge.handleMessageRead(event);
+
+        ArgumentCaptor<ReadReceiptNotification> captor = ArgumentCaptor.forClass(ReadReceiptNotification.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversations/conv-123/read"), captor.capture());
+
+        ReadReceiptNotification notification = captor.getValue();
+        assertThat(notification.messageId()).isEqualTo("msg-1");
+        assertThat(notification.userId()).isEqualTo("user-2");
+        assertThat(notification.readAt()).isEqualTo(now);
     }
 }

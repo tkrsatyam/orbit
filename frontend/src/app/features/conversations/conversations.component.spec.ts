@@ -3,8 +3,10 @@ import { provideRouter, Router } from '@angular/router';
 import { signal } from '@angular/core';
 import { of } from 'rxjs';
 import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
+import { ConversationItem } from '../../core/models/conversation.model';
 import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
+import { ConversationService } from '../../core/services/conversation.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
 import { WebSocketService } from '../../core/services/websocket/websocket.service';
@@ -28,6 +30,16 @@ describe('ConversationsComponent', () => {
     incomingRequests: ReturnType<typeof signal<IncomingRequest[]>>;
     incomingCount: ReturnType<typeof signal<number>>;
   };
+  let conversationServiceMock: {
+    conversations: ReturnType<typeof signal<ConversationItem[]>>;
+    isLoading: ReturnType<typeof signal<boolean>>;
+    unreadTotalCount: ReturnType<typeof signal<number>>;
+    loadConversations: ReturnType<typeof vi.fn>;
+    updatePresence: ReturnType<typeof vi.fn>;
+    resetUnreadCount: ReturnType<typeof vi.fn>;
+    incrementUnreadCount: ReturnType<typeof vi.fn>;
+    updateLastMessage: ReturnType<typeof vi.fn>;
+  };
   let userServiceMock: {
     getSuggestedUsers: ReturnType<typeof vi.fn>;
     blockUser: ReturnType<typeof vi.fn>;
@@ -44,6 +56,7 @@ describe('ConversationsComponent', () => {
     disconnect: ReturnType<typeof vi.fn>;
     showReconnectAlert: ReturnType<typeof signal<boolean>>;
     status: ReturnType<typeof signal<string>>;
+    subscribe: ReturnType<typeof vi.fn>;
   };
   let router: Router;
 
@@ -108,11 +121,23 @@ describe('ConversationsComponent', () => {
       joinViaInvite: vi.fn().mockReturnValue(of({ groupId: 'grp-1', groupName: 'Engineers Orbit', role: 'MEMBER', joinedAt: '2026-10-21T00:00:00Z' }))
     };
 
+    conversationServiceMock = {
+      conversations: signal<ConversationItem[]>([]),
+      isLoading: signal<boolean>(false),
+      unreadTotalCount: signal<number>(0),
+      loadConversations: vi.fn().mockReturnValue(of({ content: [] })),
+      updatePresence: vi.fn(),
+      resetUnreadCount: vi.fn(),
+      incrementUnreadCount: vi.fn(),
+      updateLastMessage: vi.fn()
+    };
+
     webSocketServiceMock = {
       connect: vi.fn(),
       disconnect: vi.fn(),
       showReconnectAlert: signal<boolean>(false),
-      status: signal<string>('DISCONNECTED')
+      status: signal<string>('DISCONNECTED'),
+      subscribe: vi.fn().mockReturnValue(() => {})
     };
 
     await TestBed.configureTestingModule({
@@ -121,6 +146,7 @@ describe('ConversationsComponent', () => {
         provideRouter([]),
         { provide: AuthService, useValue: authServiceMock },
         { provide: ContactService, useValue: contactServiceMock },
+        { provide: ConversationService, useValue: conversationServiceMock },
         { provide: UserService, useValue: userServiceMock },
         { provide: GroupService, useValue: groupServiceMock },
         { provide: WebSocketService, useValue: webSocketServiceMock }
