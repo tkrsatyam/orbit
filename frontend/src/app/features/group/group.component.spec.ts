@@ -8,6 +8,7 @@ import { UserService } from '../../core/services/user.service';
 import { ContactService } from '../../core/services/contact.service';
 import { MessageService } from '../../core/services/message/message.service';
 import { ConversationService } from '../../core/services/conversation.service';
+import { WebSocketService } from '../../core/services/websocket/websocket.service';
 import { MessageResponse } from '../../core/models/message.model';
 
 describe('GroupComponent', () => {
@@ -32,11 +33,22 @@ describe('GroupComponent', () => {
     getConversationMessages: ReturnType<typeof vi.fn>;
     subscribeToConversation: ReturnType<typeof vi.fn>;
     subscribeToReceipts: ReturnType<typeof vi.fn>;
+    subscribeToEdits: ReturnType<typeof vi.fn>;
+    subscribeToDeletes: ReturnType<typeof vi.fn>;
+    subscribeToTyping: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
     sendMessageRest: ReturnType<typeof vi.fn>;
+    editMessage: ReturnType<typeof vi.fn>;
+    deleteMessage: ReturnType<typeof vi.fn>;
+    sendTyping: ReturnType<typeof vi.fn>;
     isWebSocketConnected: ReturnType<typeof vi.fn>;
     markMessageAsRead: ReturnType<typeof vi.fn>;
     markMessagesAsRead: ReturnType<typeof vi.fn>;
+  };
+  let mockWebSocketService: {
+    subscribe: ReturnType<typeof vi.fn>;
+    publish: ReturnType<typeof vi.fn>;
+    isConnected: ReturnType<typeof vi.fn>;
   };
   let mockConversationService: {
     resetUnreadCount: ReturnType<typeof vi.fn>;
@@ -113,6 +125,9 @@ describe('GroupComponent', () => {
       getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
       subscribeToConversation: vi.fn().mockReturnValue(() => {}),
       subscribeToReceipts: vi.fn().mockReturnValue(() => {}),
+      subscribeToEdits: vi.fn().mockReturnValue(() => {}),
+      subscribeToDeletes: vi.fn().mockReturnValue(() => {}),
+      subscribeToTyping: vi.fn().mockReturnValue(() => {}),
       isWebSocketConnected: vi.fn().mockReturnValue(true),
       sendMessageStomp: vi.fn(),
       sendMessageRest: vi.fn().mockReturnValue(of({
@@ -127,8 +142,29 @@ describe('GroupComponent', () => {
         createdAt: new Date().toISOString(),
         deliveryStatus: 'SENT'
       })),
+      editMessage: vi.fn().mockReturnValue(of({
+        id: 'msg-new-1',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT',
+        content: 'Edited content',
+        deleted: false,
+        edited: true,
+        editedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        deliveryStatus: 'DELIVERED'
+      })),
+      deleteMessage: vi.fn().mockReturnValue(of(void 0)),
+      sendTyping: vi.fn(),
       markMessageAsRead: vi.fn().mockReturnValue(of(void 0)),
       markMessagesAsRead: vi.fn().mockReturnValue(of(void 0))
+    };
+
+    mockWebSocketService = {
+      subscribe: vi.fn().mockReturnValue(() => {}),
+      publish: vi.fn(),
+      isConnected: vi.fn().mockReturnValue(true)
     };
 
     mockConversationService = {
@@ -142,6 +178,7 @@ describe('GroupComponent', () => {
         { provide: GroupService, useValue: mockGroupService },
         { provide: AuthService, useValue: mockAuthService },
         { provide: MessageService, useValue: mockMessageService },
+        { provide: WebSocketService, useValue: mockWebSocketService },
         { provide: ConversationService, useValue: mockConversationService },
         {
           provide: UserService,
@@ -191,7 +228,7 @@ describe('GroupComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('[data-testid="group-view-name"]')?.textContent?.trim()).toBe('Distributed Systems Space');
     expect(compiled.querySelector('[data-testid="group-view-topic"]')?.textContent?.trim()).toBe('#distributed');
-    expect(compiled.querySelector('[data-testid="group-view-member-count"]')?.textContent?.trim()).toBe('14 members');
+    expect(compiled.querySelector('[data-testid="group-view-member-count"]')?.textContent?.trim()).toContain('14 members');
     expect(compiled.querySelector('[data-testid="group-view-desc"]')?.textContent).toContain('Weekly deep dives into consensus algorithms');
   });
 
@@ -706,5 +743,305 @@ describe('GroupComponent', () => {
     expect(component.messages().length).toBe(1);
     expect(component.messages()[0].id).toBe('msg-confirmed-1');
     expect(component.messages()[0].deliveryStatus).toBe('DELIVERED');
+  });
+
+  describe('ORDM-54: Group Message Edit & Delete (+ Admin Delete)', () => {
+    it('should subscribe to edits and deletes on conversation setup', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      expect(mockMessageService.subscribeToEdits).toHaveBeenCalledWith('conv-101', expect.any(Function));
+      expect(mockMessageService.subscribeToDeletes).toHaveBeenCalledWith('conv-101', expect.any(Function));
+    });
+
+    it('should update message content and edited flag when real-time edit arrives', async () => {
+      let editCallback: any;
+      await setupComponent();
+      mockMessageService.subscribeToEdits.mockImplementation((convId: string, cb: any) => {
+        editCallback = cb;
+        return () => {};
+      });
+
+      component.loadGroupDetails('group-101');
+      fixture.detectChanges();
+
+      component.messages.set([
+        {
+          id: 'msg-to-edit',
+          conversationId: 'conv-101',
+          senderId: 'u-1',
+          senderName: 'Lead Admin',
+          type: 'TEXT',
+          content: 'Original content',
+          deleted: false,
+          edited: false,
+          createdAt: new Date().toISOString()
+        }
+      ]);
+
+      expect(editCallback).toBeDefined();
+      editCallback({
+        messageId: 'msg-to-edit',
+        content: 'Brand new edited content',
+        editedAt: new Date().toISOString()
+      });
+      fixture.detectChanges();
+
+      expect(component.messages()[0].content).toBe('Brand new edited content');
+      expect(component.messages()[0].edited).toBe(true);
+    });
+
+    it('should soft-delete message and clear content when real-time delete arrives', async () => {
+      let deleteCallback: any;
+      await setupComponent();
+      mockMessageService.subscribeToDeletes.mockImplementation((convId: string, cb: any) => {
+        deleteCallback = cb;
+        return () => {};
+      });
+
+      component.loadGroupDetails('group-101');
+      fixture.detectChanges();
+
+      component.messages.set([
+        {
+          id: 'msg-to-delete',
+          conversationId: 'conv-101',
+          senderId: 'u-1',
+          senderName: 'Lead Admin',
+          type: 'TEXT',
+          content: 'Will be deleted',
+          deleted: false,
+          edited: false,
+          createdAt: new Date().toISOString()
+        }
+      ]);
+
+      expect(deleteCallback).toBeDefined();
+      deleteCallback({
+        messageId: 'msg-to-delete'
+      });
+      fixture.detectChanges();
+
+      expect(component.messages()[0].deleted).toBe(true);
+      expect(component.messages()[0].content).toBe('');
+    });
+
+    it('should allow author to start edit, enter edit mode, and submit edited message', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      const testMsg = {
+        id: 'msg-author-edit',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT' as const,
+        content: 'Initial text',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      component.messages.set([testMsg]);
+
+      component.startEdit(testMsg);
+      fixture.detectChanges();
+
+      expect(component.isEditing()).toBe(true);
+      expect(component.editingMessage()?.id).toBe('msg-author-edit');
+      expect(component.messageInput()).toBe('Initial text');
+
+      component.messageInput.set('Updated by author');
+      component.sendMessage();
+
+      expect(mockMessageService.editMessage).toHaveBeenCalledWith('conv-101', 'msg-author-edit', 'Updated by author');
+      expect(component.isEditing()).toBe(false);
+      expect(component.editingMessage()).toBeNull();
+    });
+
+    it('should allow author to cancel edit with cancelEdit or Escape key', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      const testMsg = {
+        id: 'msg-cancel-edit',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT' as const,
+        content: 'Keep me unchanged',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      component.startEdit(testMsg);
+      expect(component.isEditing()).toBe(true);
+
+      const escEvent = new KeyboardEvent('keydown', { key: 'Escape' });
+      component.onKeydown(escEvent);
+      fixture.detectChanges();
+
+      expect(component.isEditing()).toBe(false);
+      expect(component.messageInput()).toBe('');
+    });
+
+    it('should allow author to delete message FOR_EVERYONE and FOR_ME', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      const testMsg = {
+        id: 'msg-author-delete',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT' as const,
+        content: 'Delete me',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      component.messages.set([testMsg]);
+
+      component.openDeleteModal(testMsg);
+      expect(component.deleteModalMessage()?.id).toBe('msg-author-delete');
+
+      component.confirmDeleteMessage('FOR_EVERYONE');
+      expect(mockMessageService.deleteMessage).toHaveBeenCalledWith('conv-101', 'msg-author-delete', 'FOR_EVERYONE');
+      expect(component.messages()[0].deleted).toBe(true);
+      expect(component.deleteModalMessage()).toBeNull();
+
+      // Test FOR_ME
+      component.messages.set([testMsg]);
+      component.openDeleteModal(testMsg);
+      component.confirmDeleteMessage('FOR_ME');
+      expect(mockMessageService.deleteMessage).toHaveBeenCalledWith('conv-101', 'msg-author-delete', 'FOR_ME');
+      expect(component.messages().length).toBe(0);
+    });
+
+    it('should allow group admin to delete another member message for everyone', async () => {
+      await setupComponent('group-101', mockAdminGroup);
+      fixture.detectChanges();
+
+      const otherMemberMsg = {
+        id: 'msg-other-member',
+        conversationId: 'conv-101',
+        senderId: 'u-2',
+        senderName: 'Dev Contributor',
+        type: 'TEXT' as const,
+        content: 'Spam from member',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString()
+      };
+      component.messages.set([otherMemberMsg]);
+
+      expect(component.isAdmin()).toBe(true);
+      component.openDeleteModal(otherMemberMsg);
+      expect(component.deleteModalMessage()?.id).toBe('msg-other-member');
+
+      component.confirmDeleteMessage('FOR_EVERYONE');
+      expect(mockMessageService.deleteMessage).toHaveBeenCalledWith('conv-101', 'msg-other-member', 'FOR_EVERYONE');
+      expect(component.messages()[0].deleted).toBe(true);
+    });
+  });
+
+  describe('ORDM-55: Group Typing Indicator with Multi-User Debounce', () => {
+    it('should subscribe to typing events on group setup', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      expect(mockMessageService.subscribeToTyping).toHaveBeenCalledWith('conv-101', expect.any(Function));
+    });
+
+    it('should send typing indicator on composer input and debounce stop typing', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      component.onComposerInput('Typing something...');
+      expect(mockMessageService.sendTyping).toHaveBeenCalledWith('conv-101', true);
+
+      // Clearing input immediately stops typing
+      component.onComposerInput('');
+      expect(mockMessageService.sendTyping).toHaveBeenCalledWith('conv-101', false);
+    });
+
+    it('should aggregate and format multi-user typing indicator text', async () => {
+      let typingCallback: any;
+      await setupComponent();
+      mockMessageService.subscribeToTyping.mockImplementation((convId: string, cb: any) => {
+        typingCallback = cb;
+        return () => {};
+      });
+
+      component.loadGroupDetails('group-101');
+      fixture.detectChanges();
+
+      expect(typingCallback).toBeDefined();
+
+      // 1 user typing
+      typingCallback({ userId: 'u-2', displayName: 'Bob', typing: true });
+      expect(component.typingIndicatorText()).toBe('Bob is typing...');
+
+      // 2 users typing
+      typingCallback({ userId: 'u-3', displayName: 'Charlie', typing: true });
+      expect(component.typingIndicatorText()).toBe('Bob and Charlie are typing...');
+
+      // 3 users typing
+      typingCallback({ userId: 'u-4', displayName: 'Dana', typing: true });
+      expect(component.typingIndicatorText()).toBe('3 people are typing...');
+
+      // Bob stops typing
+      typingCallback({ userId: 'u-2', displayName: 'Bob', typing: false });
+      expect(component.typingIndicatorText()).toBe('Charlie and Dana are typing...');
+    });
+  });
+
+  describe('ORDM-56: Group Member Presence & Active Member Count', () => {
+    it('should subscribe to presence topics for all group members on load', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      expect(mockWebSocketService.subscribe).toHaveBeenCalledWith('/topic/presence/u-1', expect.any(Function));
+      expect(mockWebSocketService.subscribe).toHaveBeenCalledWith('/topic/presence/u-2', expect.any(Function));
+    });
+
+    it('should update member online presence in real time when presence event arrives', async () => {
+      await setupComponent();
+      const presenceCallbacks: Record<string, (event: any) => void> = {};
+      mockWebSocketService.subscribe.mockImplementation((topic: string, cb: any) => {
+        const match = topic.match(/\/topic\/presence\/(.+)/);
+        if (match) {
+          presenceCallbacks[match[1]] = cb;
+        }
+        return () => {};
+      });
+
+      component['memberPresenceUnsubs'].clear();
+      component.loadMembers();
+      fixture.detectChanges();
+
+      expect(component.members().find(m => m.userId === 'u-2')?.online).toBe(false);
+
+      // Simulate u-2 coming online in real time
+      presenceCallbacks['u-2']({ userId: 'u-2', online: true });
+      fixture.detectChanges();
+
+      expect(component.members().find(m => m.userId === 'u-2')?.online).toBe(true);
+    });
+
+    it('should accurately compute and render online member count', async () => {
+      await setupComponent();
+      fixture.detectChanges();
+
+      // Initially u-1 is online (true) and u-2 is offline (false) in mockMemberList
+      expect(component.onlineMemberCount()).toBe(1);
+
+      component.members.set([
+        { ...mockMemberList[0], online: true },
+        { ...mockMemberList[1], online: true }
+      ]);
+      fixture.detectChanges();
+
+      expect(component.onlineMemberCount()).toBe(2);
+    });
   });
 });

@@ -4,6 +4,7 @@ import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.ForbiddenException;
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.contact.ContactService;
 import com.orbit.conversation.ConversationService;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.group.dto.CreateGroupRequest;
@@ -21,6 +22,7 @@ import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
+import com.orbit.websocket.WebSocketSessionRegistry;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -51,17 +53,23 @@ public class GroupService {
     private final OrbitProperties orbitProperties;
     private final UserRepository userRepository;
     private final MongoTemplate mongoTemplate;
+    private final WebSocketSessionRegistry sessionRegistry;
+    private final ContactService contactService;
 
     public GroupService(GroupRepository groupRepository,
                         ConversationService conversationService,
                         OrbitProperties orbitProperties,
                         UserRepository userRepository,
-                        MongoTemplate mongoTemplate) {
+                        MongoTemplate mongoTemplate,
+                        WebSocketSessionRegistry sessionRegistry,
+                        ContactService contactService) {
         this.groupRepository = groupRepository;
         this.conversationService = conversationService;
         this.orbitProperties = orbitProperties;
         this.userRepository = userRepository;
         this.mongoTemplate = mongoTemplate;
+        this.sessionRegistry = sessionRegistry;
+        this.contactService = contactService;
     }
 
     /**
@@ -438,12 +446,22 @@ public class GroupService {
                     User u = userMap.get(m.getUserId());
                     String displayName = u != null ? u.getDisplayName() : "Unknown User";
                     String avatarUrl = u != null ? u.getAvatarUrl() : null;
+
+                    boolean isOnline = false;
+                    // ADR 007 Decision 6: A's online status remains hidden from B in shared group's member list
+                    // if target member has blocked caller
+                    boolean isBlockedByMember = contactService != null && contactService.isBlockedBy(callerUserId, m.getUserId());
+                    if (!isBlockedByMember) {
+                        isOnline = (sessionRegistry != null && sessionRegistry.isUserOnline(m.getUserId()))
+                                || (u != null && u.isOnline());
+                    }
+
                     return new GroupMemberResponse(
                             m.getUserId(),
                             displayName,
                             avatarUrl,
                             m.getRole(),
-                            false,
+                            isOnline,
                             m.getJoinedAt()
                     );
                 })
@@ -505,12 +523,19 @@ public class GroupService {
         String displayName = targetUser != null ? targetUser.getDisplayName() : "Unknown User";
         String avatarUrl = targetUser != null ? targetUser.getAvatarUrl() : null;
 
+        boolean isOnline = false;
+        boolean isBlockedByMember = contactService != null && contactService.isBlockedBy(adminUserId, targetUserId);
+        if (!isBlockedByMember) {
+            isOnline = (sessionRegistry != null && sessionRegistry.isUserOnline(targetUserId))
+                    || (targetUser != null && targetUser.isOnline());
+        }
+
         return new GroupMemberResponse(
                 targetMember.getUserId(),
                 displayName,
                 avatarUrl,
                 targetMember.getRole(),
-                false,
+                isOnline,
                 targetMember.getJoinedAt()
         );
     }

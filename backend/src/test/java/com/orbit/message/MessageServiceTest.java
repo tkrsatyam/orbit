@@ -762,6 +762,43 @@ class MessageServiceTest {
     }
 
     @Test
+    @DisplayName("deleteMessage with FOR_EVERYONE throws ForbiddenException when regular member attempts to delete another member's message in group")
+    void shouldThrowForbiddenException_WhenRegularMemberDeletesOtherMemberMessageInGroup() {
+        String groupId = "group-1";
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.GROUP)
+                .groupId(groupId)
+                .participantIds(List.of(senderId, "member-2", "member-3"))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Group group = Group.builder()
+                .id(groupId)
+                .members(List.of(
+                        GroupMember.builder().userId(senderId).role(GroupRole.MEMBER).build(),
+                        GroupMember.builder().userId("member-2").role(GroupRole.MEMBER).build(),
+                        GroupMember.builder().userId("member-3").role(GroupRole.ADMIN).build()
+                ))
+                .build();
+        when(groupRepository.findById(groupId)).thenReturn(Optional.of(group));
+
+        Message message = Message.builder()
+                .id("msg-target-grp")
+                .conversationId(conversationId)
+                .senderId(senderId)
+                .content("Author message")
+                .build();
+        when(messageRepository.findById("msg-target-grp")).thenReturn(Optional.of(message));
+
+        assertThatThrownBy(() -> messageService.deleteMessage(conversationId, "msg-target-grp", "member-2", MessageDeleteMode.FOR_EVERYONE))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("only delete your own messages for everyone");
+
+        verify(kafkaMessageProducer, never()).publishMessageDeleted(any());
+    }
+
+    @Test
     @DisplayName("deleteMessage with FOR_ME appends user ID to deletedFor and decrements unread count for recipient")
     void shouldDeleteMessageForMe_AndDecrementUnreadCount() {
         Conversation conversation = Conversation.builder()
