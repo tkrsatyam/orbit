@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, computed, effect, ElementRef, HostListener, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { ContactResponse, IncomingRequest } from '../../core/models/contact.model';
@@ -74,6 +74,15 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     return groups;
   });
 
+  constructor() {
+    effect(() => {
+      const convs = this.conversationService.conversations();
+      if (convs) {
+        this.subscribeToConversationStreams();
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.syncRouteState();
     this.webSocketService.connect();
@@ -103,9 +112,6 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     });
 
     this.conversationService.loadConversations().subscribe({
-      next: () => {
-        this.subscribeToConversationStreams();
-      },
       error: () => {
         // Silently handle initial load failure
       }
@@ -126,6 +132,27 @@ export class ConversationsComponent implements OnInit, OnDestroy {
 
   subscribeToConversationStreams(): void {
     const convs = this.conversationService.conversations();
+    const activeConvIds = new Set(convs.map(c => c.id));
+    const activePeerIds = new Set(
+      convs.filter(c => c.type === 'DIRECT' && c.participant?.id).map(c => c.participant!.id)
+    );
+
+    // Prune removed message subscriptions
+    for (const [convId, unsub] of this.messageUnsubs.entries()) {
+      if (!activeConvIds.has(convId)) {
+        unsub();
+        this.messageUnsubs.delete(convId);
+      }
+    }
+
+    // Prune removed presence subscriptions
+    for (const [peerId, unsub] of this.presenceUnsubs.entries()) {
+      if (!activePeerIds.has(peerId)) {
+        unsub();
+        this.presenceUnsubs.delete(peerId);
+      }
+    }
+
     for (const c of convs) {
       if (c.type === 'DIRECT' && c.participant?.id) {
         const peerId = c.participant.id;
