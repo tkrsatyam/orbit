@@ -4,6 +4,7 @@ import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ConflictException;
 import com.orbit.common.exception.ForbiddenException;
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.contact.ContactService;
 import com.orbit.conversation.ConversationService;
 import com.orbit.conversation.model.Conversation;
 import com.orbit.conversation.model.ConversationType;
@@ -22,6 +23,7 @@ import com.orbit.group.model.GroupRole;
 import com.orbit.group.model.GroupVisibility;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
+import com.orbit.websocket.WebSocketSessionRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,6 +43,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,6 +63,12 @@ class GroupServiceTest {
     @Mock
     private MongoTemplate mongoTemplate;
 
+    @Mock
+    private WebSocketSessionRegistry sessionRegistry;
+
+    @Mock
+    private ContactService contactService;
+
     private OrbitProperties orbitProperties;
     private GroupService groupService;
 
@@ -70,7 +79,7 @@ class GroupServiceTest {
                 new OrbitProperties.Cors("http://localhost:4200"),
                 new OrbitProperties.Cookie(true, "None")
         );
-        groupService = new GroupService(groupRepository, conversationService, orbitProperties, userRepository, mongoTemplate);
+        groupService = new GroupService(groupRepository, conversationService, orbitProperties, userRepository, mongoTemplate, sessionRegistry, contactService);
     }
 
     @Test
@@ -384,14 +393,72 @@ class GroupServiceTest {
         User user1 = User.builder().id("u-1").displayName("Alice Admin").avatarUrl("http://avatar1").build();
         User user2 = User.builder().id("u-2").displayName("Bob Member").avatarUrl(null).build();
         when(userRepository.findAllById(List.of("u-1", "u-2"))).thenReturn(List.of(user1, user2));
+        when(sessionRegistry.isUserOnline("u-1")).thenReturn(true);
+        when(sessionRegistry.isUserOnline("u-2")).thenReturn(false);
 
         GroupMemberListResponse response = groupService.getGroupMembers("u-2", "grp-1");
 
         assertThat(response.content()).hasSize(2);
         assertThat(response.content().get(0).displayName()).isEqualTo("Alice Admin");
         assertThat(response.content().get(0).role()).isEqualTo(GroupRole.ADMIN);
+        assertThat(response.content().get(0).online()).isTrue();
         assertThat(response.content().get(1).displayName()).isEqualTo("Bob Member");
         assertThat(response.content().get(1).role()).isEqualTo(GroupRole.MEMBER);
+        assertThat(response.content().get(1).online()).isFalse();
+    }
+
+    @Test
+    void getGroupMembers_SuppressesOnlinePresence_WhenTargetMemberBlockedCaller() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(List.of(
+                        GroupMember.builder().userId("u-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build(),
+                        GroupMember.builder().userId("u-2").role(GroupRole.MEMBER).joinedAt(Instant.now()).build()
+                ))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        User user1 = User.builder().id("u-1").displayName("Alice Admin").avatarUrl("http://avatar1").build();
+        User user2 = User.builder().id("u-2").displayName("Bob Member").avatarUrl(null).build();
+        when(userRepository.findAllById(List.of("u-1", "u-2"))).thenReturn(List.of(user1, user2));
+
+        // u-1 has blocked u-2 (the caller) per ADR 007 Decision 6
+        when(contactService.isBlockedBy("u-2", "u-1")).thenReturn(true);
+        lenient().when(sessionRegistry.isUserOnline("u-1")).thenReturn(true);
+        lenient().when(sessionRegistry.isUserOnline("u-2")).thenReturn(false);
+
+        GroupMemberListResponse response = groupService.getGroupMembers("u-2", "grp-1");
+
+        assertThat(response.content()).hasSize(2);
+        // u-1's presence is suppressed to false for caller u-2
+        assertThat(response.content().get(0).online()).isFalse();
+    }
+
+    @Test
+    void getGroupMembers_RetainsOnlinePresence_WhenCallerBlockedTargetMember() {
+        Group group = Group.builder()
+                .id("grp-1")
+                .members(List.of(
+                        GroupMember.builder().userId("u-1").role(GroupRole.ADMIN).joinedAt(Instant.now()).build(),
+                        GroupMember.builder().userId("u-2").role(GroupRole.MEMBER).joinedAt(Instant.now()).build()
+                ))
+                .build();
+        when(groupRepository.findById("grp-1")).thenReturn(Optional.of(group));
+
+        User user1 = User.builder().id("u-1").displayName("Alice Admin").avatarUrl("http://avatar1").build();
+        User user2 = User.builder().id("u-2").displayName("Bob Member").avatarUrl(null).build();
+        when(userRepository.findAllById(List.of("u-1", "u-2"))).thenReturn(List.of(user1, user2));
+
+        // caller u-2 blocked u-1, so u-1 did NOT block u-2 (isBlockedBy(caller, target) is false)
+        when(contactService.isBlockedBy("u-2", "u-1")).thenReturn(false);
+        lenient().when(sessionRegistry.isUserOnline("u-1")).thenReturn(true);
+        lenient().when(sessionRegistry.isUserOnline("u-2")).thenReturn(false);
+
+        GroupMemberListResponse response = groupService.getGroupMembers("u-2", "grp-1");
+
+        assertThat(response.content()).hasSize(2);
+        // Caller retains visibility of blocker target's online presence
+        assertThat(response.content().get(0).online()).isTrue();
     }
 
     @Test

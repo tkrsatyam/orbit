@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, ElementRef, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -9,14 +9,39 @@ import { GroupMemberResponse, GroupResponse, GroupService } from '../../core/ser
 import { AuthService } from '../../core/services/auth.service';
 import { parseTopicTags } from '../../shared/utils/tag-utils';
 import { PublicProfileModalComponent } from '../../shared/components/public-profile-modal/public-profile-modal.component';
-import { ChatMessageItem, MessageResponse } from '../../core/models/message.model';
+import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
+import { MessageActionsBarComponent } from '../../shared/components/message-actions-bar/message-actions-bar.component';
+import { ComposerEditingBannerComponent } from '../../shared/components/composer-editing-banner/composer-editing-banner.component';
+import { DeleteMessageModalComponent } from '../../shared/components/delete-message-modal/delete-message-modal.component';
+import { TypingIndicatorComponent } from '../../shared/components/typing-indicator/typing-indicator.component';
+import {
+  ChatMessageItem,
+  MessageDeleteMode,
+  MessageDeletedEventPayload,
+  MessageEditedEventPayload,
+  MessageResponse,
+  PresenceEventPayload,
+  TypingEventPayload
+} from '../../core/models/message.model';
 import { MessageService } from '../../core/services/message/message.service';
 import { ConversationService } from '../../core/services/conversation.service';
+import { WebSocketService } from '../../core/services/websocket/websocket.service';
 
 @Component({
   selector: 'app-group',
   standalone: true,
-  imports: [CommonModule, RouterLink, ReactiveFormsModule, FormsModule, PublicProfileModalComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    ReactiveFormsModule,
+    FormsModule,
+    PublicProfileModalComponent,
+    AvatarComponent,
+    MessageActionsBarComponent,
+    ComposerEditingBannerComponent,
+    DeleteMessageModalComponent,
+    TypingIndicatorComponent
+  ],
   templateUrl: './group.component.html',
   styleUrl: './group.component.scss'
 })
@@ -27,6 +52,7 @@ export class GroupComponent implements OnInit, OnDestroy {
   private readonly authService = inject(AuthService);
   private readonly messageService = inject(MessageService);
   private readonly conversationService = inject(ConversationService);
+  private readonly webSocketService = inject(WebSocketService);
   private readonly fb = inject(FormBuilder);
   private readonly destroyRef = inject(DestroyRef);
   private readonly incomingReadSubject = new Subject<string>();
@@ -48,8 +74,34 @@ export class GroupComponent implements OnInit, OnDestroy {
   readonly isLoadingInitial = signal<boolean>(false);
   readonly activeConversationId = signal<string | null>(null);
 
+  // Message actions & editing (ORDM-54)
+  readonly activeActionMessageId = signal<string | null>(null);
+  readonly editingMessage = signal<ChatMessageItem | null>(null);
+  readonly isEditing = computed(() => this.editingMessage() !== null);
+  readonly deleteModalMessage = signal<ChatMessageItem | null>(null);
+  readonly isDeletingMessage = signal<boolean>(false);
+
+  // Typing indicator state (ORDM-55)
+  private isActivelyTyping = false;
+  private lastTypingSentAt = 0;
+  private stopTypingTimer?: any;
+  private readonly typingSafetyTimers = new Map<string, any>();
+  readonly typingUsers = signal<Map<string, string>>(new Map());
+  readonly typingIndicatorText = computed(() => {
+    const users = Array.from(this.typingUsers().values());
+    if (users.length === 0) return null;
+    if (users.length === 1) return `${users[0]} is typing...`;
+    if (users.length === 2) return `${users[0]} and ${users[1]} are typing...`;
+    return `${users.length} people are typing...`;
+  });
+
+  // Real-time group subscriptions
   private unsubscribeTopic?: () => void;
   private unsubscribeReceipts?: () => void;
+  private unsubscribeEdits?: () => void;
+  private unsubscribeDeletes?: () => void;
+  private unsubscribeTyping?: () => void;
+  private readonly memberPresenceUnsubs = new Map<string, () => void>();
 
   readonly isEditModalOpen = signal<boolean>(false);
   readonly isSubmittingEdit = signal<boolean>(false);
@@ -93,6 +145,7 @@ export class GroupComponent implements OnInit, OnDestroy {
   readonly isAdmin = computed(() => this.group()?.role === 'ADMIN');
   readonly myGroups = computed(() => this.groupService.myGroups());
   readonly topicTags = computed(() => parseTopicTags(this.group()?.topicTag));
+  readonly onlineMemberCount = computed(() => this.members().filter(m => m.online).length);
 
   readonly leaveWarningMessage = computed(() => {
     const isAdm = this.isAdmin();
@@ -185,6 +238,18 @@ export class GroupComponent implements OnInit, OnDestroy {
       this.handleReceipt(receipt);
     });
 
+    this.unsubscribeEdits = this.messageService.subscribeToEdits(conversationId, (edited: MessageEditedEventPayload) => {
+      this.handleMessageEdited(edited);
+    });
+
+    this.unsubscribeDeletes = this.messageService.subscribeToDeletes(conversationId, (deleted: MessageDeletedEventPayload) => {
+      this.handleMessageDeleted(deleted);
+    });
+
+    this.unsubscribeTyping = this.messageService.subscribeToTyping(conversationId, (event: TypingEventPayload) => {
+      this.handleIncomingTyping(event);
+    });
+
     this.conversationService.resetUnreadCount(conversationId);
   }
 
@@ -197,6 +262,29 @@ export class GroupComponent implements OnInit, OnDestroy {
       this.unsubscribeReceipts();
       this.unsubscribeReceipts = undefined;
     }
+    if (this.unsubscribeEdits) {
+      this.unsubscribeEdits();
+      this.unsubscribeEdits = undefined;
+    }
+    if (this.unsubscribeDeletes) {
+      this.unsubscribeDeletes();
+      this.unsubscribeDeletes = undefined;
+    }
+    if (this.unsubscribeTyping) {
+      this.unsubscribeTyping();
+      this.unsubscribeTyping = undefined;
+    }
+    for (const timer of this.typingSafetyTimers.values()) {
+      clearTimeout(timer);
+    }
+    this.typingSafetyTimers.clear();
+    this.typingUsers.set(new Map());
+    this.sendStopTyping();
+
+    for (const unsub of this.memberPresenceUnsubs.values()) {
+      unsub();
+    }
+    this.memberPresenceUnsubs.clear();
   }
 
   loadInitialHistory(conversationId: string): void {
@@ -285,6 +373,39 @@ export class GroupComponent implements OnInit, OnDestroy {
       return;
     }
 
+    // If currently editing, submit message edit
+    if (this.isEditing()) {
+      const editTarget = this.editingMessage();
+      if (!editTarget) return;
+
+      if (text === editTarget.content) {
+        this.cancelEdit();
+        return;
+      }
+
+      this.isSending.set(true);
+      this.messageService.editMessage(convId, editTarget.id, text).subscribe({
+        next: (response) => {
+          this.messages.update(list => list.map(m =>
+            m.id === editTarget.id ? {
+              ...m,
+              content: response.content,
+              edited: true,
+              editedAt: response.editedAt
+            } : m
+          ));
+          this.isSending.set(false);
+          this.cancelEdit();
+        },
+        error: (err) => {
+          console.error('Failed to edit group message', err);
+          this.isSending.set(false);
+        }
+      });
+      this.sendStopTyping();
+      return;
+    }
+
     const idempotencyKey = crypto.randomUUID();
     const currentUid = this.authService.currentUser()?.id || '';
     const currentUserName = this.authService.currentUser()?.displayName || 'Orbit User';
@@ -305,6 +426,7 @@ export class GroupComponent implements OnInit, OnDestroy {
 
     this.messages.update(current => [...current, optimisticMessage]);
     this.messageInput.set('');
+    this.sendStopTyping();
     this.scrollToBottom();
 
     if (this.messageService.isWebSocketConnected()) {
@@ -312,6 +434,112 @@ export class GroupComponent implements OnInit, OnDestroy {
     } else {
       this.dispatchRestSend(convId, text, idempotencyKey);
     }
+  }
+
+  onComposerInput(value: string): void {
+    this.messageInput.set(value);
+    const convId = this.activeConversationId();
+    if (!convId) return;
+
+    if (!value || value.trim().length === 0) {
+      this.sendStopTyping();
+      return;
+    }
+
+    const now = Date.now();
+    // 2-second interval throttle for typing: true
+    if (!this.isActivelyTyping || (now - this.lastTypingSentAt >= 2000)) {
+      this.messageService.sendTyping(convId, true);
+      this.lastTypingSentAt = now;
+      this.isActivelyTyping = true;
+    }
+
+    // 3-second debounce to send typing: false
+    if (this.stopTypingTimer) {
+      clearTimeout(this.stopTypingTimer);
+    }
+    this.stopTypingTimer = setTimeout(() => {
+      this.sendStopTyping();
+    }, 3000);
+  }
+
+  sendStopTyping(): void {
+    if (this.stopTypingTimer) {
+      clearTimeout(this.stopTypingTimer);
+      this.stopTypingTimer = undefined;
+    }
+    const convId = this.activeConversationId();
+    if (convId && this.isActivelyTyping) {
+      this.isActivelyTyping = false;
+      this.messageService.sendTyping(convId, false);
+    }
+    this.lastTypingSentAt = 0;
+  }
+
+  toggleActions(msg: ChatMessageItem, event: Event): void {
+    event.stopPropagation();
+    if (this.activeActionMessageId() === msg.id) {
+      this.activeActionMessageId.set(null);
+    } else {
+      this.activeActionMessageId.set(msg.id);
+    }
+  }
+
+  onContextMenu(msg: ChatMessageItem, event: MouseEvent): void {
+    if (msg.deleted) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.activeActionMessageId.set(msg.id);
+  }
+
+  startEdit(msg: ChatMessageItem): void {
+    if (msg.deleted || msg.type !== 'TEXT') return;
+    this.editingMessage.set(msg);
+    this.messageInput.set(msg.content);
+    this.activeActionMessageId.set(null);
+    setTimeout(() => {
+      this.composerTextarea?.nativeElement?.focus();
+    }, 50);
+  }
+
+  cancelEdit(): void {
+    this.editingMessage.set(null);
+    this.messageInput.set('');
+    this.sendStopTyping();
+  }
+
+  openDeleteModal(msg: ChatMessageItem): void {
+    this.deleteModalMessage.set(msg);
+    this.activeActionMessageId.set(null);
+  }
+
+  closeDeleteModal(): void {
+    this.deleteModalMessage.set(null);
+  }
+
+  confirmDeleteMessage(mode: MessageDeleteMode): void {
+    const target = this.deleteModalMessage();
+    const convId = this.activeConversationId();
+    if (!target || !convId || this.isDeletingMessage()) return;
+
+    this.isDeletingMessage.set(true);
+    this.messageService.deleteMessage(convId, target.id, mode).subscribe({
+      next: () => {
+        this.isDeletingMessage.set(false);
+        this.closeDeleteModal();
+        if (mode === 'FOR_EVERYONE') {
+          this.messages.update(list => list.map(m =>
+            m.id === target.id ? { ...m, deleted: true, content: '' } : m
+          ));
+        } else {
+          this.messages.update(list => list.filter(m => m.id !== target.id));
+        }
+      },
+      error: (err) => {
+        console.error('Failed to delete group message', err);
+        this.isDeletingMessage.set(false);
+      }
+    });
   }
 
   private dispatchRestSend(convId: string, content: string, idempotencyKey: string): void {
@@ -385,9 +613,65 @@ export class GroupComponent implements OnInit, OnDestroy {
   }
 
   onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape' && this.isEditing()) {
+      event.preventDefault();
+      this.cancelEdit();
+      return;
+    }
+
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       this.sendMessage();
+    }
+  }
+
+  private handleMessageEdited(edited: MessageEditedEventPayload): void {
+    this.messages.update(list => list.map(m =>
+      m.id === edited.messageId ? { ...m, content: edited.content, edited: true, editedAt: edited.editedAt } : m
+    ));
+  }
+
+  private handleMessageDeleted(deleted: MessageDeletedEventPayload): void {
+    this.messages.update(list => list.map(m =>
+      m.id === deleted.messageId ? { ...m, deleted: true, content: '' } : m
+    ));
+  }
+
+  private handleIncomingTyping(event: TypingEventPayload): void {
+    const currentUid = this.authService.currentUser()?.id;
+    if (!event || event.userId === currentUid) return;
+
+    if (event.typing) {
+      const existingTimer = this.typingSafetyTimers.get(event.userId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+      }
+      const timer = setTimeout(() => {
+        this.typingUsers.update(map => {
+          const copy = new Map(map);
+          copy.delete(event.userId);
+          return copy;
+        });
+        this.typingSafetyTimers.delete(event.userId);
+      }, 5000);
+      this.typingSafetyTimers.set(event.userId, timer);
+
+      this.typingUsers.update(map => {
+        const copy = new Map(map);
+        copy.set(event.userId, event.displayName || 'Member');
+        return copy;
+      });
+    } else {
+      const existingTimer = this.typingSafetyTimers.get(event.userId);
+      if (existingTimer) {
+        clearTimeout(existingTimer);
+        this.typingSafetyTimers.delete(event.userId);
+      }
+      this.typingUsers.update(map => {
+        const copy = new Map(map);
+        copy.delete(event.userId);
+        return copy;
+      });
     }
   }
 
@@ -527,6 +811,7 @@ export class GroupComponent implements OnInit, OnDestroy {
     this.groupService.getGroupMembers(gid).subscribe({
       next: (res) => {
         this.members.set(res.content);
+        this.setupMemberPresence(res.content);
         this.loadingMembers.set(false);
       },
       error: (err) => {
@@ -535,6 +820,39 @@ export class GroupComponent implements OnInit, OnDestroy {
         this.memberActionError.set(msg);
       }
     });
+  }
+
+  private setupMemberPresence(memberList: GroupMemberResponse[]): void {
+    const currentMemberIds = new Set(memberList.map(m => m.userId));
+    for (const [userId, unsub] of this.memberPresenceUnsubs.entries()) {
+      if (!currentMemberIds.has(userId)) {
+        unsub();
+        this.memberPresenceUnsubs.delete(userId);
+      }
+    }
+
+    for (const member of memberList) {
+      if (!this.memberPresenceUnsubs.has(member.userId)) {
+        const unsub = this.webSocketService.subscribe<PresenceEventPayload>(
+          `/topic/presence/${member.userId}`,
+          (presence) => {
+            if (presence && presence.userId === member.userId) {
+              this.members.update(list =>
+                list.map(m => m.userId === member.userId ? { ...m, online: presence.online } : m)
+              );
+            }
+          }
+        );
+        this.memberPresenceUnsubs.set(member.userId, unsub);
+      }
+    }
+  }
+
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.activeActionMessageId()) {
+      this.activeActionMessageId.set(null);
+    }
   }
 
   toggleMemberRole(targetMember: GroupMemberResponse): void {

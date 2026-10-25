@@ -1,0 +1,20 @@
+<div class="empty-state" data-testid="empty-state">
+  <div class="empty-icon-circle" aria-hidden="true">
+    <ng-content select="[empty-icon]">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="8" x2="12" y2="12" />
+        <line x1="12" y1="16" x2="12.01" y2="16" />
+      </svg>
+    </ng-content>
+  </div>
+  <h3 class="empty-title" data-testid="empty-title">{{ title() }}</h3>
+  @if (description()) {
+    <p class="empty-desc" data-testid="empty-desc">{{ description() }}</p>
+  }
+  @if (actionText()) {
+    <button type="button" class="empty-action-btn" (click)="actionClick.emit()" data-testid="empty-action-btn">
+      {{ actionText() }}
+    </button>
+  }
+</div>

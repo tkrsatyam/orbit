@@ -108,12 +108,21 @@
             >
               <div class="chat-item-avatar">
                 @if (conv.type === 'DIRECT') {
-                  <span>{{ (conv.participant?.displayName || 'U').charAt(0).toUpperCase() }}</span>
+                  <app-avatar
+                    [name]="conv.participant?.displayName"
+                    size="md"
+                    [showPresence]="true"
+                    [isOnline]="!!conv.participant?.online"
+                  />
                   @if (conv.participant?.online) {
                     <span class="online-dot" aria-hidden="true" data-testid="online-presence-dot"></span>
                   }
                 } @else {
-                  <span>{{ (conv.group?.name || 'G').charAt(0).toUpperCase() }}</span>
+                  <app-avatar
+                    [name]="conv.group?.name"
+                    size="md"
+                    [isGroup]="true"
+                  />
                 }
               </div>
               <div class="chat-item-content">

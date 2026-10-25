@@ -21,10 +21,24 @@ import { MessageService } from '../../../core/services/message/message.service';
 import { UserService } from '../../../core/services/user.service';
 import { WebSocketService } from '../../../core/services/websocket/websocket.service';
 
+import { AvatarComponent } from '../../../shared/components/avatar/avatar.component';
+import { MessageActionsBarComponent } from '../../../shared/components/message-actions-bar/message-actions-bar.component';
+import { ComposerEditingBannerComponent } from '../../../shared/components/composer-editing-banner/composer-editing-banner.component';
+import { DeleteMessageModalComponent } from '../../../shared/components/delete-message-modal/delete-message-modal.component';
+import { TypingIndicatorComponent } from '../../../shared/components/typing-indicator/typing-indicator.component';
+
 @Component({
   selector: 'app-chat-thread',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    FormsModule,
+    AvatarComponent,
+    MessageActionsBarComponent,
+    ComposerEditingBannerComponent,
+    DeleteMessageModalComponent,
+    TypingIndicatorComponent
+  ],
   templateUrl: './chat-thread.component.html',
   styleUrl: './chat-thread.component.scss'
 })

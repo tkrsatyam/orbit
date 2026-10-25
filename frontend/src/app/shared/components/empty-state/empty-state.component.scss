@@ -1,0 +1,65 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px 20px;
+  max-width: 420px;
+  margin: 0 auto;
+
+  .empty-icon-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background-color: var(--orbit-elevated, #27272a);
+    color: var(--orbit-text-muted, #a1a1aa);
+    margin-bottom: 16px;
+
+    svg {
+      color: var(--orbit-text-muted, #a1a1aa);
+    }
+  }
+
+  .empty-title {
+    margin: 0 0 8px;
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--orbit-text-primary, #ededef);
+  }
+
+  .empty-desc {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--orbit-text-muted, #a1a1aa);
+    line-height: 1.5;
+  }
+
+  .empty-action-btn {
+    margin-top: 16px;
+    padding: 8px 16px;
+    background-color: var(--orbit-accent, #f59e0b);
+    color: #121214;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+}

@@ -16,9 +16,7 @@
           </svg>
         </button>
 
-        <div class="group-avatar" aria-hidden="true">
-          <span>{{ group()!.name.charAt(0).toUpperCase() }}</span>
-        </div>
+        <app-avatar [name]="group()!.name" size="md" [isGroup]="true" />
 
         <div class="group-titles">
           <div class="title-row">
@@ -34,6 +32,11 @@
             }
             <span class="member-metric" data-testid="group-view-member-count">
               {{ group()!.memberCount }} {{ group()!.memberCount === 1 ? 'member' : 'members' }}
+              @if (onlineMemberCount() > 0) {
+                <span class="online-dot-sep">•</span>
+                <span class="online-indicator-dot" title="Online members"></span>
+                <span class="online-count-label" data-testid="online-member-count">{{ onlineMemberCount() }} online</span>
+              }
             </span>
           </div>
         </div>
@@ -187,12 +190,11 @@
                   class="group-message-row"
                   [class.outgoing]="msg.senderId === currentUserId()"
                   [class.incoming]="msg.senderId !== currentUserId()"
+                  [class.has-active-actions]="activeActionMessageId() === msg.id"
                   [attr.data-testid]="'message-row-' + msg.id"
                 >
                   @if (msg.senderId !== currentUserId()) {
-                    <div class="incoming-avatar" aria-hidden="true">
-                      <span>{{ (msg.senderName || 'U').charAt(0).toUpperCase() }}</span>
-                    </div>
+                    <app-avatar [name]="msg.senderName" size="sm" />
 
                     <div class="incoming-bubble-group">
                       <div class="sender-name-label" data-testid="message-sender-name">
@@ -202,8 +204,43 @@
                         }
                       </div>
 
-                      <div class="group-message-bubble incoming" [attr.data-testid]="'message-bubble-' + msg.id">
-                        <div class="bubble-text">{{ msg.content }}</div>
+                      @if (!msg.deleted && isAdmin()) {
+                        <!-- Floating Action Bar for Group Admin -->
+                        <app-message-actions-bar
+                          [isVisible]="activeActionMessageId() === msg.id"
+                          [canEdit]="false"
+                          [canDelete]="true"
+                          [messageId]="msg.id"
+                          (delete)="openDeleteModal(msg)"
+                        />
+                      }
+
+                      <div
+                        class="group-message-bubble incoming"
+                        [class.deleted-bubble]="msg.deleted"
+                        (contextmenu)="onContextMenu(msg, $event)"
+                        [attr.data-testid]="'message-bubble-' + msg.id"
+                      >
+                        @if (!msg.deleted && isAdmin()) {
+                          <button
+                            type="button"
+                            class="bubble-chevron-btn"
+                            [class.active]="activeActionMessageId() === msg.id"
+                            (click)="toggleActions(msg, $event)"
+                            title="Message options"
+                            [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                        }
+
+                        @if (msg.deleted) {
+                          <div class="bubble-text deleted-text"><em>This message was deleted.</em></div>
+                        } @else {
+                          <div class="bubble-text">{{ msg.content }}</div>
+                        }
                         <div class="bubble-meta">
                           @if (msg.edited && !msg.deleted) {
                             <span class="edited-indicator" data-testid="edited-indicator">edited</span>
@@ -213,12 +250,45 @@
                       </div>
                     </div>
                   } @else {
+                    @if (!msg.deleted) {
+                      <!-- Floating Action Bar for Outgoing Author -->
+                      <app-message-actions-bar
+                        [isVisible]="activeActionMessageId() === msg.id"
+                        [canEdit]="msg.type === 'TEXT'"
+                        [canDelete]="true"
+                        [messageId]="msg.id"
+                        (edit)="startEdit(msg)"
+                        (delete)="openDeleteModal(msg)"
+                      />
+                    }
+
                     <div
                       class="group-message-bubble outgoing"
                       [class.failed]="msg.deliveryStatus === 'FAILED'"
+                      [class.deleted-bubble]="msg.deleted"
+                      (contextmenu)="onContextMenu(msg, $event)"
                       [attr.data-testid]="'message-bubble-' + msg.id"
                     >
-                      <div class="bubble-text">{{ msg.content }}</div>
+                      @if (!msg.deleted) {
+                        <button
+                          type="button"
+                          class="bubble-chevron-btn"
+                          [class.active]="activeActionMessageId() === msg.id"
+                          (click)="toggleActions(msg, $event)"
+                          title="Message options"
+                          [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                        >
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="6 9 12 15 18 9" />
+                          </svg>
+                        </button>
+                      }
+
+                      @if (msg.deleted) {
+                        <div class="bubble-text deleted-text"><em>You deleted this message.</em></div>
+                      } @else {
+                        <div class="bubble-text">{{ msg.content }}</div>
+                      }
                       <div class="bubble-meta">
                         @if (msg.edited && !msg.deleted) {
                           <span class="edited-indicator" data-testid="edited-indicator">edited</span>
@@ -244,15 +314,29 @@
           }
         </div>
 
-        <!-- Group Composer -->
+        <!-- Typing Indicator Bar (ORDM-55) -->
+        @if (typingIndicatorText()) {
+          <app-typing-indicator mode="bar" [text]="typingIndicatorText()" />
+        }
+
+        <!-- Group Composer with Editing Banner (ORDM-54) -->
         <footer class="group-composer-container" data-testid="group-composer">
+          <!-- Editing Banner -->
+          @if (isEditing()) {
+            <app-composer-editing-banner
+              [previewContent]="editingMessage()?.content || ''"
+              (cancel)="cancelEdit()"
+            />
+          }
+
           <div class="composer-inner-wrapper">
             <textarea
               #composerTextarea
               class="composer-textarea"
               rows="1"
-              [placeholder]="'Message #' + group()!.name + '...'"
-              [(ngModel)]="messageInput"
+              [placeholder]="isEditing() ? 'Edit message...' : ('Message #' + group()!.name + '...')"
+              [ngModel]="messageInput()"
+              (ngModelChange)="onComposerInput($event)"
               (keydown)="onKeydown($event)"
               data-testid="group-message-input"
               aria-label="Group message text"
@@ -264,13 +348,20 @@
               (click)="sendMessage()"
               [disabled]="!messageInput().trim() || isSending()"
               data-testid="group-send-btn"
-              aria-label="Send message"
+              [attr.aria-label]="isEditing() ? 'Save message' : 'Send message'"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-              <span>Send</span>
+              @if (isEditing()) {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Save</span>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                <span>Send</span>
+              }
             </button>
           </div>
         </footer>
@@ -328,12 +419,12 @@
                   title="View Profile"
                   style="cursor: pointer"
                 >
-                  <div class="member-avatar" aria-hidden="true">
-                    <span>{{ m.displayName.charAt(0).toUpperCase() }}</span>
-                  </div>
-                  @if (m.online) {
-                    <span class="online-indicator" title="Online" data-testid="online-indicator"></span>
-                  }
+                  <app-avatar
+                    [name]="m.displayName"
+                    size="md"
+                    [showPresence]="m.online"
+                    [isOnline]="m.online"
+                  />
                 </div>
 
                 <div
@@ -796,4 +887,18 @@
     (closeModal)="closeProfileModal()"
     (connectionChanged)="loadMembers()"
   />
+
+  <!-- Delete Message Modal (ORDM-54) -->
+  @if (deleteModalMessage()) {
+    <app-delete-message-modal
+      [isOpen]="!!deleteModalMessage()"
+      [messageContent]="deleteModalMessage()?.content || ''"
+      [isAuthor]="deleteModalMessage()?.senderId === currentUserId()"
+      [isAdmin]="isAdmin()"
+      [isGroup]="true"
+      [isDeleting]="isDeletingMessage()"
+      (confirm)="confirmDeleteMessage($event)"
+      (close)="closeDeleteModal()"
+    />
+  }
 </div>
