@@ -1024,8 +1024,12 @@ class MessageServiceTest {
         messageService.markMessagesAsRead(conversationId, List.of("m1", "m2"), senderId);
 
         verify(notificationRepository).markConversationAsRead(senderId, conversationId);
-        verify(messageRepository).save(msg1);
-        verify(messageRepository).save(msg2);
+
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<Iterable<Message>> captor = ArgumentCaptor.forClass(Iterable.class);
+        verify(messageRepository).saveAll(captor.capture());
+        assertThat(captor.getValue()).containsExactlyInAnyOrder(msg1, msg2);
+
         verify(kafkaMessageProducer, times(2)).publishMessageRead(any());
     }
 }

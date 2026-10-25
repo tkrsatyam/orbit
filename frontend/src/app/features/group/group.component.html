@@ -205,10 +205,10 @@
                       <div class="group-message-bubble incoming" [attr.data-testid]="'message-bubble-' + msg.id">
                         <div class="bubble-text">{{ msg.content }}</div>
                         <div class="bubble-meta">
-                          <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
-                          @if (msg.edited) {
-                            <span class="edited-tag">(edited)</span>
+                          @if (msg.edited && !msg.deleted) {
+                            <span class="edited-indicator" data-testid="edited-indicator">edited</span>
                           }
+                          <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
                         </div>
                       </div>
                     </div>
@@ -220,10 +220,10 @@
                     >
                       <div class="bubble-text">{{ msg.content }}</div>
                       <div class="bubble-meta">
-                        <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
-                        @if (msg.edited) {
-                          <span class="edited-tag">(edited)</span>
+                        @if (msg.edited && !msg.deleted) {
+                          <span class="edited-indicator" data-testid="edited-indicator">edited</span>
                         }
+                        <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
                         @if (msg.deliveryStatus === 'SENDING') {
                           <span class="status-indicator-sending" title="Sending...">•</span>
                         } @else if (msg.deliveryStatus === 'FAILED') {

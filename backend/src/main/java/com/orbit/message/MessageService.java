@@ -616,6 +616,9 @@ public class MessageService {
 
         Instant now = Instant.now();
         List<Message> messages = messageRepository.findAllById(messageIds);
+        List<Message> updatedMessages = new ArrayList<>();
+        List<MessageReadEvent> eventsToPublish = new ArrayList<>();
+
         for (Message message : messages) {
             if (!conversationId.equals(message.getConversationId()) || userId.equals(message.getSenderId())) {
                 continue;
@@ -626,9 +629,14 @@ public class MessageService {
             boolean alreadyRead = message.getReadBy().stream().anyMatch(r -> userId.equals(r.getUserId()));
             if (!alreadyRead) {
                 message.getReadBy().add(new ReadReceipt(userId, now));
-                messageRepository.save(message);
+                updatedMessages.add(message);
+                eventsToPublish.add(new MessageReadEvent(conversationId, message.getId(), userId, now));
+            }
+        }
 
-                MessageReadEvent event = new MessageReadEvent(conversationId, message.getId(), userId, now);
+        if (!updatedMessages.isEmpty()) {
+            messageRepository.saveAll(updatedMessages);
+            for (MessageReadEvent event : eventsToPublish) {
                 kafkaMessageProducer.publishMessageRead(event);
             }
         }
