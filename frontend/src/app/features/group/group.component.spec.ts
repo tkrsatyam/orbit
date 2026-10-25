@@ -6,6 +6,9 @@ import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { AuthService } from '../../core/services/auth.service';
 import { UserService } from '../../core/services/user.service';
 import { ContactService } from '../../core/services/contact.service';
+import { MessageService } from '../../core/services/message/message.service';
+import { ConversationService } from '../../core/services/conversation.service';
+import { MessageResponse } from '../../core/models/message.model';
 
 describe('GroupComponent', () => {
   let component: GroupComponent;
@@ -24,6 +27,18 @@ describe('GroupComponent', () => {
   };
   let mockAuthService: {
     currentUser: ReturnType<typeof vi.fn>;
+  };
+  let mockMessageService: {
+    getConversationMessages: ReturnType<typeof vi.fn>;
+    subscribeToConversation: ReturnType<typeof vi.fn>;
+    subscribeToReceipts: ReturnType<typeof vi.fn>;
+    sendMessageStomp: ReturnType<typeof vi.fn>;
+    sendMessageRest: ReturnType<typeof vi.fn>;
+    isWebSocketConnected: ReturnType<typeof vi.fn>;
+    markMessageAsRead: ReturnType<typeof vi.fn>;
+  };
+  let mockConversationService: {
+    resetUnreadCount: ReturnType<typeof vi.fn>;
   };
 
   const mockAdminGroup: GroupResponse = {
@@ -93,12 +108,39 @@ describe('GroupComponent', () => {
       currentUser: vi.fn().mockReturnValue({ id: 'u-1', displayName: 'Lead Admin' })
     };
 
+    mockMessageService = {
+      getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
+      subscribeToConversation: vi.fn().mockReturnValue(() => {}),
+      subscribeToReceipts: vi.fn().mockReturnValue(() => {}),
+      isWebSocketConnected: vi.fn().mockReturnValue(true),
+      sendMessageStomp: vi.fn(),
+      sendMessageRest: vi.fn().mockReturnValue(of({
+        id: 'msg-new-1',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT',
+        content: 'Hello World',
+        deleted: false,
+        edited: false,
+        createdAt: new Date().toISOString(),
+        deliveryStatus: 'SENT'
+      })),
+      markMessageAsRead: vi.fn().mockReturnValue(of(void 0))
+    };
+
+    mockConversationService = {
+      resetUnreadCount: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [GroupComponent],
       providers: [
         provideRouter([]),
         { provide: GroupService, useValue: mockGroupService },
         { provide: AuthService, useValue: mockAuthService },
+        { provide: MessageService, useValue: mockMessageService },
+        { provide: ConversationService, useValue: mockConversationService },
         {
           provide: UserService,
           useValue: {
@@ -429,5 +471,189 @@ describe('GroupComponent', () => {
     expect(component.deleteSpaceError()).toBe('Failed to delete space');
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('[data-testid="delete-space-error"]')?.textContent).toContain('Failed to delete space');
+  });
+
+  it('should initialize group messaging and load initial history (ORDM-52, ORDM-53)', async () => {
+    const mockMessages: MessageResponse[] = [
+      {
+        id: 'msg-1',
+        conversationId: 'conv-101',
+        senderId: 'u-2',
+        senderName: 'Dev Contributor',
+        type: 'TEXT',
+        content: 'Hello group!',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-21T12:00:00Z',
+        deliveryStatus: 'DELIVERED',
+        readBy: []
+      }
+    ];
+
+    await setupComponent();
+    mockMessageService.getConversationMessages.mockReturnValue(of({
+      content: mockMessages,
+      hasMore: true,
+      nextCursor: 'msg-1'
+    }));
+
+    component.loadInitialHistory('conv-101');
+    fixture.detectChanges();
+
+    expect(component.messages().length).toBe(1);
+    expect(component.messages()[0].content).toBe('Hello group!');
+    expect(component.hasMore()).toBe(true);
+    expect(component.nextCursor()).toBe('msg-1');
+    expect(mockMessageService.markMessageAsRead).toHaveBeenCalledWith('conv-101', 'msg-1');
+    expect(mockConversationService.resetUnreadCount).toHaveBeenCalledWith('conv-101');
+  });
+
+  it('should render incoming message with sender display name and admin badge (ORDM-52)', async () => {
+    await setupComponent();
+    component.messages.set([
+      {
+        id: 'msg-admin',
+        conversationId: 'conv-101',
+        senderId: 'u-1', // Lead Admin (ADMIN in mockMemberList)
+        senderName: 'Lead Admin',
+        type: 'TEXT',
+        content: 'System notice',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-21T12:00:00Z',
+        deliveryStatus: 'DELIVERED'
+      },
+      {
+        id: 'msg-incoming',
+        conversationId: 'conv-101',
+        senderId: 'u-2', // Dev Contributor (MEMBER in mockMemberList)
+        senderName: 'Dev Contributor',
+        type: 'TEXT',
+        content: 'Hi everyone!',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-21T12:05:00Z',
+        deliveryStatus: 'DELIVERED'
+      }
+    ]);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const incomingRow = compiled.querySelector('[data-testid="message-row-msg-incoming"]');
+    expect(incomingRow).not.toBeNull();
+    expect(incomingRow?.querySelector('.sender-name-label')?.textContent).toContain('Dev Contributor');
+    expect(incomingRow?.querySelector('.bubble-text')?.textContent).toContain('Hi everyone!');
+  });
+
+  it('should send group message with optimistic update and clear input (ORDM-52)', async () => {
+    await setupComponent();
+    component.messageInput.set('New group announcement');
+    fixture.detectChanges();
+
+    component.sendMessage();
+
+    expect(mockMessageService.sendMessageStomp).toHaveBeenCalledWith(
+      'conv-101',
+      'New group announcement',
+      expect.any(String)
+    );
+    expect(component.messageInput()).toBe('');
+    expect(component.messages().length).toBe(1);
+    expect(component.messages()[0].content).toBe('New group announcement');
+    expect(component.messages()[0].deliveryStatus).toBe('SENDING');
+  });
+
+  it('should fall back to REST send if WebSocket is not connected (ORDM-52)', async () => {
+    await setupComponent();
+    mockMessageService.isWebSocketConnected.mockReturnValue(false);
+    component.messageInput.set('REST group announcement');
+    fixture.detectChanges();
+
+    component.sendMessage();
+
+    expect(mockMessageService.sendMessageRest).toHaveBeenCalledWith(
+      'conv-101',
+      'REST group announcement',
+      expect.any(String)
+    );
+    expect(component.messageInput()).toBe('');
+  });
+
+  it('should load older messages on cursor pagination (ORDM-53)', async () => {
+    await setupComponent();
+    component.messages.set([
+      {
+        id: 'msg-recent',
+        conversationId: 'conv-101',
+        senderId: 'u-1',
+        senderName: 'Lead Admin',
+        type: 'TEXT',
+        content: 'Recent',
+        deleted: false,
+        edited: false,
+        createdAt: '2026-10-21T12:10:00Z',
+        deliveryStatus: 'DELIVERED'
+      }
+    ]);
+    component.hasMore.set(true);
+    component.nextCursor.set('msg-recent');
+
+    const olderMessage: MessageResponse = {
+      id: 'msg-older',
+      conversationId: 'conv-101',
+      senderId: 'u-2',
+      senderName: 'Dev Contributor',
+      type: 'TEXT',
+      content: 'Older message',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-21T12:00:00Z',
+      deliveryStatus: 'DELIVERED'
+    };
+
+    mockMessageService.getConversationMessages.mockReturnValue(of({
+      content: [olderMessage],
+      hasMore: false,
+      nextCursor: null
+    }));
+
+    component.loadOlderMessages();
+    fixture.detectChanges();
+
+    expect(mockMessageService.getConversationMessages).toHaveBeenCalledWith('conv-101', 50, 'msg-recent');
+    expect(component.messages().length).toBe(2);
+    expect(component.messages()[0].id).toBe('msg-older');
+    expect(component.messages()[1].id).toBe('msg-recent');
+    expect(component.hasMore()).toBe(false);
+  });
+
+  it('should handle incoming real-time message and mark as read (ORDM-52)', async () => {
+    await setupComponent();
+    let messageCallback: (msg: MessageResponse) => void = () => {};
+    mockMessageService.subscribeToConversation.mockImplementation((convId, cb) => {
+      messageCallback = cb;
+      return () => {};
+    });
+
+    component['setupGroupMessaging']('conv-101');
+
+    const incoming: MessageResponse = {
+      id: 'msg-stream-1',
+      conversationId: 'conv-101',
+      senderId: 'u-2',
+      senderName: 'Dev Contributor',
+      type: 'TEXT',
+      content: 'Realtime update',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-21T12:15:00Z',
+      deliveryStatus: 'DELIVERED'
+    };
+
+    messageCallback(incoming);
+    fixture.detectChanges();
+
+    expect(component.messages().some(m => m.id === 'msg-stream-1')).toBe(true);
+    expect(mockMessageService.markMessageAsRead).toHaveBeenCalledWith('conv-101', 'msg-stream-1');
   });
 });
