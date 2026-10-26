@@ -119,7 +119,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         if (HttpMethod.POST.matches(method) && MESSAGE_SEND_PATTERN.matcher(path).matches()) {
-            return new EndpointRateLimit("MESSAGE:user:" + userId, limits.messagesPerMinute());
+            return new EndpointRateLimit("MESSAGES:user:" + userId, limits.messagesPerMinute());
         }
 
         return new EndpointRateLimit("DEFAULT:user:" + userId, limits.defaultPerMinute());

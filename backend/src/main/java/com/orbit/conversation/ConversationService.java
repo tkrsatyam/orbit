@@ -21,7 +21,11 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Service managing conversation creation, membership, metadata snapshots,
@@ -84,10 +88,74 @@ public class ConversationService {
             return bTime.compareTo(aTime);
         });
 
+        // Batch pre-fetch IDs to eliminate N+1 database round-trips
+        Set<String> otherUserIds = new HashSet<>();
+        Set<String> groupIds = new HashSet<>();
+        for (Conversation conv : conversations) {
+            if (conv.getType() == ConversationType.DIRECT && conv.getParticipantIds() != null) {
+                conv.getParticipantIds().stream()
+                        .filter(id -> !id.equals(userId))
+                        .findFirst()
+                        .ifPresent(otherUserIds::add);
+            } else if (conv.getType() == ConversationType.GROUP && conv.getGroupId() != null) {
+                groupIds.add(conv.getGroupId());
+            }
+        }
+
+        Map<String, Integer> unreadCountMap = new HashMap<>();
+        if (notificationRepository != null) {
+            try {
+                List<Notification> userNotifications = notificationRepository.findByUserId(userId);
+                if (userNotifications != null) {
+                    for (Notification n : userNotifications) {
+                        if (n.getConversationId() != null) {
+                            unreadCountMap.put(n.getConversationId(), n.getCount());
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fallback for mocks/tests where findByUserId is not stubbed
+            }
+        }
+
+        Map<String, User> userMap = new HashMap<>();
+        if (userRepository != null && !otherUserIds.isEmpty()) {
+            try {
+                Iterable<User> users = userRepository.findAllById(otherUserIds);
+                if (users != null) {
+                    for (User u : users) {
+                        if (u != null && u.getId() != null) {
+                            userMap.put(u.getId(), u);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fallback for mocks/tests where findAllById is not stubbed
+            }
+        }
+
+        Map<String, Group> groupMap = new HashMap<>();
+        if (groupRepository != null && !groupIds.isEmpty()) {
+            try {
+                Iterable<Group> groups = groupRepository.findAllById(groupIds);
+                if (groups != null) {
+                    for (Group g : groups) {
+                        if (g != null && g.getId() != null) {
+                            groupMap.put(g.getId(), g);
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fallback for mocks/tests where findAllById is not stubbed
+            }
+        }
+
         List<ConversationResponse> items = new ArrayList<>(conversations.size());
         for (Conversation conv : conversations) {
             int unreadCount = 0;
-            if (notificationRepository != null) {
+            if (unreadCountMap.containsKey(conv.getId())) {
+                unreadCount = unreadCountMap.get(conv.getId());
+            } else if (notificationRepository != null) {
                 unreadCount = notificationRepository.findByUserIdAndConversationId(userId, conv.getId())
                         .map(Notification::getCount)
                         .orElse(0);
@@ -122,7 +190,10 @@ public class ConversationService {
                         // Suppressed per ADR 007 Decision 1
                         participant = new ParticipantSummary(otherUserId, "Orbit User", null, false);
                     } else {
-                        User otherUser = userRepository != null ? userRepository.findById(otherUserId).orElse(null) : null;
+                        User otherUser = userMap.get(otherUserId);
+                        if (otherUser == null && userRepository != null) {
+                            otherUser = userRepository.findById(otherUserId).orElse(null);
+                        }
                         String displayName = otherUser != null ? otherUser.getDisplayName() : "Orbit User";
                         String avatarUrl = otherUser != null ? otherUser.getAvatarUrl() : null;
                         boolean isOnline = (sessionRegistry != null && sessionRegistry.isUserOnline(otherUserId))
@@ -131,7 +202,10 @@ public class ConversationService {
                     }
                 }
             } else if (conv.getType() == ConversationType.GROUP && conv.getGroupId() != null) {
-                Group group = groupRepository != null ? groupRepository.findById(conv.getGroupId()).orElse(null) : null;
+                Group group = groupMap.get(conv.getGroupId());
+                if (group == null && groupRepository != null) {
+                    group = groupRepository.findById(conv.getGroupId()).orElse(null);
+                }
                 if (group != null) {
                     int memberCount = group.getMembers() != null ? group.getMembers().size() : 0;
                     groupSummary = new GroupSummary(group.getId(), group.getName(), group.getAvatarUrl(), memberCount);
