@@ -1,6 +1,7 @@
 package com.orbit.conversation;
 
 import com.orbit.contact.ContactRepository;
+import com.orbit.contact.model.Contact;
 import com.orbit.contact.model.ContactStatus;
 import com.orbit.conversation.dto.ConversationListResponse;
 import com.orbit.conversation.dto.ConversationResponse;
@@ -150,6 +151,25 @@ public class ConversationService {
             }
         }
 
+        Map<String, Boolean> blockedMap = new HashMap<>();
+        if (contactRepository != null && !otherUserIds.isEmpty()) {
+            try {
+                List<Contact> userContacts = contactRepository.findAllByUserId(userId);
+                if (userContacts != null) {
+                    for (Contact c : userContacts) {
+                        if (c.getStatus() == ContactStatus.BLOCKED && c.getBlockedBy() != null) {
+                            String other = userId.equals(c.getRequesterId()) ? c.getReceiverId() : c.getRequesterId();
+                            if (other != null && other.equals(c.getBlockedBy())) {
+                                blockedMap.put(other, Boolean.TRUE);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {
+                // Fallback for mocks/tests where findAllByUserId is not stubbed
+            }
+        }
+
         List<ConversationResponse> items = new ArrayList<>(conversations.size());
         for (Conversation conv : conversations) {
             int unreadCount = 0;
@@ -185,7 +205,12 @@ public class ConversationService {
                         .orElse(null);
 
                 if (otherUserId != null) {
-                    boolean isBlocked = isBlockedBy(userId, otherUserId);
+                    boolean isBlocked;
+                    if (blockedMap.containsKey(otherUserId)) {
+                        isBlocked = blockedMap.get(otherUserId);
+                    } else {
+                        isBlocked = isBlockedBy(userId, otherUserId);
+                    }
                     if (isBlocked) {
                         // Suppressed per ADR 007 Decision 1
                         participant = new ParticipantSummary(otherUserId, "Orbit User", null, false);

@@ -4,8 +4,12 @@ import com.orbit.common.config.OrbitProperties;
 import com.orbit.common.exception.ForbiddenException;
 import com.orbit.common.exception.RateLimitException;
 import com.orbit.common.exception.ResourceNotFoundException;
+import com.orbit.common.filter.RateLimitFilter;
 import com.orbit.common.ratelimit.ConsumptionResult;
 import com.orbit.common.ratelimit.TokenBucketRateLimiter;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import com.orbit.contact.ContactService;
 import com.orbit.conversation.ConversationRepository;
 import com.orbit.conversation.model.Conversation;
@@ -110,10 +114,23 @@ public class MessageService {
         }
 
         // 1. Rate-limit check (60 messages per minute per user)
-        int messageLimit = properties.rateLimit().messagesPerMinute();
-        ConsumptionResult rateLimitResult = rateLimiter.tryConsume("MESSAGES:user:" + senderId, messageLimit);
-        if (!rateLimitResult.allowed()) {
-            throw new RateLimitException("Message rate limit exceeded", rateLimitResult.retryAfterSeconds());
+        // Avoid duplicate consumption if RateLimitFilter already consumed from the bucket for this REST request
+        boolean alreadyConsumed = false;
+        try {
+            RequestAttributes attrs = RequestContextHolder.getRequestAttributes();
+            if (attrs instanceof ServletRequestAttributes servletAttrs) {
+                alreadyConsumed = Boolean.TRUE.equals(
+                        servletAttrs.getRequest().getAttribute(RateLimitFilter.RATE_LIMIT_CONSUMED_ATTR));
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (!alreadyConsumed) {
+            int messageLimit = properties.rateLimit().messagesPerMinute();
+            ConsumptionResult rateLimitResult = rateLimiter.tryConsume("MESSAGES:user:" + senderId, messageLimit);
+            if (!rateLimitResult.allowed()) {
+                throw new RateLimitException("Message rate limit exceeded", rateLimitResult.retryAfterSeconds());
+            }
         }
 
         // 2. Validate conversation existence and participant membership
