@@ -1,0 +1,1139 @@
+asyncapi: 3.1.0
+info:
+  title: Orbit Real-Time API (WebSocket & Kafka)
+  version: 1.0.0
+  description: |
+    AsyncAPI specification for Orbit real-time events, STOMP destinations over WebSocket, and Kafka multi-instance fan-out topics.
+
+    ### WebSocket Connection & Handshake
+    - **Endpoint**: `ws://localhost:8080/ws` (with SockJS fallback at `/ws`)
+    - **Authentication**: JWT access token passed as query param (`?token=<jwt>`).
+    - **Close Code**: Invalid or expired token results in connection termination with close code `4401`.
+  x-generator: springwolf
+defaultContentType: application/json
+servers:
+  kafka-cluster:
+    host: localhost:9092
+    protocol: kafka
+    description: Kafka cluster for multi-instance event distribution
+  websocket-broker:
+    host: localhost:8080
+    protocol: ws
+    pathname: /ws
+    description: Orbit STOMP WebSocket broker endpoint
+channels:
+  _app_conversations__id__read:
+    address: "/app/conversations/{id}/read"
+    messages:
+      com.orbit.message.dto.ReadReceiptRequest:
+        $ref: "#/components/messages/com.orbit.message.dto.ReadReceiptRequest"
+    bindings: {}
+  _app_conversations__id__send:
+    address: "/app/conversations/{id}/send"
+    messages:
+      com.orbit.message.dto.SendMessageRequest:
+        $ref: "#/components/messages/com.orbit.message.dto.SendMessageRequest"
+    bindings: {}
+  _app_conversations__id__typing:
+    address: "/app/conversations/{id}/typing"
+    messages:
+      com.orbit.presence.dto.TypingRequest:
+        $ref: "#/components/messages/com.orbit.presence.dto.TypingRequest"
+    bindings: {}
+  _queue_receipts:
+    address: /queue/receipts
+    messages:
+      com.orbit.message.dto.MessageResponse:
+        $ref: "#/components/messages/com.orbit.message.dto.MessageResponse"
+    bindings:
+      stomp: {}
+  _topic_conversations__conversationId__messages:
+    address: "/topic/conversations/{conversationId}/messages"
+    messages:
+      com.orbit.message.dto.MessageResponse:
+        $ref: "#/components/messages/com.orbit.message.dto.MessageResponse"
+    bindings: {}
+  _topic_conversations__conversationId__messages_deleted:
+    address: "/topic/conversations/{conversationId}/messages/deleted"
+    messages:
+      com.orbit.message.dto.MessageDeletedNotification:
+        $ref: "#/components/messages/com.orbit.message.dto.MessageDeletedNotification"
+    bindings: {}
+  _topic_conversations__conversationId__messages_edited:
+    address: "/topic/conversations/{conversationId}/messages/edited"
+    messages:
+      com.orbit.message.dto.MessageEditedNotification:
+        $ref: "#/components/messages/com.orbit.message.dto.MessageEditedNotification"
+    bindings: {}
+  _topic_conversations__conversationId__read:
+    address: "/topic/conversations/{conversationId}/read"
+    messages:
+      com.orbit.message.dto.ReadReceiptNotification:
+        $ref: "#/components/messages/com.orbit.message.dto.ReadReceiptNotification"
+    bindings: {}
+  _topic_conversations__conversationId__typing:
+    address: "/topic/conversations/{conversationId}/typing"
+    messages:
+      com.orbit.presence.dto.TypingNotification:
+        $ref: "#/components/messages/com.orbit.presence.dto.TypingNotification"
+    bindings: {}
+  _topic_presence__userId_:
+    address: "/topic/presence/{userId}"
+    messages:
+      com.orbit.presence.dto.PresenceNotification:
+        $ref: "#/components/messages/com.orbit.presence.dto.PresenceNotification"
+    bindings: {}
+  _user_queue_notifications:
+    address: /user/queue/notifications
+    messages:
+      com.orbit.notification.dto.NotificationPayload:
+        $ref: "#/components/messages/com.orbit.notification.dto.NotificationPayload"
+    bindings: {}
+  chat.messages:
+    address: chat.messages
+    messages:
+      com.orbit.message.kafka.MessageDeliveryEvent:
+        $ref: "#/components/messages/com.orbit.message.kafka.MessageDeliveryEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.messages.deleted:
+    address: chat.messages.deleted
+    messages:
+      com.orbit.message.kafka.MessageDeletedEvent:
+        $ref: "#/components/messages/com.orbit.message.kafka.MessageDeletedEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.messages.edited:
+    address: chat.messages.edited
+    messages:
+      com.orbit.message.kafka.MessageEditedEvent:
+        $ref: "#/components/messages/com.orbit.message.kafka.MessageEditedEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.messages.read:
+    address: chat.messages.read
+    messages:
+      com.orbit.message.kafka.MessageReadEvent:
+        $ref: "#/components/messages/com.orbit.message.kafka.MessageReadEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.notifications:
+    address: chat.notifications
+    messages:
+      com.orbit.notification.dto.NotificationEvent:
+        $ref: "#/components/messages/com.orbit.notification.dto.NotificationEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.presence:
+    address: chat.presence
+    messages:
+      com.orbit.presence.dto.PresenceEvent:
+        $ref: "#/components/messages/com.orbit.presence.dto.PresenceEvent"
+      com.orbit.presence.dto.TypingEvent:
+        $ref: "#/components/messages/com.orbit.presence.dto.TypingEvent"
+      java.lang.Object:
+        $ref: "#/components/messages/java.lang.Object"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+components:
+  schemas:
+    HeadersNotDocumented:
+      title: HeadersNotDocumented
+      type: object
+      properties: {}
+      description: "There can be headers, but they are not explicitly documented."
+      examples:
+        - {}
+    SpringKafkaDefaultHeaders-MessageDeletedEvent:
+      title: SpringKafkaDefaultHeaders-MessageDeletedEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.message.kafka.MessageDeletedEvent
+          const: com.orbit.message.kafka.MessageDeletedEvent
+      examples:
+        - __TypeId__: com.orbit.message.kafka.MessageDeletedEvent
+    SpringKafkaDefaultHeaders-MessageDeliveryEvent:
+      title: SpringKafkaDefaultHeaders-MessageDeliveryEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.message.kafka.MessageDeliveryEvent
+          const: com.orbit.message.kafka.MessageDeliveryEvent
+      examples:
+        - __TypeId__: com.orbit.message.kafka.MessageDeliveryEvent
+    SpringKafkaDefaultHeaders-MessageEditedEvent:
+      title: SpringKafkaDefaultHeaders-MessageEditedEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.message.kafka.MessageEditedEvent
+          const: com.orbit.message.kafka.MessageEditedEvent
+      examples:
+        - __TypeId__: com.orbit.message.kafka.MessageEditedEvent
+    SpringKafkaDefaultHeaders-MessageReadEvent:
+      title: SpringKafkaDefaultHeaders-MessageReadEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.message.kafka.MessageReadEvent
+          const: com.orbit.message.kafka.MessageReadEvent
+      examples:
+        - __TypeId__: com.orbit.message.kafka.MessageReadEvent
+    SpringKafkaDefaultHeaders-NotificationEvent:
+      title: SpringKafkaDefaultHeaders-NotificationEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.notification.dto.NotificationEvent
+          const: com.orbit.notification.dto.NotificationEvent
+      examples:
+        - __TypeId__: com.orbit.notification.dto.NotificationEvent
+    SpringKafkaDefaultHeaders-Object:
+      title: SpringKafkaDefaultHeaders-Object
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - java.lang.Object
+          const: java.lang.Object
+      examples:
+        - __TypeId__: java.lang.Object
+    SpringStompDefaultHeaders:
+      title: SpringStompDefaultHeaders
+      type: object
+      properties: {}
+      examples:
+        - {}
+    com.orbit.message.dto.MessageDeletedNotification:
+      title: MessageDeletedNotification
+      type: object
+      properties:
+        messageId:
+          type: string
+          description: ID of deleted message
+      description: "Payload broadcast to /topic/conversations/{id}/messages/deleted"
+      examples:
+        - messageId: string
+    com.orbit.message.dto.MessageEditedNotification:
+      title: MessageEditedNotification
+      type: object
+      properties:
+        content:
+          type: string
+          description: Updated content
+        editedAt:
+          type: string
+          description: Timestamp when message was edited
+          format: date-time
+        messageId:
+          type: string
+          description: ID of edited message
+      description: "Payload broadcast to /topic/conversations/{id}/messages/edited"
+      examples:
+        - content: string
+          editedAt: 2015-07-20T15:49:04-07:00
+          messageId: string
+    com.orbit.message.dto.MessageResponse:
+      title: MessageResponse
+      type: object
+      properties:
+        content:
+          type: string
+          description: Message text content
+          examples:
+            - Hey! Have you checked the latest ADR?
+        conversationId:
+          type: string
+          description: Conversation ID
+          examples:
+            - 60c72b2f9b1d8b2bad000002
+        createdAt:
+          type: string
+          description: Timestamp when message was created
+          format: date-time
+        deleted:
+          type: boolean
+          description: Soft delete indicator
+          examples:
+            - false
+        deliveryStatus:
+          title: MessageDeliveryStatus
+          type: string
+          description: Delivery status of a message
+          enum:
+            - SENDING
+            - SENT
+            - DELIVERED
+            - READ
+            - FAILED
+          examples:
+            - DELIVERED
+        edited:
+          type: boolean
+          description: Edited indicator
+          examples:
+            - false
+        editedAt:
+          type: string
+          description: "Timestamp when message was edited, or null if unedited"
+          format: date-time
+        id:
+          type: string
+          description: Unique message ID
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+        idempotencyKey:
+          type: string
+          description: Client idempotency key if provided
+          examples:
+            - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        readBy:
+          title: List
+          type: array
+          description: User IDs who have read this message
+          items:
+            type: string
+            description: User IDs who have read this message
+        senderId:
+          type: string
+          description: Sender user ID
+          examples:
+            - 60c72b2f9b1d8b2bad000003
+        senderName:
+          type: string
+          description: Sender display name snapshot
+          examples:
+            - Satyam Kumar
+        type:
+          title: MessageType
+          type: string
+          description: Message type
+          enum:
+            - TEXT
+            - IMAGE
+            - FILE
+          examples:
+            - TEXT
+      description: Response representation of a message
+      examples:
+        - content: Hey! Have you checked the latest ADR?
+          conversationId: 60c72b2f9b1d8b2bad000002
+          createdAt: 2015-07-20T15:49:04-07:00
+          deleted: false
+          deliveryStatus: DELIVERED
+          edited: false
+          editedAt: 2015-07-20T15:49:04-07:00
+          id: 60c72b2f9b1d8b2bad000001
+          idempotencyKey: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          readBy:
+            - string
+          senderId: 60c72b2f9b1d8b2bad000003
+          senderName: Satyam Kumar
+          type: TEXT
+    com.orbit.message.dto.ReadReceiptNotification:
+      title: ReadReceiptNotification
+      type: object
+      properties:
+        messageId:
+          type: string
+          description: Message ID that was read
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+        readAt:
+          type: string
+          description: Timestamp when the message was marked as read
+          format: date-time
+        userId:
+          type: string
+          description: ID of user who read the message
+          examples:
+            - 60c72b2f9b1d8b2bad000002
+      description: WebSocket payload fanned out when a message is read
+      examples:
+        - messageId: 60c72b2f9b1d8b2bad000001
+          readAt: 2015-07-20T15:49:04-07:00
+          userId: 60c72b2f9b1d8b2bad000002
+    com.orbit.message.dto.ReadReceiptRequest:
+      title: ReadReceiptRequest
+      type: object
+      properties:
+        messageId:
+          type: string
+          description: Unique identifier of the message marked as read
+          minLength: 1
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+      description: Payload to mark a message as read
+      examples:
+        - messageId: 60c72b2f9b1d8b2bad000001
+      required:
+        - messageId
+    com.orbit.message.dto.SendMessageRequest:
+      title: SendMessageRequest
+      type: object
+      properties:
+        content:
+          type: string
+          description: Content text of the message
+          minLength: 1
+          maxLength: 4000
+          examples:
+            - Hey! Have you checked the latest ADR?
+        idempotencyKey:
+          type:
+            - string
+            - "null"
+          description: Client-generated idempotency key (UUID)
+          examples:
+            - c8f2b7a4-3995-4672-9a0f-1558914619a9
+        type:
+          title: MessageType
+          type: string
+          description: Message type
+          enum:
+            - TEXT
+            - IMAGE
+            - FILE
+          examples:
+            - TEXT
+      description: Payload to send a message within a conversation
+      examples:
+        - content: Hey! Have you checked the latest ADR?
+          idempotencyKey: c8f2b7a4-3995-4672-9a0f-1558914619a9
+          type: TEXT
+      required:
+        - content
+    com.orbit.message.kafka.MessageDeletedEvent:
+      title: MessageDeletedEvent
+      type: object
+      properties:
+        conversationId:
+          type: string
+        messageId:
+          type: string
+        recipientIds:
+          title: List
+          type: array
+          items:
+            type: string
+      examples:
+        - conversationId: string
+          messageId: string
+          recipientIds:
+            - string
+    com.orbit.message.kafka.MessageDeliveryEvent:
+      title: MessageDeliveryEvent
+      type: object
+      properties:
+        conversationId:
+          type: string
+        message:
+          $ref: "#/components/schemas/com.orbit.message.dto.MessageResponse"
+        messageId:
+          type: string
+        recipientIds:
+          title: List
+          type: array
+          items:
+            type: string
+        senderId:
+          type: string
+      examples:
+        - conversationId: string
+          message:
+            content: Hey! Have you checked the latest ADR?
+            conversationId: 60c72b2f9b1d8b2bad000002
+            createdAt: 2015-07-20T15:49:04-07:00
+            deleted: false
+            deliveryStatus: DELIVERED
+            edited: false
+            editedAt: 2015-07-20T15:49:04-07:00
+            id: 60c72b2f9b1d8b2bad000001
+            idempotencyKey: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            readBy:
+              - string
+            senderId: 60c72b2f9b1d8b2bad000003
+            senderName: Satyam Kumar
+            type: TEXT
+          messageId: string
+          recipientIds:
+            - string
+          senderId: string
+    com.orbit.message.kafka.MessageEditedEvent:
+      title: MessageEditedEvent
+      type: object
+      properties:
+        content:
+          type: string
+        conversationId:
+          type: string
+        editedAt:
+          type: string
+          format: date-time
+        messageId:
+          type: string
+        recipientIds:
+          title: List
+          type: array
+          items:
+            type: string
+      examples:
+        - content: string
+          conversationId: string
+          editedAt: 2015-07-20T15:49:04-07:00
+          messageId: string
+          recipientIds:
+            - string
+    com.orbit.message.kafka.MessageReadEvent:
+      title: MessageReadEvent
+      type: object
+      properties:
+        conversationId:
+          type: string
+        messageId:
+          type: string
+        readAt:
+          type: string
+          format: date-time
+        userId:
+          type: string
+      examples:
+        - conversationId: string
+          messageId: string
+          readAt: 2015-07-20T15:49:04-07:00
+          userId: string
+    com.orbit.notification.dto.NotificationEvent:
+      title: NotificationEvent
+      type: object
+      properties:
+        payload:
+          $ref: "#/components/schemas/com.orbit.notification.dto.NotificationPayload"
+        userId:
+          type: string
+          description: Recipient user ID
+          examples:
+            - 64f1a2b3c4d5e6f7a8b9c0d2
+      description: Kafka event for chat.notifications topic
+      examples:
+        - payload:
+            conversationId: 64f1a2b3c4d5e6f7a8b9c0e1
+            count: 5
+            type: UNREAD_COUNT
+          userId: 64f1a2b3c4d5e6f7a8b9c0d2
+    com.orbit.notification.dto.NotificationPayload:
+      title: NotificationPayload
+      type: object
+      properties:
+        conversationId:
+          type: string
+          description: ID of associated conversation
+          examples:
+            - 64f1a2b3c4d5e6f7a8b9c0e1
+        count:
+          type: integer
+          description: Unread count for the conversation
+          format: int32
+          examples:
+            - 5
+        type:
+          type: string
+          description: Notification type
+          examples:
+            - UNREAD_COUNT
+      description: Real-time personal notification payload
+      examples:
+        - conversationId: 64f1a2b3c4d5e6f7a8b9c0e1
+          count: 5
+          type: UNREAD_COUNT
+    com.orbit.presence.dto.PresenceEvent:
+      title: PresenceEvent
+      type: object
+      properties:
+        lastSeen:
+          type: string
+          format: date-time
+        online:
+          type: boolean
+        userId:
+          type: string
+      examples:
+        - lastSeen: 2015-07-20T15:49:04-07:00
+          online: true
+          userId: string
+    com.orbit.presence.dto.PresenceNotification:
+      title: PresenceNotification
+      type: object
+      properties:
+        lastSeen:
+          type: string
+          description: Timestamp when user was last seen
+          format: date-time
+        online:
+          type: boolean
+          description: "True if currently online, false otherwise"
+          examples:
+            - true
+        userId:
+          type: string
+          description: User ID whose presence state updated
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+      description: WebSocket notification payload for user presence updates
+      examples:
+        - lastSeen: 2015-07-20T15:49:04-07:00
+          online: true
+          userId: 60c72b2f9b1d8b2bad000001
+    com.orbit.presence.dto.TypingEvent:
+      title: TypingEvent
+      type: object
+      properties:
+        conversationId:
+          type: string
+        displayName:
+          type: string
+        typing:
+          type: boolean
+        userId:
+          type: string
+      examples:
+        - conversationId: string
+          displayName: string
+          typing: true
+          userId: string
+    com.orbit.presence.dto.TypingNotification:
+      title: TypingNotification
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: Display name of user who is typing
+        typing:
+          type: boolean
+          description: Whether user is actively typing
+        userId:
+          type: string
+          description: ID of user who is typing
+      description: "Payload broadcast to /topic/conversations/{conversationId}/typing"
+      examples:
+        - displayName: string
+          typing: true
+          userId: string
+    com.orbit.presence.dto.TypingRequest:
+      title: TypingRequest
+      type: object
+      properties:
+        typing:
+          type: boolean
+      examples:
+        - typing: true
+      required:
+        - typing
+    java.lang.Object:
+      type: object
+      examples:
+        - {}
+  messages:
+    com.orbit.message.dto.MessageDeletedNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.MessageDeletedNotification"
+      name: com.orbit.message.dto.MessageDeletedNotification
+      title: MessageDeletedNotification
+      bindings:
+        stomp: {}
+    com.orbit.message.dto.MessageEditedNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.MessageEditedNotification"
+      name: com.orbit.message.dto.MessageEditedNotification
+      title: MessageEditedNotification
+      bindings:
+        stomp: {}
+    com.orbit.message.dto.MessageResponse:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.MessageResponse"
+      name: com.orbit.message.dto.MessageResponse
+      title: MessageResponse
+      bindings:
+        stomp: {}
+    com.orbit.message.dto.ReadReceiptNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.ReadReceiptNotification"
+      name: com.orbit.message.dto.ReadReceiptNotification
+      title: ReadReceiptNotification
+      bindings:
+        stomp: {}
+    com.orbit.message.dto.ReadReceiptRequest:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.ReadReceiptRequest"
+      name: com.orbit.message.dto.ReadReceiptRequest
+      title: ReadReceiptRequest
+      bindings:
+        stomp: {}
+    com.orbit.message.dto.SendMessageRequest:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.SendMessageRequest"
+      name: com.orbit.message.dto.SendMessageRequest
+      title: SendMessageRequest
+      bindings:
+        stomp: {}
+    com.orbit.message.kafka.MessageDeletedEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.kafka.MessageDeletedEvent"
+      name: com.orbit.message.kafka.MessageDeletedEvent
+      title: MessageDeletedEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.message.kafka.MessageDeliveryEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.kafka.MessageDeliveryEvent"
+      name: com.orbit.message.kafka.MessageDeliveryEvent
+      title: MessageDeliveryEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.message.kafka.MessageEditedEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.kafka.MessageEditedEvent"
+      name: com.orbit.message.kafka.MessageEditedEvent
+      title: MessageEditedEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.message.kafka.MessageReadEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.kafka.MessageReadEvent"
+      name: com.orbit.message.kafka.MessageReadEvent
+      title: MessageReadEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.notification.dto.NotificationEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.notification.dto.NotificationEvent"
+      name: com.orbit.notification.dto.NotificationEvent
+      title: NotificationEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.notification.dto.NotificationPayload:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.notification.dto.NotificationPayload"
+      name: com.orbit.notification.dto.NotificationPayload
+      title: NotificationPayload
+      bindings:
+        stomp: {}
+    com.orbit.presence.dto.PresenceEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.presence.dto.PresenceEvent"
+      name: com.orbit.presence.dto.PresenceEvent
+      title: PresenceEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.presence.dto.PresenceNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.presence.dto.PresenceNotification"
+      name: com.orbit.presence.dto.PresenceNotification
+      title: PresenceNotification
+      bindings:
+        stomp: {}
+    com.orbit.presence.dto.TypingEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.presence.dto.TypingEvent"
+      name: com.orbit.presence.dto.TypingEvent
+      title: TypingEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.presence.dto.TypingNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.presence.dto.TypingNotification"
+      name: com.orbit.presence.dto.TypingNotification
+      title: TypingNotification
+      bindings:
+        stomp: {}
+    com.orbit.presence.dto.TypingRequest:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.presence.dto.TypingRequest"
+      name: com.orbit.presence.dto.TypingRequest
+      title: TypingRequest
+      bindings:
+        stomp: {}
+    java.lang.Object:
+      headers:
+        $ref: "#/components/schemas/SpringKafkaDefaultHeaders-Object"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          type: object
+          examples:
+            - {}
+      name: java.lang.Object
+      title: Object
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+operations:
+  _app_conversations__id__read_receive_markStompMessageAsRead:
+    action: receive
+    channel:
+      $ref: "#/channels/_app_conversations__id__read"
+    title: _app_conversations__id__read_receive
+    description: Client marks a message as read in a conversation over WebSocket.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_app_conversations__id__read/messages/com.orbit.message.dto.ReadReceiptRequest"
+  _app_conversations__id__send_receive_sendStompMessage:
+    action: receive
+    channel:
+      $ref: "#/channels/_app_conversations__id__send"
+    title: _app_conversations__id__send_receive
+    description: Client sends a real-time message to a conversation over WebSocket.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_app_conversations__id__send/messages/com.orbit.message.dto.SendMessageRequest"
+    reply:
+      channel:
+        $ref: "#/channels/_queue_receipts"
+      messages:
+        - $ref: "#/channels/_queue_receipts/messages/com.orbit.message.dto.MessageResponse"
+  _app_conversations__id__typing_receive_handleTyping:
+    action: receive
+    channel:
+      $ref: "#/channels/_app_conversations__id__typing"
+    title: _app_conversations__id__typing_receive
+    description: Client signals ephemeral typing status (typing=true/false) in a conversation.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_app_conversations__id__typing/messages/com.orbit.presence.dto.TypingRequest"
+  _topic_conversations__conversationId__messages_deleted_send_handleMessageDeleted:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__messages_deleted"
+    title: _topic_conversations__conversationId__messages_deleted_send
+    description: Broadcasts message deletion notifications to all subscribers in the
+      conversation.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__messages_deleted/messages/com.orbit.message.dto.MessageDeletedNotification"
+  _topic_conversations__conversationId__messages_edited_send_handleMessageEdited:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__messages_edited"
+    title: _topic_conversations__conversationId__messages_edited_send
+    description: Broadcasts message edit notifications to all subscribers in the conversation.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__messages_edited/messages/com.orbit.message.dto.MessageEditedNotification"
+  _topic_conversations__conversationId__messages_send_handleChatMessage:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__messages"
+    title: _topic_conversations__conversationId__messages_send
+    description: Broadcasts new message delivery event to all connected subscribers
+      in the conversation.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__messages/messages/com.orbit.message.dto.MessageResponse"
+  _topic_conversations__conversationId__read_send_handleMessageRead:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__read"
+    title: _topic_conversations__conversationId__read_send
+    description: Broadcasts read receipt status transitions to conversation participants.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__read/messages/com.orbit.message.dto.ReadReceiptNotification"
+  _topic_conversations__conversationId__typing_send_handleTyping:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__typing"
+    title: _topic_conversations__conversationId__typing_send
+    description: Broadcasts ephemeral typing indicators to conversation participants.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__typing/messages/com.orbit.presence.dto.TypingNotification"
+  _topic_presence__userId__send_handlePresence:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_presence__userId_"
+    title: _topic_presence__userId__send
+    description: Broadcasts user online/offline status and lastSeen timestamp updates
+      to contacts and group members.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_presence__userId_/messages/com.orbit.presence.dto.PresenceNotification"
+  _user_queue_notifications_send_handleNotification:
+    action: send
+    channel:
+      $ref: "#/channels/_user_queue_notifications"
+    title: _user_queue_notifications_send
+    description: "Pushes real-time personal notification (unread count, mention) to\
+      \ user private queue."
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_user_queue_notifications/messages/com.orbit.notification.dto.NotificationPayload"
+  chat.messages.deleted_receive_handleMessageDeleted:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.messages.deleted"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.deleted/messages/com.orbit.message.kafka.MessageDeletedEvent"
+  chat.messages.deleted_send_publishMessageDeleted:
+    action: send
+    channel:
+      $ref: "#/channels/chat.messages.deleted"
+    title: chat.messages.deleted_send
+    description: Publishes deleted message events to Kafka chat.messages.deleted topic
+      for multi-instance fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.deleted/messages/com.orbit.message.kafka.MessageDeletedEvent"
+  chat.messages.edited_receive_handleMessageEdited:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.messages.edited"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.edited/messages/com.orbit.message.kafka.MessageEditedEvent"
+  chat.messages.edited_send_publishMessageEdited:
+    action: send
+    channel:
+      $ref: "#/channels/chat.messages.edited"
+    title: chat.messages.edited_send
+    description: Publishes edited message events to Kafka chat.messages.edited topic
+      for multi-instance fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.edited/messages/com.orbit.message.kafka.MessageEditedEvent"
+  chat.messages.read_receive_handleMessageRead:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.messages.read"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.read/messages/com.orbit.message.kafka.MessageReadEvent"
+  chat.messages.read_send_publishMessageRead:
+    action: send
+    channel:
+      $ref: "#/channels/chat.messages.read"
+    title: chat.messages.read_send
+    description: Publishes read receipt events to Kafka chat.messages.read topic for
+      multi-instance fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.read/messages/com.orbit.message.kafka.MessageReadEvent"
+  chat.messages_receive_handleChatMessage:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.messages"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages/messages/com.orbit.message.kafka.MessageDeliveryEvent"
+  chat.messages_send_publishMessage:
+    action: send
+    channel:
+      $ref: "#/channels/chat.messages"
+    title: chat.messages_send
+    description: Publishes saved messages to Kafka chat.messages topic for multi-instance
+      fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages/messages/com.orbit.message.kafka.MessageDeliveryEvent"
+  chat.notifications_receive_handleNotification:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.notifications"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.notifications/messages/com.orbit.notification.dto.NotificationEvent"
+  chat.notifications_send_publishNotification:
+    action: send
+    channel:
+      $ref: "#/channels/chat.notifications"
+    title: chat.notifications_send
+    description: Publishes personal notifications to Kafka chat.notifications topic
+      for multi-instance fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.notifications/messages/com.orbit.notification.dto.NotificationEvent"
+  chat.presence_receive_handlePresenceOrTyping:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.presence"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.presence/messages/java.lang.Object"
+  chat.presence_send_publishPresence:
+    action: send
+    channel:
+      $ref: "#/channels/chat.presence"
+    title: chat.presence_send
+    description: Publishes user presence online/offline status events to Kafka chat.presence
+      topic.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.presence/messages/com.orbit.presence.dto.PresenceEvent"
+  chat.presence_send_publishTyping:
+    action: send
+    channel:
+      $ref: "#/channels/chat.presence"
+    title: chat.presence_send
+    description: Publishes typing events to Kafka chat.presence topic for multi-instance
+      fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.presence/messages/com.orbit.presence.dto.TypingEvent"

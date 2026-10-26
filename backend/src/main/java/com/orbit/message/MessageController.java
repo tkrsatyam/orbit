@@ -7,6 +7,9 @@ import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.ReadReceiptRequest;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageDeleteMode;
+import io.github.springwolf.bindings.stomp.annotations.StompAsyncOperationBinding;
+import io.github.springwolf.core.asyncapi.annotations.AsyncListener;
+import io.github.springwolf.core.asyncapi.annotations.AsyncOperation;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.enums.ParameterIn;
@@ -161,6 +164,14 @@ public class MessageController {
      * Destination: /app/conversations/{id}/send
      * Receipt delivered to user destination: /user/queue/receipts
      */
+    @AsyncListener(
+            operation = @AsyncOperation(
+                    channelName = "/app/conversations/{id}/send",
+                    description = "Client sends a real-time message to a conversation over WebSocket.",
+                    payloadType = SendMessageRequest.class
+            )
+    )
+    @StompAsyncOperationBinding
     @MessageMapping("/conversations/{id}/send")
     @SendToUser("/queue/receipts")
     public MessageResponse sendStompMessage(
@@ -224,6 +235,14 @@ public class MessageController {
      * STOMP endpoint for marking a message as read.
      * Destination: /app/conversations/{id}/read
      */
+    @AsyncListener(
+            operation = @AsyncOperation(
+                    channelName = "/app/conversations/{id}/read",
+                    description = "Client marks a message as read in a conversation over WebSocket.",
+                    payloadType = ReadReceiptRequest.class
+            )
+    )
+    @StompAsyncOperationBinding
     @MessageMapping("/conversations/{id}/read")
     public void markStompMessageAsRead(
             @DestinationVariable("id") String conversationId,
