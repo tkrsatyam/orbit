@@ -995,6 +995,7 @@ paths:
           enum:
           - FOR_EVERYONE
           - FOR_ME
+          title: MessageDeleteMode
       responses:
         "204":
           description: Message deleted successfully
@@ -1171,6 +1172,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/SuggestedUserResponse"
+                title: List
         "401":
           description: "Missing, invalid, expired, or blacklisted access token"
           content:
@@ -1266,6 +1268,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/GroupResponse"
+                title: List
         "401":
           description: Missing or invalid bearer token
           content:
@@ -1421,6 +1424,7 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of the error
           example: 2026-10-18T17:15:00Z
+      title: ErrorResponse
     CreateGroupRequest:
       type: object
       description: Payload for creating a new group
@@ -1450,9 +1454,11 @@ components:
           - PUBLIC
           - PRIVATE
           example: PUBLIC
+          title: GroupVisibility
       required:
       - name
       - visibility
+      title: CreateGroupRequest
     GroupResponse:
       type: object
       description: Group details response
@@ -1480,6 +1486,7 @@ components:
           - PUBLIC
           - PRIVATE
           example: PUBLIC
+          title: GroupVisibility
         avatarUrl:
           type: string
           description: Group avatar URL
@@ -1508,6 +1515,8 @@ components:
           - ADMIN
           - MEMBER
           example: ADMIN
+          title: GroupRole
+      title: GroupResponse
     GroupJoinResponse:
       type: object
       description: Response returned upon joining a group
@@ -1527,6 +1536,8 @@ components:
           - ADMIN
           - MEMBER
           example: MEMBER
+          title: GroupRole
+      title: GroupJoinResponse
     InviteResponse:
       type: object
       description: Private group invite link response
@@ -1539,6 +1550,7 @@ components:
           type: string
           format: date-time
           description: Timestamp when the invite expires (7 days after issuance)
+      title: InviteResponse
     SendMessageRequest:
       type: object
       description: Payload to send a message within a conversation
@@ -1558,6 +1570,7 @@ components:
           - IMAGE
           - FILE
           example: TEXT
+          title: MessageType
         idempotencyKey:
           type:
           - string
@@ -1566,6 +1579,7 @@ components:
           example: c8f2b7a4-3995-4672-9a0f-1558914619a9
       required:
       - content
+      title: SendMessageRequest
     MessageResponse:
       type: object
       description: Response representation of a message
@@ -1594,6 +1608,7 @@ components:
           - IMAGE
           - FILE
           example: TEXT
+          title: MessageType
         content:
           type: string
           description: Message text content
@@ -1624,15 +1639,18 @@ components:
           - READ
           - FAILED
           example: DELIVERED
+          title: MessageDeliveryStatus
         readBy:
           type: array
           description: User IDs who have read this message
           items:
             type: string
+          title: List
         idempotencyKey:
           type: string
           description: Client idempotency key if provided
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      title: MessageResponse
     BatchReadRequest:
       type: object
       description: Payload to mark multiple messages as read in bulk
@@ -1643,8 +1661,10 @@ components:
           items:
             type: string
           minItems: 1
+          title: List
       required:
       - messageIds
+      title: BatchReadRequest
     SendRequestDto:
       type: object
       properties:
@@ -1653,6 +1673,7 @@ components:
           minLength: 1
       required:
       - targetUserId
+      title: SendRequestDto
     ConnectionRequestResponse:
       type: object
       properties:
@@ -1664,11 +1685,13 @@ components:
           - PENDING
           - CONNECTED
           - BLOCKED
+          title: ContactStatus
         toUser:
           $ref: "#/components/schemas/ContactUserSummaryDto"
         createdAt:
           type: string
           format: date-time
+      title: ConnectionRequestResponse
     ContactUserSummaryDto:
       type: object
       properties:
@@ -1678,6 +1701,7 @@ components:
           type: string
         avatarUrl:
           type: string
+      title: ContactUserSummaryDto
     RegisterRequest:
       type: object
       description: User registration payload
@@ -1705,6 +1729,7 @@ components:
       - displayName
       - email
       - password
+      title: RegisterRequest
     AuthResponse:
       type: object
       description: Authentication response containing the JWT access token and optional
@@ -1718,6 +1743,7 @@ components:
           type: "null"
           $ref: "#/components/schemas/UserSummaryResponse"
           description: User profile summary (null on token refresh)
+      title: AuthResponse
     UserSummaryResponse:
       type: object
       description: User profile summary
@@ -1751,6 +1777,7 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
+      title: UserSummaryResponse
     LoginRequest:
       type: object
       description: User authentication payload
@@ -1769,6 +1796,7 @@ components:
       required:
       - email
       - password
+      title: LoginRequest
     UpdateGroupRequest:
       type: object
       description: Request payload for updating group metadata (all fields optional)
@@ -1791,6 +1819,7 @@ components:
           example: "#interview-prep"
           maxLength: 50
           minLength: 0
+      title: UpdateGroupRequest
     UpdateMemberRoleRequest:
       type: object
       description: Request to update member role in group
@@ -1802,8 +1831,10 @@ components:
           - ADMIN
           - MEMBER
           example: ADMIN
+          title: GroupRole
       required:
       - role
+      title: UpdateMemberRoleRequest
     GroupMemberResponse:
       type: object
       description: Details of a group member
@@ -1827,6 +1858,7 @@ components:
           - ADMIN
           - MEMBER
           example: ADMIN
+          title: GroupRole
         online:
           type: boolean
           description: Whether user is online
@@ -1836,6 +1868,7 @@ components:
           format: date-time
           description: Timestamp when user joined group
           example: 2026-06-27T10:30:00Z
+      title: GroupMemberResponse
     EditMessageRequest:
       type: object
       description: Request payload to edit a text message
@@ -1848,6 +1881,7 @@ components:
           minLength: 1
       required:
       - content
+      title: EditMessageRequest
     RespondRequestDto:
       type: object
       properties:
@@ -1856,8 +1890,10 @@ components:
           enum:
           - ACCEPT
           - DECLINE
+          title: RequestAction
       required:
       - action
+      title: RespondRequestDto
     AcceptRequestResponse:
       type: object
       properties:
@@ -1865,6 +1901,7 @@ components:
           type: string
         conversationId:
           type: string
+      title: AcceptRequestResponse
     UserProfileResponse:
       type: object
       description: Public user profile or masked profile unavailable response
@@ -1903,6 +1940,7 @@ components:
           - CONNECTED
           - BLOCKED
           example: CONNECTED
+          title: ConnectionStatus
         available:
           type:
           - boolean
@@ -1910,6 +1948,7 @@ components:
           description: Availability flag present only when profile is masked due to
             a block
           example: false
+      title: UserProfileResponse
     SuggestedUserResponse:
       type: object
       properties:
@@ -1923,6 +1962,7 @@ components:
           type: string
         initials:
           type: string
+      title: SuggestedUserResponse
     SelfProfileResponse:
       type: object
       description: Authenticated user's own profile
@@ -1956,6 +1996,7 @@ components:
           format: date-time
           description: ISO-8601 UTC timestamp of account creation
           example: 2026-06-27T10:30:00Z
+      title: SelfProfileResponse
     GroupPageResponse:
       type: object
       description: Paginated public group discovery response
@@ -1965,6 +2006,7 @@ components:
           description: List of public groups
           items:
             $ref: "#/components/schemas/GroupResponse"
+          title: List
         page:
           type: integer
           format: int32
@@ -1989,6 +2031,7 @@ components:
           type: boolean
           description: Whether this is the last page
           example: false
+      title: GroupPageResponse
     GroupMemberListResponse:
       type: object
       description: Wrapper response for group member list
@@ -1998,6 +2041,8 @@ components:
           description: List of group members
           items:
             $ref: "#/components/schemas/GroupMemberResponse"
+          title: List
+      title: GroupMemberListResponse
     ConversationListResponse:
       type: object
       description: List of conversations for authenticated user
@@ -2007,6 +2052,8 @@ components:
           description: Array of conversation items
           items:
             $ref: "#/components/schemas/ConversationResponse"
+          title: List
+      title: ConversationListResponse
     ConversationResponse:
       type: object
       description: Conversation list item representation
@@ -2022,6 +2069,7 @@ components:
           - DIRECT
           - GROUP
           example: DIRECT
+          title: ConversationType
         participant:
           $ref: "#/components/schemas/ParticipantSummary"
           description: Participant summary for DIRECT conversations
@@ -2040,6 +2088,7 @@ components:
           type: boolean
           description: Mute status for current user
           example: false
+      title: ConversationResponse
     GroupSummary:
       type: object
       description: Group summary in group conversation
@@ -2061,6 +2110,7 @@ components:
           format: int32
           description: Member count
           example: 24
+      title: GroupSummary
     LastMessageResponse:
       type: object
       description: Last message snapshot in conversation
@@ -2081,6 +2131,7 @@ components:
           type: string
           format: date-time
           description: Timestamp when sent
+      title: LastMessageResponse
     ParticipantSummary:
       type: object
       description: Participant summary in direct conversation
@@ -2101,6 +2152,7 @@ components:
           type: boolean
           description: Live online presence flag
           example: true
+      title: ParticipantSummary
     MessageHistoryResponse:
       type: object
       description: Paginated message history envelope
@@ -2111,6 +2163,7 @@ components:
             this batch)
           items:
             $ref: "#/components/schemas/MessageResponse"
+          title: List
         hasMore:
           type: boolean
           description: Indicates whether older messages exist before this batch
@@ -2120,6 +2173,7 @@ components:
           description: Cursor (message ID) to pass as 'before' parameter to load previous
             messages
           example: 60c72b2f9b1d8b2bad000001
+      title: MessageHistoryResponse
     ContactListResponse:
       type: object
       properties:
@@ -2127,6 +2181,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ContactResponse"
+          title: List
+      title: ContactListResponse
     ContactResponse:
       type: object
       properties:
@@ -2144,6 +2200,7 @@ components:
           type: boolean
         conversationId:
           type: string
+      title: ContactResponse
     IncomingRequestDto:
       type: object
       properties:
@@ -2154,6 +2211,7 @@ components:
         createdAt:
           type: string
           format: date-time
+      title: IncomingRequestDto
     IncomingRequestsResponse:
       type: object
       properties:
@@ -2161,6 +2219,8 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/IncomingRequestDto"
+          title: List
+      title: IncomingRequestsResponse
   securitySchemes:
     bearerAuth:
       type: http

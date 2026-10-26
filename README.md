@@ -135,6 +135,7 @@ npm start
 The frontend runs on `http://localhost:4200`
 The backend runs on `http://localhost:8080`
 Swagger UI is available at `http://localhost:8080/swagger-ui.html`
+Springwolf UI (AsyncAPI) is available at `http://localhost:8080/springwolf/asyncapi-ui.html`
 
 ---
 
@@ -146,6 +147,7 @@ Swagger UI is available at `http://localhost:8080/swagger-ui.html`
 | [`TECH_STACK.md`](./docs/TECH_STACK.md) | Technology decisions and justifications |
 | [`API_CONTRACTS.md`](./docs/API_CONTRACTS.md) | REST and WebSocket endpoint reference |
 | [`backend/openapi.yaml`](./backend/openapi.yaml) | OpenAPI 3.1 specification (Swagger UI at `/swagger-ui.html`) |
+| [`backend/asyncapi.yaml`](./backend/asyncapi.yaml) | AsyncAPI 3.1 specification (Springwolf UI at `/springwolf/asyncapi-ui.html`) |
 | [`architecture/erd.md`](./docs/architecture/erd.md) | Database schema |
 | [`architecture/c1_system_context.md`](./docs/architecture/c1_system_context.md) | System context diagram |
 | [`architecture/c2_container.md`](./docs/architecture/c2_container.md) | Container diagram |

@@ -33,6 +33,32 @@ springdoc:
     path: /swagger-ui.html
     operations-sorter: method
     tags-sorter: alpha
+  packages-to-scan: com.orbit
+
+springwolf:
+  enabled: true
+  docket:
+    base-package: com.orbit
+    info:
+      title: Orbit Real-Time API (WebSocket & Kafka)
+      version: 1.0.0
+      description: |
+        AsyncAPI specification for Orbit real-time events, STOMP destinations over WebSocket, and Kafka multi-instance fan-out topics.
+        
+        ### WebSocket Connection & Handshake
+        - **Endpoint**: `ws://localhost:8080/ws` (with SockJS fallback at `/ws`)
+        - **Authentication**: JWT access token passed as query param (`?token=<jwt>`).
+        - **Close Code**: Invalid or expired token results in connection termination with close code `4401`.
+    servers:
+      websocket-broker:
+        protocol: ws
+        host: localhost:8080
+        pathname: /ws
+        description: Orbit STOMP WebSocket broker endpoint
+      kafka-cluster:
+        protocol: kafka
+        host: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+        description: Kafka cluster for multi-instance event distribution
 
 orbit:
   jwt:

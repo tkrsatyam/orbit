@@ -2,15 +2,21 @@ package com.orbit.websocket;
 
 import com.orbit.message.dto.MessageDeletedNotification;
 import com.orbit.message.dto.MessageEditedNotification;
+import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.ReadReceiptNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
 import com.orbit.message.kafka.MessageReadEvent;
+import com.orbit.notification.dto.NotificationEvent;
+import com.orbit.notification.dto.NotificationPayload;
 import com.orbit.presence.dto.PresenceEvent;
 import com.orbit.presence.dto.PresenceNotification;
 import com.orbit.presence.dto.TypingEvent;
 import com.orbit.presence.dto.TypingNotification;
+import io.github.springwolf.bindings.stomp.annotations.StompAsyncOperationBinding;
+import io.github.springwolf.core.asyncapi.annotations.AsyncOperation;
+import io.github.springwolf.core.asyncapi.annotations.AsyncPublisher;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +26,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Consumes events from Kafka (chat.messages, chat.messages.edited, chat.messages.deleted,
- * chat.messages.read, chat.presence) and forwards them to local WebSocket sessions.
+ * chat.messages.read, chat.presence, chat.notifications) and forwards them to local WebSocket sessions.
  * Follows Flow D (Multi-Instance Fan-Out) from docs/architecture/sequences/message_send_flow.md.
  */
 @Component
@@ -44,6 +50,14 @@ public class KafkaWebSocketBridge {
      * Instances with no relevant sessions discard the event silently.
      */
     @KafkaListener(topics = "chat.messages", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/messages",
+                    description = "Broadcasts new message delivery event to all connected subscribers in the conversation.",
+                    payloadType = MessageResponse.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handleChatMessage(MessageDeliveryEvent event) {
         if (event == null || event.recipientIds() == null) {
             return;
@@ -67,6 +81,14 @@ public class KafkaWebSocketBridge {
      * Consumes message edited events and fans out to /topic/conversations/{conversationId}/messages/edited.
      */
     @KafkaListener(topics = "chat.messages.edited", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/messages/edited",
+                    description = "Broadcasts message edit notifications to all subscribers in the conversation.",
+                    payloadType = MessageEditedNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handleMessageEdited(MessageEditedEvent event) {
         if (event == null || event.conversationId() == null) {
             return;
@@ -83,6 +105,14 @@ public class KafkaWebSocketBridge {
      * Consumes message deleted events and fans out to /topic/conversations/{conversationId}/messages/deleted.
      */
     @KafkaListener(topics = "chat.messages.deleted", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/messages/deleted",
+                    description = "Broadcasts message deletion notifications to all subscribers in the conversation.",
+                    payloadType = MessageDeletedNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handleMessageDeleted(MessageDeletedEvent event) {
         if (event == null || event.conversationId() == null) {
             return;
@@ -99,6 +129,14 @@ public class KafkaWebSocketBridge {
      * Consumes message read events and fans out to /topic/conversations/{conversationId}/read.
      */
     @KafkaListener(topics = "chat.messages.read", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/read",
+                    description = "Broadcasts read receipt status transitions to conversation participants.",
+                    payloadType = ReadReceiptNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handleMessageRead(MessageReadEvent event) {
         if (event == null || event.conversationId() == null) {
             return;
@@ -129,6 +167,14 @@ public class KafkaWebSocketBridge {
         }
     }
 
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/typing",
+                    description = "Broadcasts ephemeral typing indicators to conversation participants.",
+                    payloadType = TypingNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handleTyping(TypingEvent event) {
         if (event == null || event.conversationId() == null) {
             return;
@@ -141,6 +187,14 @@ public class KafkaWebSocketBridge {
                 new TypingNotification(event.userId(), event.displayName(), event.typing()));
     }
 
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/presence/{userId}",
+                    description = "Broadcasts user online/offline status and lastSeen timestamp updates to contacts and group members.",
+                    payloadType = PresenceNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
     public void handlePresence(PresenceEvent event) {
         if (event == null || event.userId() == null) {
             return;
@@ -152,4 +206,29 @@ public class KafkaWebSocketBridge {
         messagingTemplate.convertAndSend(destination,
                 new PresenceNotification(event.userId(), event.online(), event.lastSeen()));
     }
+
+    /**
+     * Consumes personal notifications from Kafka topic 'chat.notifications' and delivers to /user/queue/notifications.
+     */
+    @KafkaListener(topics = "chat.notifications", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/user/queue/notifications",
+                    description = "Pushes real-time personal notification (unread count, mention) to user private queue.",
+                    payloadType = NotificationPayload.class
+            )
+    )
+    @StompAsyncOperationBinding
+    public void handleNotification(NotificationEvent event) {
+        if (event == null || event.userId() == null) {
+            return;
+        }
+
+        if (sessionRegistry.isOnline(event.userId())) {
+            log.debug("Delivering real-time notification to user={}: type={}",
+                    event.userId(), event.payload() != null ? event.payload().type() : null);
+            messagingTemplate.convertAndSendToUser(event.userId(), "/queue/notifications", event.payload());
+        }
+    }
 }
+
