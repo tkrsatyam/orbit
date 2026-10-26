@@ -626,10 +626,10 @@ async function publishOrUpdateComment(repo, prNumber, token, commentBody, commit
   console.log(`Successfully created new review comment for commit ${commitSha}.`);
 }
 
-function parseReviewResponse(rawText, domain) {
-  if (!rawText) {
+function normalizeDomainResult(parsed, defaultDomain) {
+  if (!parsed || typeof parsed !== 'object') {
     return {
-      domain,
+      domain: defaultDomain,
       status: 'PASS',
       summary: '',
       reviewOfUpdates: '',
@@ -637,12 +637,31 @@ function parseReviewResponse(rawText, domain) {
       verification: { architecture: 'Verified.', security: 'Verified.' }
     };
   }
+  return {
+    domain: parsed.domain || defaultDomain,
+    status: parsed.status || (Array.isArray(parsed.issues) && parsed.issues.length > 0 ? 'WARNING' : 'PASS'),
+    summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
+    reviewOfUpdates: typeof parsed.reviewOfUpdates === 'string' ? parsed.reviewOfUpdates.trim() : '',
+    issues: Array.isArray(parsed.issues) ? parsed.issues : [],
+    verification: {
+      architecture: parsed.verification?.architecture || 'Verified.',
+      security: parsed.verification?.security || 'Verified.'
+    }
+  };
+}
 
+function parseReviewResponse(rawText, defaultDomain) {
+  if (!rawText) {
+    return [normalizeDomainResult(null, defaultDomain)];
+  }
   let parsed = null;
   try {
     parsed = JSON.parse(rawText.trim());
   } catch (e) {
-    const match = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || rawText.match(/\{[\s\S]*\}/);
+    const match =
+      rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) ||
+      rawText.match(/\[[\s\S]*\]/) ||
+      rawText.match(/\{[\s\S]*\}/);
     if (match) {
       try {
         parsed = JSON.parse(match[1] || match[0]);
@@ -651,29 +670,47 @@ function parseReviewResponse(rawText, domain) {
       }
     }
   }
-
-  if (parsed && typeof parsed === 'object') {
-    return {
-      domain: parsed.domain || domain,
-      status: parsed.status || (Array.isArray(parsed.issues) && parsed.issues.length > 0 ? 'WARNING' : 'PASS'),
-      summary: typeof parsed.summary === 'string' ? parsed.summary.trim() : '',
-      reviewOfUpdates: typeof parsed.reviewOfUpdates === 'string' ? parsed.reviewOfUpdates.trim() : '',
-      issues: Array.isArray(parsed.issues) ? parsed.issues : [],
-      verification: {
-        architecture: parsed.verification?.architecture || 'Verified.',
-        security: parsed.verification?.security || 'Verified.'
-      }
-    };
+  if (Array.isArray(parsed)) {
+    return parsed.map((item, idx) =>
+      normalizeDomainResult(item, item.domain || (idx === 0 ? 'Backend' : 'Frontend'))
+    );
   }
-
-  return {
-    domain,
-    status: 'PASS',
-    summary: rawText.substring(0, 300),
-    reviewOfUpdates: rawText.substring(0, 300),
-    issues: [],
-    verification: { architecture: 'Verified.', security: 'Verified.' }
-  };
+  if (parsed && typeof parsed === 'object') {
+    if (Array.isArray(parsed.results)) {
+      return parsed.results.map((item, idx) =>
+        normalizeDomainResult(item, item.domain || (idx === 0 ? 'Backend' : 'Frontend'))
+      );
+    }
+    if (Array.isArray(parsed.domains)) {
+      return parsed.domains.map((item, idx) =>
+        normalizeDomainResult(item, item.domain || (idx === 0 ? 'Backend' : 'Frontend'))
+      );
+    }
+    if ((parsed.backend && typeof parsed.backend === 'object') || (parsed.frontend && typeof parsed.frontend === 'object')) {
+      const results = [];
+      if (parsed.backend && typeof parsed.backend === 'object') {
+        results.push(normalizeDomainResult(parsed.backend, 'Backend'));
+      }
+      if (parsed.frontend && typeof parsed.frontend === 'object') {
+        results.push(normalizeDomainResult(parsed.frontend, 'Frontend'));
+      }
+      return results;
+    }
+    return [normalizeDomainResult(parsed, defaultDomain)];
+  }
+  return [
+    normalizeDomainResult(
+      {
+        domain: defaultDomain,
+        status: 'PASS',
+        summary: rawText.substring(0, 300),
+        reviewOfUpdates: rawText.substring(0, 300),
+        issues: [],
+        verification: { architecture: 'Verified.', security: 'Verified.' }
+      },
+      defaultDomain
+    )
+  ];
 }
 
 function renderConsolidatedReport(results, commitSha, isFollowUp, modelsUsed = []) {
@@ -850,7 +887,11 @@ async function fetchPRContext(repo, prNumber, token) {
         if (author.includes('bot') && comment.body.includes(`Commit \`${currentCommit}\``)) {
           continue;
         }
-        if (comment.body.includes('<!-- orbit-ai-review:commit:') || comment.body.includes('## 🤖 AI Code Review')) {
+        // Only mark true when an actual automated review tag is present
+        if (
+          comment.body.includes('<!-- orbit-ai-review:commit:') ||
+          comment.body.includes('<!-- jobtrackr-ai-review:commit:')
+        ) {
           hasPriorReview = true;
         }
         contextText += `\n--- Comment by @${author} ---\n${comment.body}\n`;
@@ -952,8 +993,8 @@ async function main() {
     console.log(`Extracted functional requirements and ADR context for PR #${PR_NUMBER}. Injecting into review prompt.`);
   }
 
-  // Scope Gating & Follow-Up Detection
-  const isFollowUpReview = Boolean(prContext.hasPriorReview || (prContext.text && prContext.text.includes('--- Comment by')));
+  // Scope Gating & Follow-Up Detection: only true if an automated AI review tag exists
+  const isFollowUpReview = Boolean(prContext.hasPriorReview);
   const latestCommitFiles = getLatestCommitFiles();
 
   let backendActive = false;
@@ -995,33 +1036,55 @@ async function main() {
   }
 
   let reviewComment = '';
-
   if (backendActive && frontendActive) {
-    console.log('Dispatching staggered Backend and Frontend reviews...');
-    try {
-      const backendPromise = callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY);
-      await sleep(1500);
-      const frontendPromise = callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY);
-      const [backendRes, frontendRes] = await Promise.all([backendPromise, frontendPromise]);
-      const backendResult = parseReviewResponse(backendRes.reviewText, 'Backend');
-      const frontendResult = parseReviewResponse(frontendRes.reviewText, 'Frontend');
-      reviewComment = renderConsolidatedReport(
-        [backendResult, frontendResult],
-        commitSha,
-        isFollowUpReview,
-        [backendRes.modelUsed, frontendRes.modelUsed]
-      );
-    } catch (parallelErr) {
-      console.warn('Parallel review failed:', parallelErr.message);
-      return;
+    const shouldSplit = totalStats.total > DIFF_THRESHOLD && backendStats.total >= 50 && frontendStats.total >= 50;
+    if (shouldSplit) {
+      console.log(`Diff exceeds threshold (${totalStats.total} > ${DIFF_THRESHOLD}) with substantial BE (${backendStats.total}) and FE (${frontendStats.total}) changes. Dispatching staggered Split Mode...`);
+      try {
+        const backendPromise = callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY);
+        await sleep(1500);
+        const frontendPromise = callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY);
+        const [backendRes, frontendRes] = await Promise.all([backendPromise, frontendPromise]);
+        const backendResults = parseReviewResponse(backendRes.reviewText, 'Backend');
+        const frontendResults = parseReviewResponse(frontendRes.reviewText, 'Frontend');
+        reviewComment = renderConsolidatedReport(
+          [...backendResults, ...frontendResults],
+          commitSha,
+          isFollowUpReview,
+          [backendRes.modelUsed, frontendRes.modelUsed]
+        );
+      } catch (parallelErr) {
+        console.warn('Parallel review failed:', parallelErr.message);
+        return;
+      }
+    } else {
+      console.log(`Diff is within threshold (${totalStats.total} <= ${DIFF_THRESHOLD}) or single domain dominant. Dispatching Single Consolidated Review...`);
+      const combinedRules = `\n\n# Backend Domain Rules\n${backendRules}\n\n# Frontend Domain Rules\n${frontendRules}`;
+      const fullDiff = getDiffContent();
+      const fullDiffBlock = formatDiffBlock(fullDiff);
+      const multiDomainOutputInstruction = `\n\n# Multi-Domain Output Schema Requirement\nSince this pull request touches both Backend and Frontend, you MUST respond strictly with a valid JSON array containing exactly two objects—one for "Backend" and one for "Frontend":\n\`\`\`json\n[\n  {\n    "domain": "Backend",\n    "status": "PASS",\n    "summary": "...",\n    "reviewOfUpdates": "...",\n    "issues": [],\n    "verification": { "architecture": "...", "security": "..." }\n  },\n  {\n    "domain": "Frontend",\n    "status": "PASS",\n    "summary": "...",\n    "reviewOfUpdates": "...",\n    "issues": [],\n    "verification": { "architecture": "...", "security": "..." }\n  }\n]\n\`\`\``;
+      const unifiedPrompt = `${basePrompt}${requirementsContextBlock}${projectContractsBlock}${fullSourceFilesBlock}${prContextBlock}${combinedRules}${fullDiffBlock}${multiDomainOutputInstruction}`;
+      try {
+        const res = await callGeminiWithFallback(unifiedPrompt, GEMINI_API_KEY);
+        const results = parseReviewResponse(res.reviewText, 'Backend');
+        reviewComment = renderConsolidatedReport(
+          results,
+          commitSha,
+          isFollowUpReview,
+          [res.modelUsed]
+        );
+      } catch (err) {
+        console.warn('Single consolidated review failed:', err.message);
+        return;
+      }
     }
   } else if (backendActive) {
     console.log('Dispatching Backend-only review...');
     try {
       const backendRes = await callGeminiWithFallback(backendFullPrompt, GEMINI_API_KEY);
-      const backendResult = parseReviewResponse(backendRes.reviewText, 'Backend');
+      const backendResults = parseReviewResponse(backendRes.reviewText, 'Backend');
       reviewComment = renderConsolidatedReport(
-        [backendResult],
+        backendResults,
         commitSha,
         isFollowUpReview,
         [backendRes.modelUsed]
@@ -1034,9 +1097,9 @@ async function main() {
     console.log('Dispatching Frontend-only review...');
     try {
       const frontendRes = await callGeminiWithFallback(frontendFullPrompt, GEMINI_API_KEY);
-      const frontendResult = parseReviewResponse(frontendRes.reviewText, 'Frontend');
+      const frontendResults = parseReviewResponse(frontendRes.reviewText, 'Frontend');
       reviewComment = renderConsolidatedReport(
-        [frontendResult],
+        frontendResults,
         commitSha,
         isFollowUpReview,
         [frontendRes.modelUsed]
