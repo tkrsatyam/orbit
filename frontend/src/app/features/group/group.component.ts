@@ -163,22 +163,26 @@ export class GroupComponent implements OnInit, OnDestroy {
   });
 
   ngOnInit(): void {
-    this.route.paramMap.subscribe(params => {
-      const id = params.get('id');
-      if (id) {
-        this.groupId.set(id);
-        this.loadGroupDetails(id);
-      } else {
-        this.errorMessage.set('Group ID is missing');
-        this.loading.set(false);
-      }
-    });
+    this.route.paramMap
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(params => {
+        const id = params.get('id');
+        if (id) {
+          this.groupId.set(id);
+          this.loadGroupDetails(id);
+        } else {
+          this.errorMessage.set('Group ID is missing');
+          this.loading.set(false);
+        }
+      });
 
-    this.groupService.loadMyGroups().subscribe({
-      error: () => {
-        // Silently handle
-      }
-    });
+    this.groupService.loadMyGroups()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        error: () => {
+          // Silently handle
+        }
+      });
 
     // Buffer read receipts in 500ms windows to prevent high-volume network storms
     this.incomingReadSubject.pipe(

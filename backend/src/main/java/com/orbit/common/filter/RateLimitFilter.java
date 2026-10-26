@@ -29,6 +29,8 @@ import java.util.regex.Pattern;
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
+    public static final String RATE_LIMIT_CONSUMED_ATTR = "orbit.rateLimit.messages.consumed";
+
     private static final String API_PREFIX = "/api/v1/";
     private static final Pattern MESSAGE_SEND_PATTERN = Pattern.compile("^/api/v1/conversations/[^/]+/messages$");
     private static final Pattern UPLOAD_PATTERN = Pattern.compile("^/api/v1/(conversations/[^/]+/messages/upload|users/me/avatar|groups/[^/]+/avatar|groups/[^/]+/cover)$");
@@ -71,6 +73,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (!result.allowed()) {
             rejectWith429(request, response, result.retryAfterSeconds());
             return;
+        }
+
+        if (plan.key().startsWith("MESSAGES:user:")) {
+            request.setAttribute(RATE_LIMIT_CONSUMED_ATTR, Boolean.TRUE);
         }
 
         filterChain.doFilter(request, response);
@@ -119,7 +125,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
         }
 
         if (HttpMethod.POST.matches(method) && MESSAGE_SEND_PATTERN.matcher(path).matches()) {
-            return new EndpointRateLimit("MESSAGE:user:" + userId, limits.messagesPerMinute());
+            return new EndpointRateLimit("MESSAGES:user:" + userId, limits.messagesPerMinute());
         }
 
         return new EndpointRateLimit("DEFAULT:user:" + userId, limits.defaultPerMinute());

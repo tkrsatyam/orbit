@@ -13,4 +13,6 @@ public interface NotificationRepository extends MongoRepository<Notification, St
     Optional<Notification> findByUserIdAndConversationId(String userId, String conversationId);
 
     List<Notification> findByUserIdAndReadFalse(String userId);
+
+    List<Notification> findByUserId(String userId);
 }
