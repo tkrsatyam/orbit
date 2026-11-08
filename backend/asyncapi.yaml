@@ -65,6 +65,12 @@ channels:
       com.orbit.message.dto.MessageEditedNotification:
         $ref: "#/components/messages/com.orbit.message.dto.MessageEditedNotification"
     bindings: {}
+  _topic_conversations__conversationId__reactions:
+    address: "/topic/conversations/{conversationId}/reactions"
+    messages:
+      com.orbit.message.dto.MessageReactionNotification:
+        $ref: "#/components/messages/com.orbit.message.dto.MessageReactionNotification"
+    bindings: {}
   _topic_conversations__conversationId__read:
     address: "/topic/conversations/{conversationId}/read"
     messages:
@@ -110,6 +116,14 @@ channels:
     messages:
       com.orbit.message.kafka.MessageEditedEvent:
         $ref: "#/components/messages/com.orbit.message.kafka.MessageEditedEvent"
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+  chat.messages.reactions:
+    address: chat.messages.reactions
+    messages:
+      com.orbit.message.kafka.MessageReactionEvent:
+        $ref: "#/components/messages/com.orbit.message.kafka.MessageReactionEvent"
     bindings:
       kafka:
         bindingVersion: 0.5.0
@@ -189,6 +203,19 @@ components:
           const: com.orbit.message.kafka.MessageEditedEvent
       examples:
         - __TypeId__: com.orbit.message.kafka.MessageEditedEvent
+    SpringKafkaDefaultHeaders-MessageReactionEvent:
+      title: SpringKafkaDefaultHeaders-MessageReactionEvent
+      type: object
+      properties:
+        __TypeId__:
+          title: __TypeId__
+          type: string
+          description: Spring Type Id Header
+          examples:
+            - com.orbit.message.kafka.MessageReactionEvent
+          const: com.orbit.message.kafka.MessageReactionEvent
+      examples:
+        - __TypeId__: com.orbit.message.kafka.MessageReactionEvent
     SpringKafkaDefaultHeaders-MessageReadEvent:
       title: SpringKafkaDefaultHeaders-MessageReadEvent
       type: object
@@ -263,6 +290,36 @@ components:
         - content: string
           editedAt: 2015-07-20T15:49:04-07:00
           messageId: string
+    com.orbit.message.dto.MessageReactionNotification:
+      title: MessageReactionNotification
+      type: object
+      properties:
+        conversationId:
+          type: string
+          description: Conversation ID
+          examples:
+            - 60c72b2f9b1d8b2bad000002
+        messageId:
+          type: string
+          description: Message ID whose reactions updated
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+        reactions:
+          title: List
+          type: array
+          description: Updated reactions list
+          items:
+            $ref: "#/components/schemas/com.orbit.message.dto.ReactionResponse"
+      description: WebSocket notification payload broadcast when message reactions
+        update
+      examples:
+        - conversationId: 60c72b2f9b1d8b2bad000002
+          messageId: 60c72b2f9b1d8b2bad000001
+          reactions:
+            - createdAt: 2015-07-20T15:49:04-07:00
+              displayName: Satyam Kumar
+              emoji: 👍
+              userId: 60c72b2f9b1d8b2bad000003
     com.orbit.message.dto.MessageResponse:
       title: MessageResponse
       type: object
@@ -317,6 +374,14 @@ components:
           description: Client idempotency key if provided
           examples:
             - a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        quotedMessage:
+          $ref: "#/components/schemas/com.orbit.message.dto.QuotedMessageResponse"
+        reactions:
+          title: List
+          type: array
+          description: Reactions on this message
+          items:
+            $ref: "#/components/schemas/com.orbit.message.dto.ReactionResponse"
         readBy:
           title: List
           type: array
@@ -355,11 +420,92 @@ components:
           editedAt: 2015-07-20T15:49:04-07:00
           id: 60c72b2f9b1d8b2bad000001
           idempotencyKey: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          quotedMessage:
+            content: Has anyone tried the course?
+            messageId: 60c72b2f9b1d8b2bad000001
+            senderId: 60c72b2f9b1d8b2bad000003
+            senderName: Satyam Kumar
+            type: TEXT
+          reactions:
+            - createdAt: 2015-07-20T15:49:04-07:00
+              displayName: Satyam Kumar
+              emoji: 👍
+              userId: 60c72b2f9b1d8b2bad000003
           readBy:
             - string
           senderId: 60c72b2f9b1d8b2bad000003
           senderName: Satyam Kumar
           type: TEXT
+    com.orbit.message.dto.QuotedMessageResponse:
+      title: QuotedMessageResponse
+      type: object
+      properties:
+        content:
+          type: string
+          description: Snapshot of message content at reply time
+          examples:
+            - Has anyone tried the course?
+        messageId:
+          type: string
+          description: Target message ID (for UI navigation)
+          examples:
+            - 60c72b2f9b1d8b2bad000001
+        senderId:
+          type: string
+          description: Author user ID of original message
+          examples:
+            - 60c72b2f9b1d8b2bad000003
+        senderName:
+          type: string
+          description: Author display name of original message
+          examples:
+            - Satyam Kumar
+        type:
+          title: MessageType
+          type: string
+          description: Original message type
+          enum:
+            - TEXT
+            - IMAGE
+            - FILE
+          examples:
+            - TEXT
+      description: Embedded snapshot of a quoted message
+      examples:
+        - content: Has anyone tried the course?
+          messageId: 60c72b2f9b1d8b2bad000001
+          senderId: 60c72b2f9b1d8b2bad000003
+          senderName: Satyam Kumar
+          type: TEXT
+    com.orbit.message.dto.ReactionResponse:
+      title: ReactionResponse
+      type: object
+      properties:
+        createdAt:
+          type: string
+          description: Timestamp when reaction was added
+          format: date-time
+        displayName:
+          type: string
+          description: Display name snapshot of reacting user
+          examples:
+            - Satyam Kumar
+        emoji:
+          type: string
+          description: Unicode emoji character
+          examples:
+            - 👍
+        userId:
+          type: string
+          description: ID of user who reacted
+          examples:
+            - 60c72b2f9b1d8b2bad000003
+      description: Reaction representation on a message
+      examples:
+        - createdAt: 2015-07-20T15:49:04-07:00
+          displayName: Satyam Kumar
+          emoji: 👍
+          userId: 60c72b2f9b1d8b2bad000003
     com.orbit.message.dto.ReadReceiptNotification:
       title: ReadReceiptNotification
       type: object
@@ -416,6 +562,13 @@ components:
           description: Client-generated idempotency key (UUID)
           examples:
             - c8f2b7a4-3995-4672-9a0f-1558914619a9
+        quotedMessageId:
+          type:
+            - string
+            - "null"
+          description: ID of message being quoted in reply
+          examples:
+            - 60c72b2f9b1d8b2bad000001
         type:
           title: MessageType
           type: string
@@ -430,6 +583,7 @@ components:
       examples:
         - content: Hey! Have you checked the latest ADR?
           idempotencyKey: c8f2b7a4-3995-4672-9a0f-1558914619a9
+          quotedMessageId: 60c72b2f9b1d8b2bad000001
           type: TEXT
       required:
         - content
@@ -480,6 +634,17 @@ components:
             editedAt: 2015-07-20T15:49:04-07:00
             id: 60c72b2f9b1d8b2bad000001
             idempotencyKey: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            quotedMessage:
+              content: Has anyone tried the course?
+              messageId: 60c72b2f9b1d8b2bad000001
+              senderId: 60c72b2f9b1d8b2bad000003
+              senderName: Satyam Kumar
+              type: TEXT
+            reactions:
+              - createdAt: 2015-07-20T15:49:04-07:00
+                displayName: Satyam Kumar
+                emoji: 👍
+                userId: 60c72b2f9b1d8b2bad000003
             readBy:
               - string
             senderId: 60c72b2f9b1d8b2bad000003
@@ -514,6 +679,27 @@ components:
           messageId: string
           recipientIds:
             - string
+    com.orbit.message.kafka.MessageReactionEvent:
+      title: MessageReactionEvent
+      type: object
+      properties:
+        conversationId:
+          type: string
+        messageId:
+          type: string
+        reactions:
+          title: List
+          type: array
+          items:
+            $ref: "#/components/schemas/com.orbit.message.dto.ReactionResponse"
+      examples:
+        - conversationId: string
+          messageId: string
+          reactions:
+            - createdAt: 2015-07-20T15:49:04-07:00
+              displayName: Satyam Kumar
+              emoji: 👍
+              userId: 60c72b2f9b1d8b2bad000003
     com.orbit.message.kafka.MessageReadEvent:
       title: MessageReadEvent
       type: object
@@ -685,6 +871,17 @@ components:
       title: MessageEditedNotification
       bindings:
         stomp: {}
+    com.orbit.message.dto.MessageReactionNotification:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.dto.MessageReactionNotification"
+      name: com.orbit.message.dto.MessageReactionNotification
+      title: MessageReactionNotification
+      bindings:
+        stomp: {}
     com.orbit.message.dto.MessageResponse:
       headers:
         $ref: "#/components/schemas/HeadersNotDocumented"
@@ -762,6 +959,18 @@ components:
           $ref: "#/components/schemas/com.orbit.message.kafka.MessageEditedEvent"
       name: com.orbit.message.kafka.MessageEditedEvent
       title: MessageEditedEvent
+      bindings:
+        kafka:
+          bindingVersion: 0.5.0
+    com.orbit.message.kafka.MessageReactionEvent:
+      headers:
+        $ref: "#/components/schemas/HeadersNotDocumented"
+      payload:
+        schemaFormat: application/vnd.aai.asyncapi+json;version=3.1.0
+        schema:
+          $ref: "#/components/schemas/com.orbit.message.kafka.MessageReactionEvent"
+      name: com.orbit.message.kafka.MessageReactionEvent
+      title: MessageReactionEvent
       bindings:
         kafka:
           bindingVersion: 0.5.0
@@ -939,6 +1148,16 @@ operations:
       stomp: {}
     messages:
       - $ref: "#/channels/_topic_conversations__conversationId__messages/messages/com.orbit.message.dto.MessageResponse"
+  _topic_conversations__conversationId__reactions_send_handleMessageReactions:
+    action: send
+    channel:
+      $ref: "#/channels/_topic_conversations__conversationId__reactions"
+    title: _topic_conversations__conversationId__reactions_send
+    description: Broadcasts message reaction updates to all subscribers in the conversation.
+    bindings:
+      stomp: {}
+    messages:
+      - $ref: "#/channels/_topic_conversations__conversationId__reactions/messages/com.orbit.message.dto.MessageReactionNotification"
   _topic_conversations__conversationId__read_send_handleMessageRead:
     action: send
     channel:
@@ -1029,6 +1248,30 @@ operations:
         bindingVersion: 0.5.0
     messages:
       - $ref: "#/channels/chat.messages.edited/messages/com.orbit.message.kafka.MessageEditedEvent"
+  chat.messages.reactions_receive_handleMessageReactions:
+    action: receive
+    channel:
+      $ref: "#/channels/chat.messages.reactions"
+    bindings:
+      kafka:
+        groupId:
+          type: string
+          const: orbit-websocket-group
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.reactions/messages/com.orbit.message.kafka.MessageReactionEvent"
+  chat.messages.reactions_send_publishReaction:
+    action: send
+    channel:
+      $ref: "#/channels/chat.messages.reactions"
+    title: chat.messages.reactions_send
+    description: Publishes updated reactions on a message to Kafka chat.messages.reactions
+      topic for WebSocket fan-out.
+    bindings:
+      kafka:
+        bindingVersion: 0.5.0
+    messages:
+      - $ref: "#/channels/chat.messages.reactions/messages/com.orbit.message.kafka.MessageReactionEvent"
   chat.messages.read_receive_handleMessageRead:
     action: receive
     channel:

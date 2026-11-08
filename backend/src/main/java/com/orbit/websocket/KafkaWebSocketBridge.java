@@ -2,11 +2,13 @@ package com.orbit.websocket;
 
 import com.orbit.message.dto.MessageDeletedNotification;
 import com.orbit.message.dto.MessageEditedNotification;
+import com.orbit.message.dto.MessageReactionNotification;
 import com.orbit.message.dto.MessageResponse;
 import com.orbit.message.dto.ReadReceiptNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReactionEvent;
 import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.notification.dto.NotificationEvent;
 import com.orbit.notification.dto.NotificationPayload;
@@ -123,6 +125,30 @@ public class KafkaWebSocketBridge {
         String destination = "/topic/conversations/" + event.conversationId() + "/messages/deleted";
         messagingTemplate.convertAndSend(destination,
                 new MessageDeletedNotification(event.messageId()));
+    }
+
+    /**
+     * Consumes message reaction events and fans out to /topic/conversations/{conversationId}/reactions.
+     */
+    @KafkaListener(topics = "chat.messages.reactions", groupId = "orbit-websocket-group")
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = "/topic/conversations/{conversationId}/reactions",
+                    description = "Broadcasts message reaction updates to all subscribers in the conversation.",
+                    payloadType = MessageReactionNotification.class
+            )
+    )
+    @StompAsyncOperationBinding
+    public void handleMessageReactions(MessageReactionEvent event) {
+        if (event == null || event.conversationId() == null) {
+            return;
+        }
+
+        log.debug("Delivering real-time message reactions to subscribers: conversationId={}, messageId={}",
+                event.conversationId(), event.messageId());
+        String destination = "/topic/conversations/" + event.conversationId() + "/reactions";
+        messagingTemplate.convertAndSend(destination,
+                new MessageReactionNotification(event.messageId(), event.conversationId(), event.reactions()));
     }
 
     /**

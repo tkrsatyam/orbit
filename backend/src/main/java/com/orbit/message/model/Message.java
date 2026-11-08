@@ -62,6 +62,11 @@ public class Message {
 
     private Instant editedAt;
 
+    private QuotedMessage quotedMessage;
+
+    @Builder.Default
+    private List<Reaction> reactions = new ArrayList<>();
+
     @Builder.Default
     private List<ReadReceipt> readBy = new ArrayList<>();
 

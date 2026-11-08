@@ -496,6 +496,103 @@ paths:
           description: Forbidden - user is not a conversation participant
         "404":
           description: Conversation or message not found
+  /api/v1/conversations/{id}/messages/{messageId}/reactions:
+    post:
+      tags:
+      - Messages
+      summary: Add or toggle an emoji reaction on a message
+      description: "Adds, swaps, or toggles an emoji reaction on a message. Sending\
+        \ the same emoji removes it, a different emoji swaps it."
+      operationId: addReaction
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReactionRequest"
+        required: true
+      responses:
+        "200":
+          description: Reactions updated successfully
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReactionListResponse"
+        "400":
+          description: Target message is deleted or invalid payload
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ReactionListResponse"
+        "403":
+          description: User is not a participant or is blocked by counterparty
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Conversation or message not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      tags:
+      - Messages
+      summary: Remove reaction from a message
+      description: Removes the authenticated caller's reaction from the specified
+        message.
+      operationId: removeReaction
+      parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+      responses:
+        "204":
+          description: Reaction removed successfully
+        "400":
+          description: Target message is deleted
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+        "403":
+          description: User is not a participant
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Conversation or message not found
+          content:
+            '*/*':
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/v1/conversations/{id}/messages/read-batch:
     post:
       tags:
@@ -1577,6 +1674,12 @@ components:
           - "null"
           description: Client-generated idempotency key (UUID)
           example: c8f2b7a4-3995-4672-9a0f-1558914619a9
+        quotedMessageId:
+          type:
+          - string
+          - "null"
+          description: ID of message being quoted in reply
+          example: 60c72b2f9b1d8b2bad000001
       required:
       - content
       title: SendMessageRequest
@@ -1650,7 +1753,91 @@ components:
           type: string
           description: Client idempotency key if provided
           example: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        reactions:
+          type: array
+          description: Reactions on this message
+          items:
+            $ref: "#/components/schemas/ReactionResponse"
+          title: List
+        quotedMessage:
+          $ref: "#/components/schemas/QuotedMessageResponse"
+          description: "Embedded snapshot of quoted message, or null if not a reply"
       title: MessageResponse
+    QuotedMessageResponse:
+      type: object
+      description: Embedded snapshot of a quoted message
+      properties:
+        messageId:
+          type: string
+          description: Target message ID (for UI navigation)
+          example: 60c72b2f9b1d8b2bad000001
+        content:
+          type: string
+          description: Snapshot of message content at reply time
+          example: Has anyone tried the course?
+        senderId:
+          type: string
+          description: Author user ID of original message
+          example: 60c72b2f9b1d8b2bad000003
+        senderName:
+          type: string
+          description: Author display name of original message
+          example: Satyam Kumar
+        type:
+          type: string
+          description: Original message type
+          enum:
+          - TEXT
+          - IMAGE
+          - FILE
+          example: TEXT
+          title: MessageType
+      title: QuotedMessageResponse
+    ReactionResponse:
+      type: object
+      description: Reaction representation on a message
+      properties:
+        emoji:
+          type: string
+          description: Unicode emoji character
+          example: 👍
+        userId:
+          type: string
+          description: ID of user who reacted
+          example: 60c72b2f9b1d8b2bad000003
+        displayName:
+          type: string
+          description: Display name snapshot of reacting user
+          example: Satyam Kumar
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp when reaction was added
+      title: ReactionResponse
+    ReactionRequest:
+      type: object
+      description: Payload to add or toggle an emoji reaction on a message
+      properties:
+        emoji:
+          type: string
+          description: Unicode emoji character
+          example: 👍
+          maxLength: 16
+          minLength: 0
+      required:
+      - emoji
+      title: ReactionRequest
+    ReactionListResponse:
+      type: object
+      description: List of reactions on a message
+      properties:
+        reactions:
+          type: array
+          description: Array of reactions
+          items:
+            $ref: "#/components/schemas/ReactionResponse"
+          title: List
+      title: ReactionListResponse
     BatchReadRequest:
       type: object
       description: Payload to mark multiple messages as read in bulk

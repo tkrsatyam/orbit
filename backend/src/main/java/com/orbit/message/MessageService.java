@@ -20,17 +20,21 @@ import com.orbit.group.model.GroupRole;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReactionResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReactionEvent;
 import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
 import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.message.model.QuotedMessage;
+import com.orbit.message.model.Reaction;
 import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
@@ -168,6 +172,43 @@ public class MessageService {
 
         MessageType messageType = request.type() != null ? request.type() : MessageType.TEXT;
 
+        // Resolve quoted message snapshot if requested
+        QuotedMessage quotedMessageSnapshot = null;
+        if (request.quotedMessageId() != null && !request.quotedMessageId().isBlank()) {
+            String qId = request.quotedMessageId().trim();
+            Optional<Message> quotedNormal = messageRepository.findById(qId);
+            if (quotedNormal.isPresent()) {
+                Message qm = quotedNormal.get();
+                if (qm.isDeleted()) {
+                    throw new IllegalArgumentException("Cannot quote a deleted message");
+                }
+                quotedMessageSnapshot = QuotedMessage.builder()
+                        .messageId(qm.getId())
+                        .content(qm.getContent())
+                        .senderId(qm.getSenderId())
+                        .senderName(qm.getSenderName())
+                        .type(qm.getType())
+                        .build();
+            } else {
+                Optional<BlockedMessage> quotedBlocked = blockedMessageRepository.findById(qId);
+                if (quotedBlocked.isPresent()) {
+                    BlockedMessage qm = quotedBlocked.get();
+                    if (qm.isDeleted()) {
+                        throw new IllegalArgumentException("Cannot quote a deleted message");
+                    }
+                    quotedMessageSnapshot = QuotedMessage.builder()
+                            .messageId(qm.getId())
+                            .content(qm.getContent())
+                            .senderId(qm.getSenderId())
+                            .senderName(qm.getSenderName())
+                            .type(qm.getType())
+                            .build();
+                } else {
+                    throw new ResourceNotFoundException("Quoted message not found");
+                }
+            }
+        }
+
         // 4. Block status check (1:1 conversations only, per ADR 007)
         boolean isBlocked = false;
         if (conversation.getType() == ConversationType.DIRECT && !recipientIds.isEmpty()) {
@@ -184,6 +225,7 @@ public class MessageService {
                     .senderName(senderName)
                     .type(messageType)
                     .content(request.content())
+                    .quotedMessage(quotedMessageSnapshot)
                     .idempotencyKey(idempotencyKey)
                     .createdAt(Instant.now())
                     .build();
@@ -200,6 +242,7 @@ public class MessageService {
                 .senderName(senderName)
                 .type(messageType)
                 .content(request.content())
+                .quotedMessage(quotedMessageSnapshot)
                 .idempotencyKey(idempotencyKey)
                 .createdAt(Instant.now())
                 .build();
@@ -656,6 +699,207 @@ public class MessageService {
             for (MessageReadEvent event : eventsToPublish) {
                 kafkaMessageProducer.publishMessageRead(event);
             }
+        }
+    }
+
+    /**
+     * Adds, swaps, or toggles an emoji reaction on a message.
+     * Enforces participant membership and the blocking check for 1:1 conversations (ADR 007 Decision 10).
+     * Reacting with the same emoji removes it; reacting with a different emoji replaces it.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageId      the target message identifier
+     * @param userId         the user reacting
+     * @param emoji          the emoji string
+     * @return updated list of reactions on the message
+     */
+    public List<ReactionResponse> addOrToggleReaction(String conversationId, String messageId, String userId, String emoji) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Message ID cannot be blank");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be blank");
+        }
+        if (emoji == null || emoji.isBlank()) {
+            throw new IllegalArgumentException("Emoji cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(userId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        // Blocking check for 1:1 direct conversations (ADR 007 Decision 10)
+        if (conversation.getType() == ConversationType.DIRECT) {
+            String otherUserId = conversation.getParticipantIds().stream()
+                    .filter(id -> !id.equals(userId))
+                    .findFirst()
+                    .orElse(null);
+            if (otherUserId != null && contactService.isBlockedBy(userId, otherUserId)) {
+                throw new ForbiddenException("Cannot react to messages in a conversation where you are blocked");
+            }
+        }
+
+        // Lookup message in messages, fallback to blockedMessages
+        Optional<Message> normalOpt = messageRepository.findById(messageId);
+        if (normalOpt.isPresent()) {
+            Message message = normalOpt.get();
+            if (!conversationId.equals(message.getConversationId())) {
+                throw new ResourceNotFoundException("Message does not belong to conversation");
+            }
+            if (message.isDeleted()) {
+                throw new IllegalArgumentException("Cannot react to a deleted message");
+            }
+
+            if (message.getReactions() == null) {
+                message.setReactions(new ArrayList<>());
+            }
+
+            String displayName = userRepository.findById(userId)
+                    .map(User::getDisplayName)
+                    .orElse("Orbit User");
+
+            applyReactionToggle(message.getReactions(), userId, displayName, emoji.trim());
+            messageRepository.save(message);
+
+            List<ReactionResponse> updatedResponses = message.getReactions().stream()
+                    .map(ReactionResponse::from)
+                    .toList();
+
+            kafkaMessageProducer.publishReaction(new MessageReactionEvent(conversationId, messageId, updatedResponses));
+            return updatedResponses;
+        }
+
+        Optional<BlockedMessage> blockedOpt = blockedMessageRepository.findById(messageId);
+        if (blockedOpt.isPresent()) {
+            BlockedMessage blockedMessage = blockedOpt.get();
+            if (!conversationId.equals(blockedMessage.getConversationId())) {
+                throw new ResourceNotFoundException("Message does not belong to conversation");
+            }
+            if (blockedMessage.isDeleted()) {
+                throw new IllegalArgumentException("Cannot react to a deleted message");
+            }
+
+            if (blockedMessage.getReactions() == null) {
+                blockedMessage.setReactions(new ArrayList<>());
+            }
+
+            String displayName = userRepository.findById(userId)
+                    .map(User::getDisplayName)
+                    .orElse("Orbit User");
+
+            applyReactionToggle(blockedMessage.getReactions(), userId, displayName, emoji.trim());
+            blockedMessageRepository.save(blockedMessage);
+
+            return blockedMessage.getReactions().stream()
+                    .map(ReactionResponse::from)
+                    .toList();
+        }
+
+        throw new ResourceNotFoundException("Message not found");
+    }
+
+    /**
+     * Removes the authenticated user's reaction from a message.
+     *
+     * @param conversationId the conversation identifier
+     * @param messageId      the target message identifier
+     * @param userId         the user removing their reaction
+     */
+    public void removeReaction(String conversationId, String messageId, String userId) {
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new IllegalArgumentException("Conversation ID cannot be blank");
+        }
+        if (messageId == null || messageId.isBlank()) {
+            throw new IllegalArgumentException("Message ID cannot be blank");
+        }
+        if (userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("User ID cannot be blank");
+        }
+
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+
+        if (conversation.getParticipantIds() == null || !conversation.getParticipantIds().contains(userId)) {
+            throw new ForbiddenException("User is not a participant in this conversation");
+        }
+
+        Optional<Message> normalOpt = messageRepository.findById(messageId);
+        if (normalOpt.isPresent()) {
+            Message message = normalOpt.get();
+            if (!conversationId.equals(message.getConversationId())) {
+                throw new ResourceNotFoundException("Message does not belong to conversation");
+            }
+            if (message.isDeleted()) {
+                throw new IllegalArgumentException("Cannot react to a deleted message");
+            }
+
+            if (message.getReactions() != null) {
+                boolean removed = message.getReactions().removeIf(r -> userId.equals(r.getUserId()));
+                if (removed) {
+                    messageRepository.save(message);
+                    List<ReactionResponse> updatedResponses = message.getReactions().stream()
+                            .map(ReactionResponse::from)
+                            .toList();
+                    kafkaMessageProducer.publishReaction(new MessageReactionEvent(conversationId, messageId, updatedResponses));
+                }
+            }
+            return;
+        }
+
+        Optional<BlockedMessage> blockedOpt = blockedMessageRepository.findById(messageId);
+        if (blockedOpt.isPresent()) {
+            BlockedMessage blockedMessage = blockedOpt.get();
+            if (!conversationId.equals(blockedMessage.getConversationId())) {
+                throw new ResourceNotFoundException("Message does not belong to conversation");
+            }
+            if (blockedMessage.isDeleted()) {
+                throw new IllegalArgumentException("Cannot react to a deleted message");
+            }
+
+            if (blockedMessage.getReactions() != null) {
+                blockedMessage.getReactions().removeIf(r -> userId.equals(r.getUserId()));
+                blockedMessageRepository.save(blockedMessage);
+            }
+            return;
+        }
+
+        throw new ResourceNotFoundException("Message not found");
+    }
+
+    private void applyReactionToggle(List<Reaction> reactions, String userId, String displayName, String emoji) {
+        Optional<Reaction> existing = reactions.stream()
+                .filter(r -> userId.equals(r.getUserId()))
+                .findFirst();
+
+        if (existing.isPresent()) {
+            Reaction current = existing.get();
+            if (current.getEmoji().equals(emoji)) {
+                // Same emoji toggles off
+                reactions.remove(current);
+            } else {
+                // Different emoji swaps
+                reactions.remove(current);
+                reactions.add(Reaction.builder()
+                        .userId(userId)
+                        .displayName(displayName)
+                        .emoji(emoji)
+                        .createdAt(Instant.now())
+                        .build());
+            }
+        } else {
+            // New reaction
+            reactions.add(Reaction.builder()
+                    .userId(userId)
+                    .displayName(displayName)
+                    .emoji(emoji)
+                    .createdAt(Instant.now())
+                    .build());
         }
     }
 }

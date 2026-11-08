@@ -300,4 +300,60 @@ describe('MessageService', () => {
       callback
     );
   });
+
+  it('should add or toggle reaction via POST /api/v1/conversations/{id}/messages/{messageId}/reactions', () => {
+    service.addOrToggleReaction('conv-123', 'msg-1', '🔥').subscribe();
+
+    const req = httpTesting.expectOne(
+      `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1/reactions`
+    );
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ emoji: '🔥' });
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ emoji: '🔥', userId: 'user-1', displayName: 'Satyam', createdAt: '2026-10-25T10:00:00Z' });
+  });
+
+  it('should remove reaction via DELETE /api/v1/conversations/{id}/messages/{messageId}/reactions', () => {
+    service.removeReaction('conv-123', 'msg-1').subscribe();
+
+    const req = httpTesting.expectOne(
+      `${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages/msg-1/reactions`
+    );
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null);
+  });
+
+  it('should subscribe to reactions on /topic/conversations/{id}/reactions', () => {
+    const callback = vi.fn();
+    service.subscribeToReactions('conv-123', callback);
+
+    expect(webSocketServiceMock.subscribe).toHaveBeenCalledWith(
+      '/topic/conversations/conv-123/reactions',
+      callback
+    );
+  });
+
+  it('should include quotedMessageId when sending message via REST or STOMP', () => {
+    service.sendMessageStomp('conv-123', 'Reply text', 'idem-1', 'quoted-msg-99');
+    expect(webSocketServiceMock.publish).toHaveBeenCalledWith(
+      '/app/conversations/conv-123/send',
+      {
+        content: 'Reply text',
+        type: 'TEXT',
+        idempotencyKey: 'idem-1',
+        quotedMessageId: 'quoted-msg-99'
+      }
+    );
+
+    service.sendMessageRest('conv-123', 'Reply text 2', 'idem-2', 'quoted-msg-99').subscribe();
+    const req = httpTesting.expectOne(`${environment.apiBaseUrl}/api/v1/conversations/conv-123/messages`);
+    expect(req.request.body).toEqual({
+      content: 'Reply text 2',
+      type: 'TEXT',
+      idempotencyKey: 'idem-2',
+      quotedMessageId: 'quoted-msg-99'
+    });
+    req.flush({});
+  });
 });

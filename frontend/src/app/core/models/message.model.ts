@@ -4,6 +4,21 @@ export type MessageDeliveryStatus = 'SENDING' | 'SENT' | 'DELIVERED' | 'READ' | 
 
 export type MessageDeleteMode = 'FOR_EVERYONE' | 'FOR_ME';
 
+export interface ReactionResponse {
+  emoji: string;
+  userId: string;
+  displayName: string;
+  createdAt: string;
+}
+
+export interface QuotedMessageResponse {
+  messageId: string;
+  content: string;
+  senderId: string;
+  senderName: string;
+  type: MessageType;
+}
+
 export interface MessageResponse {
   id: string;
   conversationId: string;
@@ -19,6 +34,8 @@ export interface MessageResponse {
   readBy?: string[];
   deliveryStatus?: MessageDeliveryStatus;
   idempotencyKey?: string;
+  quotedMessage?: QuotedMessageResponse | null;
+  reactions?: ReactionResponse[];
 }
 
 export interface MessageHistoryResponse {
@@ -31,6 +48,7 @@ export interface SendMessagePayload {
   content: string;
   type?: MessageType;
   idempotencyKey?: string;
+  quotedMessageId?: string | null;
 }
 
 export interface EditMessagePayload {
@@ -45,6 +63,17 @@ export interface MessageEditedEventPayload {
 
 export interface MessageDeletedEventPayload {
   messageId: string;
+}
+
+export interface MessageReactionNotification {
+  conversationId: string;
+  messageId: string;
+  userId: string;
+  displayName: string;
+  emoji?: string | null;
+  action: 'ADDED' | 'REMOVED' | 'UPDATED';
+  reactions: ReactionResponse[];
+  timestamp: string;
 }
 
 export interface ReadReceiptRequestPayload {

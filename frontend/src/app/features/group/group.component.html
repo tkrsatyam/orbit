@@ -204,15 +204,29 @@
                         }
                       </div>
 
-                      @if (!msg.deleted && isAdmin()) {
-                        <!-- Floating Action Bar for Group Admin -->
+                      @if (!msg.deleted) {
+                        <!-- Floating Action Bar for Incoming -->
                         <app-message-actions-bar
                           [isVisible]="activeActionMessageId() === msg.id"
                           [canEdit]="false"
-                          [canDelete]="true"
+                          [canDelete]="isAdmin()"
+                          [canReact]="true"
+                          [canReply]="true"
                           [messageId]="msg.id"
                           (delete)="openDeleteModal(msg)"
+                          (react)="toggleReactionPicker(msg)"
+                          (reply)="startReply(msg)"
                         />
+                      }
+
+                      @if (activeReactionPickerMessageId() === msg.id) {
+                        <div class="reaction-picker-popover incoming" (click)="$event.stopPropagation()">
+                          <app-reaction-picker
+                            [currentEmoji]="getMyReactionEmoji(msg)"
+                            (selectEmoji)="onSelectReaction(msg, $event)"
+                            (close)="activeReactionPickerMessageId.set(null)"
+                          />
+                        </div>
                       }
 
                       <div
@@ -221,7 +235,7 @@
                         (contextmenu)="onContextMenu(msg, $event)"
                         [attr.data-testid]="'message-bubble-' + msg.id"
                       >
-                        @if (!msg.deleted && isAdmin()) {
+                        @if (!msg.deleted) {
                           <button
                             type="button"
                             class="bubble-chevron-btn"
@@ -236,6 +250,15 @@
                           </button>
                         }
 
+                        @if (msg.quotedMessage; as quote) {
+                          <div class="quoted-preview-card" [attr.data-testid]="'quoted-preview-' + msg.id">
+                            <div class="quote-content-wrap">
+                              <span class="quote-sender">{{ quote.senderName }}</span>
+                              <span class="quote-text">{{ quote.content }}</span>
+                            </div>
+                          </div>
+                        }
+
                         @if (msg.deleted) {
                           <div class="bubble-text deleted-text"><em>This message was deleted.</em></div>
                         } @else {
@@ -248,6 +271,15 @@
                           <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
                         </div>
                       </div>
+
+                      @if (!msg.deleted && (msg.reactions?.length || 0) > 0) {
+                        <app-message-reactions
+                          [reactions]="msg.reactions || []"
+                          [currentUserId]="currentUserId()"
+                          [messageId]="msg.id"
+                          (toggleReaction)="onToggleReaction(msg, $event)"
+                        />
+                      }
                     </div>
                   } @else {
                     @if (!msg.deleted) {
@@ -256,56 +288,90 @@
                         [isVisible]="activeActionMessageId() === msg.id"
                         [canEdit]="msg.type === 'TEXT'"
                         [canDelete]="true"
+                        [canReact]="true"
+                        [canReply]="true"
                         [messageId]="msg.id"
                         (edit)="startEdit(msg)"
                         (delete)="openDeleteModal(msg)"
+                        (react)="toggleReactionPicker(msg)"
+                        (reply)="startReply(msg)"
                       />
                     }
 
-                    <div
-                      class="group-message-bubble outgoing"
-                      [class.failed]="msg.deliveryStatus === 'FAILED'"
-                      [class.deleted-bubble]="msg.deleted"
-                      (contextmenu)="onContextMenu(msg, $event)"
-                      [attr.data-testid]="'message-bubble-' + msg.id"
-                    >
-                      @if (!msg.deleted) {
-                        <button
-                          type="button"
-                          class="bubble-chevron-btn"
-                          [class.active]="activeActionMessageId() === msg.id"
-                          (click)="toggleActions(msg, $event)"
-                          title="Message options"
-                          [attr.data-testid]="'message-chevron-btn-' + msg.id"
-                        >
-                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <polyline points="6 9 12 15 18 9" />
-                          </svg>
-                        </button>
-                      }
-
-                      @if (msg.deleted) {
-                        <div class="bubble-text deleted-text"><em>You deleted this message.</em></div>
-                      } @else {
-                        <div class="bubble-text">{{ msg.content }}</div>
-                      }
-                      <div class="bubble-meta">
-                        @if (msg.edited && !msg.deleted) {
-                          <span class="edited-indicator" data-testid="edited-indicator">edited</span>
-                        }
-                        <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
-                        @if (msg.deliveryStatus === 'SENDING') {
-                          <span class="status-indicator-sending" title="Sending...">•</span>
-                        } @else if (msg.deliveryStatus === 'FAILED') {
-                          <span class="status-indicator-failed" title="Failed to deliver">!</span>
-                        } @else {
-                          <span class="status-receipt-icon" title="Delivered">
-                            <svg class="check-icon single-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          </span>
-                        }
+                    @if (activeReactionPickerMessageId() === msg.id) {
+                      <div class="reaction-picker-popover outgoing" (click)="$event.stopPropagation()">
+                        <app-reaction-picker
+                          [currentEmoji]="getMyReactionEmoji(msg)"
+                          (selectEmoji)="onSelectReaction(msg, $event)"
+                          (close)="activeReactionPickerMessageId.set(null)"
+                        />
                       </div>
+                    }
+
+                    <div class="bubble-stack outgoing">
+                      <div
+                        class="group-message-bubble outgoing"
+                        [class.failed]="msg.deliveryStatus === 'FAILED'"
+                        [class.deleted-bubble]="msg.deleted"
+                        (contextmenu)="onContextMenu(msg, $event)"
+                        [attr.data-testid]="'message-bubble-' + msg.id"
+                      >
+                        @if (!msg.deleted) {
+                          <button
+                            type="button"
+                            class="bubble-chevron-btn"
+                            [class.active]="activeActionMessageId() === msg.id"
+                            (click)="toggleActions(msg, $event)"
+                            title="Message options"
+                            [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                          >
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <polyline points="6 9 12 15 18 9" />
+                            </svg>
+                          </button>
+                        }
+
+                        @if (msg.quotedMessage; as quote) {
+                          <div class="quoted-preview-card" [attr.data-testid]="'quoted-preview-' + msg.id">
+                            <div class="quote-content-wrap">
+                              <span class="quote-sender">{{ quote.senderName }}</span>
+                              <span class="quote-text">{{ quote.content }}</span>
+                            </div>
+                          </div>
+                        }
+
+                        @if (msg.deleted) {
+                          <div class="bubble-text deleted-text"><em>You deleted this message.</em></div>
+                        } @else {
+                          <div class="bubble-text">{{ msg.content }}</div>
+                        }
+                        <div class="bubble-meta">
+                          @if (msg.edited && !msg.deleted) {
+                            <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                          }
+                          <span class="sent-time">{{ formatTime(msg.createdAt) }}</span>
+                          @if (msg.deliveryStatus === 'SENDING') {
+                            <span class="status-indicator-sending" title="Sending...">•</span>
+                          } @else if (msg.deliveryStatus === 'FAILED') {
+                            <span class="status-indicator-failed" title="Failed to deliver">!</span>
+                          } @else {
+                            <span class="status-receipt-icon" title="Delivered">
+                              <svg class="check-icon single-tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            </span>
+                          }
+                        </div>
+                      </div>
+
+                      @if (!msg.deleted && (msg.reactions?.length || 0) > 0) {
+                        <app-message-reactions
+                          [reactions]="msg.reactions || []"
+                          [currentUserId]="currentUserId()"
+                          [messageId]="msg.id"
+                          (toggleReaction)="onToggleReaction(msg, $event)"
+                        />
+                      }
                     </div>
                   }
                 </div>
@@ -319,13 +385,20 @@
           <app-typing-indicator mode="bar" [text]="typingIndicatorText()" />
         }
 
-        <!-- Group Composer with Editing Banner (ORDM-54) -->
+        <!-- Group Composer with Editing Banner (ORDM-54) & Reply Banner (ORDM-59) -->
         <footer class="group-composer-container" data-testid="group-composer">
           <!-- Editing Banner -->
           @if (isEditing()) {
             <app-composer-editing-banner
               [previewContent]="editingMessage()?.content || ''"
               (cancel)="cancelEdit()"
+            />
+          } @else if (replyingToMessage(); as replyTarget) {
+            <!-- Reply Banner -->
+            <app-composer-reply-banner
+              [senderName]="replyTarget.senderName"
+              [previewContent]="replyTarget.content"
+              (dismiss)="dismissReply()"
             />
           }
 
@@ -334,7 +407,7 @@
               #composerTextarea
               class="composer-textarea"
               rows="1"
-              [placeholder]="isEditing() ? 'Edit message...' : ('Message #' + group()!.name + '...')"
+              [placeholder]="isEditing() ? 'Edit message...' : (isReplying() ? 'Type a reply...' : ('Message #' + group()!.name + '...'))"
               [ngModel]="messageInput()"
               (ngModelChange)="onComposerInput($event)"
               (keydown)="onKeydown($event)"

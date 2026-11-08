@@ -14,13 +14,18 @@ import { MessageActionsBarComponent } from '../../shared/components/message-acti
 import { ComposerEditingBannerComponent } from '../../shared/components/composer-editing-banner/composer-editing-banner.component';
 import { DeleteMessageModalComponent } from '../../shared/components/delete-message-modal/delete-message-modal.component';
 import { TypingIndicatorComponent } from '../../shared/components/typing-indicator/typing-indicator.component';
+import { ReactionPickerComponent } from '../../shared/components/reaction-picker/reaction-picker.component';
+import { MessageReactionsComponent } from '../../shared/components/message-reactions/message-reactions.component';
+import { ComposerReplyBannerComponent } from '../../shared/components/composer-reply-banner/composer-reply-banner.component';
 import {
   ChatMessageItem,
   MessageDeleteMode,
   MessageDeletedEventPayload,
   MessageEditedEventPayload,
+  MessageReactionNotification,
   MessageResponse,
   PresenceEventPayload,
+  ReactionResponse,
   TypingEventPayload
 } from '../../core/models/message.model';
 import { MessageService } from '../../core/services/message/message.service';
@@ -40,7 +45,10 @@ import { WebSocketService } from '../../core/services/websocket/websocket.servic
     MessageActionsBarComponent,
     ComposerEditingBannerComponent,
     DeleteMessageModalComponent,
-    TypingIndicatorComponent
+    TypingIndicatorComponent,
+    ReactionPickerComponent,
+    MessageReactionsComponent,
+    ComposerReplyBannerComponent
   ],
   templateUrl: './group.component.html',
   styleUrl: './group.component.scss'
@@ -81,6 +89,11 @@ export class GroupComponent implements OnInit, OnDestroy {
   readonly deleteModalMessage = signal<ChatMessageItem | null>(null);
   readonly isDeletingMessage = signal<boolean>(false);
 
+  // Quoted reply & reactions (ORDM-9)
+  readonly replyingToMessage = signal<ChatMessageItem | null>(null);
+  readonly isReplying = computed(() => this.replyingToMessage() !== null);
+  readonly activeReactionPickerMessageId = signal<string | null>(null);
+
   // Typing indicator state (ORDM-55)
   private isActivelyTyping = false;
   private lastTypingSentAt = 0;
@@ -100,6 +113,7 @@ export class GroupComponent implements OnInit, OnDestroy {
   private unsubscribeReceipts?: () => void;
   private unsubscribeEdits?: () => void;
   private unsubscribeDeletes?: () => void;
+  private unsubscribeReactions?: () => void;
   private unsubscribeTyping?: () => void;
   private readonly memberPresenceUnsubs = new Map<string, () => void>();
 
@@ -119,7 +133,7 @@ export class GroupComponent implements OnInit, OnDestroy {
   readonly removingMemberId = signal<string | null>(null);
   readonly isRemoveMemberModalOpen = signal<boolean>(false);
   readonly memberToRemove = signal<GroupMemberResponse | null>(null);
-  readonly currentUserId = computed(() => this.authService.currentUser()?.id);
+  readonly currentUserId = computed(() => this.authService.currentUser()?.id || '');
 
   // Leave space state
   readonly isLeaveModalOpen = signal<boolean>(false);
@@ -250,6 +264,10 @@ export class GroupComponent implements OnInit, OnDestroy {
       this.handleMessageDeleted(deleted);
     });
 
+    this.unsubscribeReactions = this.messageService.subscribeToReactions(conversationId, (notif: MessageReactionNotification) => {
+      this.handleReactionNotification(notif);
+    });
+
     this.unsubscribeTyping = this.messageService.subscribeToTyping(conversationId, (event: TypingEventPayload) => {
       this.handleIncomingTyping(event);
     });
@@ -273,6 +291,10 @@ export class GroupComponent implements OnInit, OnDestroy {
     if (this.unsubscribeDeletes) {
       this.unsubscribeDeletes();
       this.unsubscribeDeletes = undefined;
+    }
+    if (this.unsubscribeReactions) {
+      this.unsubscribeReactions();
+      this.unsubscribeReactions = undefined;
     }
     if (this.unsubscribeTyping) {
       this.unsubscribeTyping();
@@ -413,6 +435,8 @@ export class GroupComponent implements OnInit, OnDestroy {
     const idempotencyKey = crypto.randomUUID();
     const currentUid = this.authService.currentUser()?.id || '';
     const currentUserName = this.authService.currentUser()?.displayName || 'Orbit User';
+    const quoted = this.replyingToMessage();
+    const quotedMessageId = quoted ? quoted.id : undefined;
 
     const optimisticMessage: ChatMessageItem = {
       id: 'temp-' + idempotencyKey,
@@ -425,18 +449,30 @@ export class GroupComponent implements OnInit, OnDestroy {
       edited: false,
       createdAt: new Date().toISOString(),
       deliveryStatus: 'SENDING',
-      idempotencyKey
+      idempotencyKey,
+      quotedMessage: quoted ? {
+        messageId: quoted.id,
+        content: quoted.content,
+        senderId: quoted.senderId,
+        senderName: quoted.senderName,
+        type: quoted.type
+      } : null
     };
 
     this.messages.update(current => [...current, optimisticMessage]);
     this.messageInput.set('');
+    this.dismissReply();
     this.sendStopTyping();
     this.scrollToBottom();
 
     if (this.messageService.isWebSocketConnected()) {
-      this.messageService.sendMessageStomp(convId, text, idempotencyKey);
+      if (quotedMessageId) {
+        this.messageService.sendMessageStomp(convId, text, idempotencyKey, quotedMessageId);
+      } else {
+        this.messageService.sendMessageStomp(convId, text, idempotencyKey);
+      }
     } else {
-      this.dispatchRestSend(convId, text, idempotencyKey);
+      this.dispatchRestSend(convId, text, idempotencyKey, quotedMessageId);
     }
   }
 
@@ -498,9 +534,11 @@ export class GroupComponent implements OnInit, OnDestroy {
 
   startEdit(msg: ChatMessageItem): void {
     if (msg.deleted || msg.type !== 'TEXT') return;
+    this.dismissReply();
     this.editingMessage.set(msg);
     this.messageInput.set(msg.content);
     this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.set(null);
     setTimeout(() => {
       this.composerTextarea?.nativeElement?.focus();
     }, 50);
@@ -510,6 +548,81 @@ export class GroupComponent implements OnInit, OnDestroy {
     this.editingMessage.set(null);
     this.messageInput.set('');
     this.sendStopTyping();
+  }
+
+  startReply(msg: ChatMessageItem): void {
+    if (msg.deleted) return;
+    this.replyingToMessage.set(msg);
+    this.cancelEdit();
+    this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.set(null);
+    setTimeout(() => {
+      this.composerTextarea?.nativeElement?.focus();
+    }, 50);
+  }
+
+  dismissReply(): void {
+    this.replyingToMessage.set(null);
+  }
+
+  toggleReactionPicker(msg: ChatMessageItem): void {
+    this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.update(curr => curr === msg.id ? null : msg.id);
+  }
+
+  onSelectReaction(msg: ChatMessageItem, emoji: string): void {
+    this.activeReactionPickerMessageId.set(null);
+    this.applyReaction(msg.id, emoji);
+  }
+
+  onToggleReaction(msg: ChatMessageItem, emoji: string): void {
+    this.applyReaction(msg.id, emoji);
+  }
+
+  getMyReactionEmoji(msg: ChatMessageItem): string | null {
+    const myId = this.authService.currentUser()?.id;
+    const found = msg.reactions?.find(r => r.userId === myId);
+    return found ? found.emoji : null;
+  }
+
+  private applyReaction(messageId: string, emoji: string): void {
+    const convId = this.activeConversationId();
+    if (!convId) return;
+
+    this.messageService.addOrToggleReaction(convId, messageId, emoji).subscribe({
+      next: (response) => {
+        this.messages.update(list => list.map(m => {
+          if (m.id !== messageId) return m;
+          const currentReactions = m.reactions ? [...m.reactions] : [];
+          const myId = this.authService.currentUser()?.id;
+          const existingIdx = currentReactions.findIndex(r => r.userId === myId);
+
+          if (!response) {
+            if (existingIdx !== -1) {
+              currentReactions.splice(existingIdx, 1);
+            }
+          } else {
+            if (existingIdx !== -1) {
+              currentReactions[existingIdx] = response;
+            } else {
+              currentReactions.push(response);
+            }
+          }
+          return { ...m, reactions: currentReactions };
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to react to message in group', err);
+      }
+    });
+  }
+
+  private handleReactionNotification(notif: MessageReactionNotification): void {
+    this.messages.update(list => list.map(m =>
+      m.id === notif.messageId
+        ? { ...m, reactions: notif.reactions }
+        : m
+    ));
   }
 
   openDeleteModal(msg: ChatMessageItem): void {
@@ -546,9 +659,13 @@ export class GroupComponent implements OnInit, OnDestroy {
     });
   }
 
-  private dispatchRestSend(convId: string, content: string, idempotencyKey: string): void {
+  private dispatchRestSend(convId: string, content: string, idempotencyKey: string, quotedMessageId?: string): void {
     this.isSending.set(true);
-    this.messageService.sendMessageRest(convId, content, idempotencyKey).subscribe({
+    const request$ = quotedMessageId
+      ? this.messageService.sendMessageRest(convId, content, idempotencyKey, quotedMessageId)
+      : this.messageService.sendMessageRest(convId, content, idempotencyKey);
+
+    request$.subscribe({
       next: (response: MessageResponse) => {
         this.isSending.set(false);
         this.messages.update(current =>
@@ -617,10 +734,17 @@ export class GroupComponent implements OnInit, OnDestroy {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.isEditing()) {
-      event.preventDefault();
-      this.cancelEdit();
-      return;
+    if (event.key === 'Escape') {
+      if (this.isEditing()) {
+        event.preventDefault();
+        this.cancelEdit();
+        return;
+      }
+      if (this.isReplying()) {
+        event.preventDefault();
+        this.dismissReply();
+        return;
+      }
     }
 
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -856,6 +980,9 @@ export class GroupComponent implements OnInit, OnDestroy {
   onDocumentClick(): void {
     if (this.activeActionMessageId()) {
       this.activeActionMessageId.set(null);
+    }
+    if (this.activeReactionPickerMessageId()) {
+      this.activeReactionPickerMessageId.set(null);
     }
   }
 

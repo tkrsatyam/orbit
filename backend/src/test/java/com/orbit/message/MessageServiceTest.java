@@ -17,17 +17,21 @@ import com.orbit.group.model.GroupRole;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReactionResponse;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.kafka.KafkaMessageProducer;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReactionEvent;
 import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.BlockedMessage;
 import com.orbit.message.model.Message;
 import com.orbit.message.model.MessageDeleteMode;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.message.model.QuotedMessage;
+import com.orbit.message.model.Reaction;
 import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
 import com.orbit.user.UserRepository;
@@ -1068,5 +1072,259 @@ class MessageServiceTest {
         assertThat(captor.getValue()).containsExactlyInAnyOrder(msg1, msg2);
 
         verify(kafkaMessageProducer, times(2)).publishMessageRead(any());
+    }
+
+    @Test
+    @DisplayName("addOrToggleReaction adds reaction and publishes Kafka reaction event")
+    void addReaction_NewReaction_AddsAndPublishesEvent() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(contactService.isBlockedBy(senderId, recipientId)).thenReturn(false);
+
+        Message message = Message.builder()
+                .id("msg-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .content("Hello")
+                .reactions(new ArrayList<>())
+                .build();
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+
+        User user = User.builder().id(senderId).displayName("Satyam").build();
+        when(userRepository.findById(senderId)).thenReturn(Optional.of(user));
+
+        List<ReactionResponse> result = messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "👍");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).emoji()).isEqualTo("👍");
+        assertThat(result.get(0).userId()).isEqualTo(senderId);
+        assertThat(result.get(0).displayName()).isEqualTo("Satyam");
+
+        verify(messageRepository).save(message);
+        ArgumentCaptor<MessageReactionEvent> captor = ArgumentCaptor.forClass(MessageReactionEvent.class);
+        verify(kafkaMessageProducer).publishReaction(captor.capture());
+        assertThat(captor.getValue().conversationId()).isEqualTo(conversationId);
+        assertThat(captor.getValue().messageId()).isEqualTo("msg-1");
+        assertThat(captor.getValue().reactions()).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("addOrToggleReaction toggles off existing reaction when same emoji is passed")
+    void addReaction_SameEmoji_TogglesOffReaction() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(contactService.isBlockedBy(senderId, recipientId)).thenReturn(false);
+
+        List<Reaction> existingReactions = new ArrayList<>();
+        existingReactions.add(new Reaction(senderId, "Satyam", "👍", Instant.now()));
+
+        Message message = Message.builder()
+                .id("msg-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .content("Hello")
+                .reactions(existingReactions)
+                .build();
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+
+        List<ReactionResponse> result = messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "👍");
+
+        assertThat(result).isEmpty();
+        verify(messageRepository).save(message);
+        verify(kafkaMessageProducer).publishReaction(any());
+    }
+
+    @Test
+    @DisplayName("addOrToggleReaction swaps reaction when different emoji is passed")
+    void addReaction_DifferentEmoji_SwapsReaction() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(contactService.isBlockedBy(senderId, recipientId)).thenReturn(false);
+
+        List<Reaction> existingReactions = new ArrayList<>();
+        existingReactions.add(new Reaction(senderId, "Satyam", "👍", Instant.now()));
+
+        Message message = Message.builder()
+                .id("msg-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .content("Hello")
+                .reactions(existingReactions)
+                .build();
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+
+        User user = User.builder().id(senderId).displayName("Satyam").build();
+        when(userRepository.findById(senderId)).thenReturn(Optional.of(user));
+
+        List<ReactionResponse> result = messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "🔥");
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).emoji()).isEqualTo("🔥");
+        assertThat(result.get(0).userId()).isEqualTo(senderId);
+        verify(messageRepository).save(message);
+    }
+
+    @Test
+    @DisplayName("addOrToggleReaction throws ForbiddenException when reactor is blocked by counterparty in 1:1 conversation")
+    void addReaction_BlockedByCounterparty_ThrowsForbiddenException() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(contactService.isBlockedBy(senderId, recipientId)).thenReturn(true);
+
+        assertThatThrownBy(() -> messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "👍"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("blocked");
+    }
+
+    @Test
+    @DisplayName("addOrToggleReaction throws IllegalArgumentException when message is deleted")
+    void addReaction_DeletedMessage_ThrowsIllegalArgumentException() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        Message message = Message.builder()
+                .id("msg-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .deleted(true)
+                .build();
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+
+        assertThatThrownBy(() -> messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "👍"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("deleted");
+    }
+
+    @Test
+    @DisplayName("removeReaction removes existing reaction and publishes Kafka reaction event")
+    void removeReaction_ExistingReaction_RemovesAndPublishesEvent() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+
+        List<Reaction> existingReactions = new ArrayList<>();
+        existingReactions.add(new Reaction(senderId, "Satyam", "👍", Instant.now()));
+
+        Message message = Message.builder()
+                .id("msg-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .reactions(existingReactions)
+                .build();
+        when(messageRepository.findById("msg-1")).thenReturn(Optional.of(message));
+
+        messageService.removeReaction(conversationId, "msg-1", senderId);
+
+        assertThat(message.getReactions()).isEmpty();
+        verify(messageRepository).save(message);
+        verify(kafkaMessageProducer).publishReaction(any());
+    }
+
+    @Test
+    @DisplayName("sendMessage with quotedMessageId creates immutable snapshot of original message")
+    void sendMessage_WithQuotedMessage_SnapshotsOriginal() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(contactService.isBlockedBy(senderId, recipientId)).thenReturn(false);
+
+        Message original = Message.builder()
+                .id("orig-1")
+                .conversationId(conversationId)
+                .senderId(recipientId)
+                .senderName("Rahul")
+                .content("Do you prefer Kafka?")
+                .type(MessageType.TEXT)
+                .build();
+        when(messageRepository.findById("orig-1")).thenReturn(Optional.of(original));
+
+        when(userRepository.findById(senderId)).thenReturn(Optional.of(User.builder().id(senderId).displayName("Satyam").build()));
+        when(rateLimiter.tryConsume(anyString(), anyInt())).thenReturn(ConsumptionResult.success());
+
+        when(messageRepository.save(any(Message.class))).thenAnswer(invocation -> {
+            Message m = invocation.getArgument(0);
+            m.setId("reply-1");
+            return m;
+        });
+
+        SendMessageRequest request = new SendMessageRequest("Yes, Kafka is great!", MessageType.TEXT, null, "orig-1");
+        MessageResponse response = messageService.sendMessage(conversationId, senderId, request);
+
+        assertThat(response.quotedMessage()).isNotNull();
+        assertThat(response.quotedMessage().messageId()).isEqualTo("orig-1");
+        assertThat(response.quotedMessage().content()).isEqualTo("Do you prefer Kafka?");
+        assertThat(response.quotedMessage().senderId()).isEqualTo(recipientId);
+        assertThat(response.quotedMessage().senderName()).isEqualTo("Rahul");
+        assertThat(response.quotedMessage().type()).isEqualTo(MessageType.TEXT);
+    }
+
+    @Test
+    @DisplayName("sendMessage with deleted quoted message throws IllegalArgumentException")
+    void sendMessage_WithDeletedQuotedMessage_ThrowsIllegalArgumentException() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(rateLimiter.tryConsume(anyString(), anyInt())).thenReturn(ConsumptionResult.success());
+
+        Message original = Message.builder()
+                .id("orig-1")
+                .conversationId(conversationId)
+                .deleted(true)
+                .build();
+        when(messageRepository.findById("orig-1")).thenReturn(Optional.of(original));
+
+        SendMessageRequest request = new SendMessageRequest("Replying to deleted", MessageType.TEXT, null, "orig-1");
+        assertThatThrownBy(() -> messageService.sendMessage(conversationId, senderId, request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("deleted");
+    }
+
+    @Test
+    @DisplayName("sendMessage with non-existent quoted message throws ResourceNotFoundException")
+    void sendMessage_WithNonExistentQuotedMessage_ThrowsResourceNotFoundException() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(rateLimiter.tryConsume(anyString(), anyInt())).thenReturn(ConsumptionResult.success());
+
+        when(messageRepository.findById("non-existent")).thenReturn(Optional.empty());
+        when(blockedMessageRepository.findById("non-existent")).thenReturn(Optional.empty());
+
+        SendMessageRequest request = new SendMessageRequest("Replying to ghost", MessageType.TEXT, null, "non-existent");
+        assertThatThrownBy(() -> messageService.sendMessage(conversationId, senderId, request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Quoted message not found");
     }
 }

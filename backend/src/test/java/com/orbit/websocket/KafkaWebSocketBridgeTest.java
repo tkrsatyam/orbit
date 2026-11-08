@@ -2,11 +2,14 @@ package com.orbit.websocket;
 
 import com.orbit.message.dto.MessageDeletedNotification;
 import com.orbit.message.dto.MessageEditedNotification;
+import com.orbit.message.dto.MessageReactionNotification;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReactionResponse;
 import com.orbit.message.dto.ReadReceiptNotification;
 import com.orbit.message.kafka.MessageDeletedEvent;
 import com.orbit.message.kafka.MessageDeliveryEvent;
 import com.orbit.message.kafka.MessageEditedEvent;
+import com.orbit.message.kafka.MessageReactionEvent;
 import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
@@ -166,5 +169,26 @@ class KafkaWebSocketBridgeTest {
         assertThat(notification.messageId()).isEqualTo("msg-1");
         assertThat(notification.userId()).isEqualTo("user-2");
         assertThat(notification.readAt()).isEqualTo(now);
+    }
+
+    @Test
+    @DisplayName("Should fan out message reaction event to /topic/conversations/{id}/reactions")
+    void shouldFanOutMessageReactionEvent() {
+        Instant now = Instant.now();
+        List<ReactionResponse> reactions = List.of(
+                new ReactionResponse("👍", "user-2", "Rahul", now)
+        );
+        MessageReactionEvent event = new MessageReactionEvent("conv-123", "msg-1", reactions);
+
+        bridge.handleMessageReactions(event);
+
+        ArgumentCaptor<MessageReactionNotification> captor = ArgumentCaptor.forClass(MessageReactionNotification.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversations/conv-123/reactions"), captor.capture());
+
+        MessageReactionNotification notification = captor.getValue();
+        assertThat(notification.messageId()).isEqualTo("msg-1");
+        assertThat(notification.conversationId()).isEqualTo("conv-123");
+        assertThat(notification.reactions()).hasSize(1);
+        assertThat(notification.reactions().get(0).emoji()).isEqualTo("👍");
     }
 }

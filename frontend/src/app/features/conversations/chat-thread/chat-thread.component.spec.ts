@@ -26,6 +26,9 @@ describe('ChatThreadComponent', () => {
     subscribeToReceipts: ReturnType<typeof vi.fn>;
     subscribeToEdits: ReturnType<typeof vi.fn>;
     subscribeToDeletes: ReturnType<typeof vi.fn>;
+    subscribeToReactions: ReturnType<typeof vi.fn>;
+    addOrToggleReaction: ReturnType<typeof vi.fn>;
+    removeReaction: ReturnType<typeof vi.fn>;
     subscribeToTyping: ReturnType<typeof vi.fn>;
     sendTyping: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
@@ -92,6 +95,9 @@ describe('ChatThreadComponent', () => {
         deleteCallback = cb;
         return () => {};
       }),
+      subscribeToReactions: vi.fn().mockReturnValue(() => {}),
+      addOrToggleReaction: vi.fn().mockReturnValue(of({ emoji: '👍', userId: 'my-user-id', displayName: 'Satyam Kumar', createdAt: new Date().toISOString() })),
+      removeReaction: vi.fn().mockReturnValue(of(undefined)),
       subscribeToTyping: vi.fn().mockImplementation((_convId: string, cb: (typing: any) => void) => {
         typingCallback = cb;
         return () => {};

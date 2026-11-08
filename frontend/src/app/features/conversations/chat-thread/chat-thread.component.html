@@ -86,81 +86,116 @@
                   [isVisible]="activeActionMessageId() === msg.id"
                   [canEdit]="msg.type === 'TEXT'"
                   [canDelete]="true"
+                  [canReact]="true"
+                  [canReply]="true"
                   [messageId]="msg.id"
                   (edit)="startEdit(msg)"
                   (delete)="openDeleteModal(msg)"
+                  (react)="toggleReactionPicker(msg)"
+                  (reply)="startReply(msg)"
                 />
               }
 
-              <div
-                class="message-bubble outgoing"
-                [class.failed]="msg.deliveryStatus === 'FAILED'"
-                (contextmenu)="onContextMenu(msg, $event)"
-              >
-                @if (!msg.deleted) {
-                  <button
-                    type="button"
-                    class="bubble-chevron-btn"
-                    [class.active]="activeActionMessageId() === msg.id"
-                    (click)="toggleActions(msg, $event)"
-                    title="Message options"
-                    [attr.data-testid]="'message-chevron-btn-' + msg.id"
-                  >
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                }
-                <div class="bubble-content">
-                  @if (msg.deleted) {
-                    <p class="bubble-text deleted-text"><em>You deleted this message.</em></p>
-                  } @else {
-                    <p class="bubble-text">{{ msg.content }}</p>
-                  }
+              @if (activeReactionPickerMessageId() === msg.id) {
+                <div class="reaction-picker-popover outgoing" (click)="$event.stopPropagation()">
+                  <app-reaction-picker
+                    [currentEmoji]="getMyReactionEmoji(msg)"
+                    (selectEmoji)="onSelectReaction(msg, $event)"
+                    (close)="activeReactionPickerMessageId.set(null)"
+                  />
                 </div>
-                <div class="bubble-meta">
-                  @if (msg.edited && !msg.deleted) {
-                    <span class="edited-indicator" data-testid="edited-indicator">edited</span>
-                  }
-                  <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+              }
 
-                  @if (msg.deliveryStatus === 'SENDING') {
-                    <span class="delivery-status sending" title="Sending...">
-                      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
+              <div class="bubble-stack">
+                <div
+                  class="message-bubble outgoing"
+                  [class.failed]="msg.deliveryStatus === 'FAILED'"
+                  (contextmenu)="onContextMenu(msg, $event)"
+                >
+                  @if (!msg.deleted) {
+                    <button
+                      type="button"
+                      class="bubble-chevron-btn"
+                      [class.active]="activeActionMessageId() === msg.id"
+                      (click)="toggleActions(msg, $event)"
+                      title="Message options"
+                      [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9" />
                       </svg>
-                    </span>
-                  } @else if (msg.deliveryStatus === 'FAILED') {
-                    <div class="delivery-status failed">
-                      <span class="failed-label">Failed</span>
-                      <button
-                        type="button"
-                        class="btn-retry"
-                        (click)="retryMessage(msg)"
-                        title="Retry send"
-                        [attr.data-testid]="'retry-btn-' + msg.id"
-                      >
-                        Retry
-                      </button>
-                    </div>
-                  } @else if (msg.deliveryStatus === 'SENT') {
-                    <!-- SENT: Single checkmark (✓). Persisted on server, recipient has not received yet -->
-                    <span class="delivery-status sent" title="Sent (server acknowledged)" [attr.data-testid]="'delivery-status-' + msg.id">
-                      <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    </span>
-                  } @else {
-                    <!-- DELIVERED / READ: Double checkmark (✓✓) per Lucide standard -->
-                    <span class="delivery-status delivered" [class.read]="msg.deliveryStatus === 'READ'" [title]="msg.deliveryStatus === 'READ' ? 'Read' : 'Delivered'" [attr.data-testid]="'delivery-status-' + msg.id">
-                      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <path d="M18 6 7 17l-5-5" />
-                        <path d="m22 10-7.5 7.5L13 16" />
-                      </svg>
-                    </span>
+                    </button>
                   }
+
+                  @if (msg.quotedMessage; as quote) {
+                    <div class="quoted-preview-card" [attr.data-testid]="'quoted-preview-' + msg.id">
+                      <div class="quote-content-wrap">
+                        <span class="quote-sender">{{ quote.senderName }}</span>
+                        <span class="quote-text">{{ quote.content }}</span>
+                      </div>
+                    </div>
+                  }
+
+                  <div class="bubble-content">
+                    @if (msg.deleted) {
+                      <p class="bubble-text deleted-text"><em>You deleted this message.</em></p>
+                    } @else {
+                      <p class="bubble-text">{{ msg.content }}</p>
+                    }
+                  </div>
+                  <div class="bubble-meta">
+                    @if (msg.edited && !msg.deleted) {
+                      <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                    }
+                    <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+
+                    @if (msg.deliveryStatus === 'SENDING') {
+                      <span class="delivery-status sending" title="Sending...">
+                        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin-icon">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                      </span>
+                    } @else if (msg.deliveryStatus === 'FAILED') {
+                      <div class="delivery-status failed">
+                        <span class="failed-label">Failed</span>
+                        <button
+                          type="button"
+                          class="btn-retry"
+                          (click)="retryMessage(msg)"
+                          title="Retry send"
+                          [attr.data-testid]="'retry-btn-' + msg.id"
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    } @else if (msg.deliveryStatus === 'SENT') {
+                      <!-- SENT: Single checkmark (✓). Persisted on server, recipient has not received yet -->
+                      <span class="delivery-status sent" title="Sent (server acknowledged)" [attr.data-testid]="'delivery-status-' + msg.id">
+                        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </span>
+                    } @else {
+                      <!-- DELIVERED / READ: Double checkmark (✓✓) per Lucide standard -->
+                      <span class="delivery-status delivered" [class.read]="msg.deliveryStatus === 'READ'" [title]="msg.deliveryStatus === 'READ' ? 'Read' : 'Delivered'" [attr.data-testid]="'delivery-status-' + msg.id">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M18 6 7 17l-5-5" />
+                          <path d="m22 10-7.5 7.5L13 16" />
+                        </svg>
+                      </span>
+                    }
+                  </div>
                 </div>
+
+                @if (!msg.deleted && (msg.reactions?.length || 0) > 0) {
+                  <app-message-reactions
+                    [reactions]="msg.reactions || []"
+                    [currentUserId]="currentUserId()"
+                    [messageId]="msg.id"
+                    (toggleReaction)="onToggleReaction(msg, $event)"
+                  />
+                }
               </div>
             </div>
           } @else {
@@ -176,47 +211,82 @@
               <app-avatar [name]="peerName()" size="sm" />
 
               @if (!msg.deleted) {
-                <!-- Floating Action Bar (Delete for me only) -->
+                <!-- Floating Action Bar -->
                 <app-message-actions-bar
                   [isVisible]="activeActionMessageId() === msg.id"
                   [canEdit]="false"
                   [canDelete]="true"
+                  [canReact]="true"
+                  [canReply]="true"
                   [messageId]="msg.id"
                   (delete)="openDeleteModal(msg)"
+                  (react)="toggleReactionPicker(msg)"
+                  (reply)="startReply(msg)"
                 />
               }
 
-              <div
-                class="message-bubble incoming"
-                (contextmenu)="onContextMenu(msg, $event)"
-              >
-                @if (!msg.deleted) {
-                  <button
-                    type="button"
-                    class="bubble-chevron-btn"
-                    [class.active]="activeActionMessageId() === msg.id"
-                    (click)="toggleActions(msg, $event)"
-                    title="Message options"
-                    [attr.data-testid]="'message-chevron-btn-' + msg.id"
-                  >
-                    <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
+              @if (activeReactionPickerMessageId() === msg.id) {
+                <div class="reaction-picker-popover incoming" (click)="$event.stopPropagation()">
+                  <app-reaction-picker
+                    [currentEmoji]="getMyReactionEmoji(msg)"
+                    (selectEmoji)="onSelectReaction(msg, $event)"
+                    (close)="activeReactionPickerMessageId.set(null)"
+                  />
+                </div>
+              }
+
+              <div class="bubble-stack">
+                <div
+                  class="message-bubble incoming"
+                  (contextmenu)="onContextMenu(msg, $event)"
+                >
+                  @if (!msg.deleted) {
+                    <button
+                      type="button"
+                      class="bubble-chevron-btn"
+                      [class.active]="activeActionMessageId() === msg.id"
+                      (click)="toggleActions(msg, $event)"
+                      title="Message options"
+                      [attr.data-testid]="'message-chevron-btn-' + msg.id"
+                    >
+                      <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                    </button>
+                  }
+
+                  @if (msg.quotedMessage; as quote) {
+                    <div class="quoted-preview-card" [attr.data-testid]="'quoted-preview-' + msg.id">
+                      <div class="quote-content-wrap">
+                        <span class="quote-sender">{{ quote.senderName }}</span>
+                        <span class="quote-text">{{ quote.content }}</span>
+                      </div>
+                    </div>
+                  }
+
+                  <div class="bubble-content">
+                    @if (msg.deleted) {
+                      <p class="bubble-text deleted-text"><em>This message was deleted.</em></p>
+                    } @else {
+                      <p class="bubble-text">{{ msg.content }}</p>
+                    }
+                  </div>
+                  <div class="bubble-meta">
+                    @if (msg.edited && !msg.deleted) {
+                      <span class="edited-indicator" data-testid="edited-indicator">edited</span>
+                    }
+                    <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
+                  </div>
+                </div>
+
+                @if (!msg.deleted && (msg.reactions?.length || 0) > 0) {
+                  <app-message-reactions
+                    [reactions]="msg.reactions || []"
+                    [currentUserId]="currentUserId()"
+                    [messageId]="msg.id"
+                    (toggleReaction)="onToggleReaction(msg, $event)"
+                  />
                 }
-                <div class="bubble-content">
-                  @if (msg.deleted) {
-                    <p class="bubble-text deleted-text"><em>This message was deleted.</em></p>
-                  } @else {
-                    <p class="bubble-text">{{ msg.content }}</p>
-                  }
-                </div>
-                <div class="bubble-meta">
-                  @if (msg.edited && !msg.deleted) {
-                    <span class="edited-indicator" data-testid="edited-indicator">edited</span>
-                  }
-                  <span class="message-time">{{ formatTime(msg.createdAt) }}</span>
-                </div>
               </div>
             </div>
           }
@@ -258,19 +328,26 @@
       </div>
     } @else {
       <!-- Active Composer -->
-      <div class="composer-card" [class.editing]="isEditing()">
+      <div class="composer-card" [class.editing]="isEditing()" [class.replying]="isReplying()">
         @if (isEditing()) {
           <!-- Composer Editing Mode Banner -->
           <app-composer-editing-banner
             [previewContent]="editingMessage()?.content || ''"
             (cancel)="cancelEdit()"
           />
+        } @else if (replyingToMessage(); as replyTarget) {
+          <!-- Composer Reply Mode Banner -->
+          <app-composer-reply-banner
+            [senderName]="replyTarget.senderName"
+            [previewContent]="replyTarget.content"
+            (dismiss)="dismissReply()"
+          />
         }
         <textarea
           #composerTextarea
           class="composer-textarea"
           rows="1"
-          [placeholder]="isEditing() ? 'Edit message...' : 'Message ' + peerName() + '...'"
+          [placeholder]="isEditing() ? 'Edit message...' : (isReplying() ? 'Type a reply...' : 'Message ' + peerName() + '...')"
           [ngModel]="messageInput()"
           (ngModelChange)="onComposerInput($event)"
           (keydown)="onKeydown($event)"

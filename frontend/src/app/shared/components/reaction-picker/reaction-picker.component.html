@@ -1,0 +1,14 @@
+<div class="reaction-picker" role="toolbar" aria-label="Reactions" data-testid="reaction-picker">
+  @for (emoji of emojis; track emoji) {
+    <button
+      type="button"
+      class="btn-emoji"
+      [class.active]="emoji === currentEmoji()"
+      (click)="onSelect(emoji)"
+      [attr.data-testid]="'emoji-btn-' + emoji"
+      [title]="emoji"
+    >
+      <span class="emoji-glyph">{{ emoji }}</span>
+    </button>
+  }
+</div>

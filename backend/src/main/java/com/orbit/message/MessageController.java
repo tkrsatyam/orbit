@@ -4,6 +4,9 @@ import com.orbit.message.dto.BatchReadRequest;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReactionListResponse;
+import com.orbit.message.dto.ReactionRequest;
+import com.orbit.message.dto.ReactionResponse;
 import com.orbit.message.dto.ReadReceiptRequest;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageDeleteMode;
@@ -37,6 +40,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.security.Principal;
+import java.util.List;
 
 /**
  * Controller handling both STOMP WebSocket messages and REST fallback message sends.
@@ -156,6 +160,62 @@ public class MessageController {
 
         String currentUserId = authentication.getName();
         messageService.deleteMessage(conversationId, messageId, currentUserId, mode);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Adds, updates, or toggles an emoji reaction on a message.
+     */
+    @Operation(
+            summary = "Add or toggle an emoji reaction on a message",
+            description = "Adds, swaps, or toggles an emoji reaction on a message. Sending the same emoji removes it, a different emoji swaps it."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Reactions updated successfully",
+                    content = @Content(schema = @Schema(implementation = ReactionListResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Target message is deleted or invalid payload",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "User is not a participant or is blocked by counterparty",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Conversation or message not found",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class)))
+    })
+    @PostMapping("/api/v1/conversations/{id}/messages/{messageId}/reactions")
+    public ResponseEntity<ReactionListResponse> addReaction(
+            @PathVariable("id") String conversationId,
+            @PathVariable("messageId") String messageId,
+            @Valid @RequestBody ReactionRequest request,
+            Authentication authentication) {
+        String currentUserId = authentication.getName();
+        List<ReactionResponse> reactions = messageService.addOrToggleReaction(conversationId, messageId, currentUserId, request.emoji());
+        return ResponseEntity.ok(new ReactionListResponse(reactions));
+    }
+
+    /**
+     * Removes caller's emoji reaction from a message.
+     */
+    @Operation(
+            summary = "Remove reaction from a message",
+            description = "Removes the authenticated caller's reaction from the specified message."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Reaction removed successfully"),
+            @ApiResponse(responseCode = "400", description = "Target message is deleted",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "User is not a participant",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Conversation or message not found",
+                    content = @Content(schema = @Schema(implementation = com.orbit.common.dto.ErrorResponse.class)))
+    })
+    @DeleteMapping("/api/v1/conversations/{id}/messages/{messageId}/reactions")
+    public ResponseEntity<Void> removeReaction(
+            @PathVariable("id") String conversationId,
+            @PathVariable("messageId") String messageId,
+            Authentication authentication) {
+        String currentUserId = authentication.getName();
+        messageService.removeReaction(conversationId, messageId, currentUserId);
         return ResponseEntity.noContent().build();
     }
 

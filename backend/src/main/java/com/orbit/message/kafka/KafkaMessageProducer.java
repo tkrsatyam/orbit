@@ -22,6 +22,7 @@ public class KafkaMessageProducer {
     public static final String CHAT_MESSAGES_EDITED_TOPIC = "chat.messages.edited";
     public static final String CHAT_MESSAGES_DELETED_TOPIC = "chat.messages.deleted";
     public static final String CHAT_MESSAGES_READ_TOPIC = "chat.messages.read";
+    public static final String CHAT_MESSAGES_REACTIONS_TOPIC = "chat.messages.reactions";
     public static final String CHAT_PRESENCE_TOPIC = "chat.presence";
     public static final String CHAT_NOTIFICATIONS_TOPIC = "chat.notifications";
 
@@ -198,6 +199,30 @@ public class KafkaMessageProducer {
         } catch (Exception e) {
             log.error("Failed to publish notification event to Kafka for userId={}: {}",
                     event.userId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Publishes a message reaction event to Kafka for multi-instance fan-out.
+     *
+     * @param event the reaction event
+     */
+    @AsyncPublisher(
+            operation = @AsyncOperation(
+                    channelName = CHAT_MESSAGES_REACTIONS_TOPIC,
+                    description = "Publishes updated reactions on a message to Kafka chat.messages.reactions topic for WebSocket fan-out.",
+                    payloadType = MessageReactionEvent.class
+            )
+    )
+    @KafkaAsyncOperationBinding
+    public void publishReaction(MessageReactionEvent event) {
+        try {
+            kafkaTemplate.send(CHAT_MESSAGES_REACTIONS_TOPIC, event.conversationId(), event);
+            log.debug("Published message reaction event to Kafka: messageId={}, conversationId={}",
+                    event.messageId(), event.conversationId());
+        } catch (Exception e) {
+            log.error("Failed to publish message reaction event to Kafka for messageId={}: {}",
+                    event.messageId(), e.getMessage(), e);
         }
     }
 }
