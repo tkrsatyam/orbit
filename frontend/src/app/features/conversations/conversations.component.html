@@ -3,6 +3,8 @@
   <app-navigation-rail
     [activeTab]="activeNavTab()"
     [incomingCount]="contactService.incomingCount()"
+    [unreadChatsCount]="conversationService.unreadTotalCount()"
+    [unreadGroupsCount]="unreadGroupsCount()"
     [user]="currentUser()"
     [(isMenuOpen)]="isMenuOpen"
     (tabChange)="setNavTab($event)"
@@ -12,6 +14,42 @@
 
   <!-- Sidebar (312px) -->
   <section class="workstation-sidebar" data-testid="workstation-sidebar">
+    @if (notificationService.showPermissionBanner()) {
+      <div class="notification-prompt-banner" data-testid="notification-permission-banner" role="region" aria-label="Desktop notifications prompt">
+        <div class="banner-icon-col" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+        </div>
+        <div class="banner-content-col">
+          <p class="banner-text">Enable desktop notifications to get alerted for new messages.</p>
+          <div class="banner-actions-row">
+            <button
+              type="button"
+              class="btn-enable-notif"
+              (click)="notificationService.requestPermission()"
+              data-testid="enable-notifications-btn"
+            >
+              Enable
+            </button>
+            <button
+              type="button"
+              class="btn-dismiss-notif"
+              (click)="notificationService.dismissBanner()"
+              data-testid="dismiss-notifications-banner-btn"
+              title="Dismiss"
+              aria-label="Dismiss notification prompt"
+            >
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    }
     @if (activeNavTab() === 'CHATS') {
       <header class="sidebar-header">
         <div class="header-title-row">
@@ -230,7 +268,14 @@
                       <span class="topic-tag-pill">{{ tag }}</span>
                     }
                   </div>
-                  <span class="members-metric">{{ grp.memberCount }} members</span>
+                  <div class="group-item-meta-right">
+                    <span class="members-metric">{{ grp.memberCount }} members</span>
+                    @if (getGroupUnreadCount(grp.id) > 0) {
+                      <span class="unread-badge" [attr.data-testid]="'unread-badge-group-' + grp.id">
+                        {{ getGroupUnreadCount(grp.id) }}
+                      </span>
+                    }
+                  </div>
                 </div>
               </div>
             </div>

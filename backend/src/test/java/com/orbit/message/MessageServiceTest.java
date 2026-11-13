@@ -34,6 +34,8 @@ import com.orbit.message.model.QuotedMessage;
 import com.orbit.message.model.Reaction;
 import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
+import com.orbit.notification.dto.NotificationEvent;
+import com.orbit.notification.dto.NotificationPayload;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
 import org.junit.jupiter.api.BeforeEach;
@@ -165,7 +167,13 @@ class MessageServiceTest {
         assertThat(conversation.getLastMessage()).isNotNull();
         assertThat(conversation.getLastMessage().getContent()).isEqualTo("Hello World");
 
-        verify(notificationRepository).incrementUnreadCount(recipientId, conversationId);
+        verify(notificationRepository).incrementAndGetUnreadCount(recipientId, conversationId);
+
+        ArgumentCaptor<NotificationEvent> notifCaptor = ArgumentCaptor.forClass(NotificationEvent.class);
+        verify(kafkaMessageProducer).publishNotification(notifCaptor.capture());
+        assertThat(notifCaptor.getValue().userId()).isEqualTo(recipientId);
+        assertThat(notifCaptor.getValue().payload().type()).isEqualTo("UNREAD_COUNT");
+        assertThat(notifCaptor.getValue().payload().conversationId()).isEqualTo(conversationId);
 
         ArgumentCaptor<MessageDeliveryEvent> eventCaptor = ArgumentCaptor.forClass(MessageDeliveryEvent.class);
         verify(kafkaMessageProducer).publishMessage(eventCaptor.capture());
@@ -217,7 +225,8 @@ class MessageServiceTest {
         // Verify normal messages, lastMessage, notifications, and Kafka are SKIPPED
         verify(messageRepository, never()).save(any());
         verify(conversationRepository, never()).save(any());
-        verify(notificationRepository, never()).incrementUnreadCount(anyString(), anyString());
+        verify(notificationRepository, never()).incrementAndGetUnreadCount(anyString(), anyString());
+        verify(kafkaMessageProducer, never()).publishNotification(any());
         verify(kafkaMessageProducer, never()).publishMessage(any());
     }
 
@@ -880,6 +889,7 @@ class MessageServiceTest {
         assertThat(message.getReadBy().get(0).getUserId()).isEqualTo(recipientId);
         verify(messageRepository).save(message);
         verify(notificationRepository).markConversationAsRead(recipientId, conversationId);
+        verify(kafkaMessageProducer).publishNotification(argThat(e -> e.userId().equals(recipientId) && e.payload().count() == 0));
 
         ArgumentCaptor<MessageReadEvent> captor = ArgumentCaptor.forClass(MessageReadEvent.class);
         verify(kafkaMessageProducer).publishMessageRead(captor.capture());
@@ -912,6 +922,7 @@ class MessageServiceTest {
         verify(messageRepository, never()).save(any());
         verify(kafkaMessageProducer, never()).publishMessageRead(any());
         verify(notificationRepository).markConversationAsRead(recipientId, conversationId);
+        verify(kafkaMessageProducer).publishNotification(argThat(e -> e.userId().equals(recipientId) && e.payload().count() == 0));
     }
 
     @Test
@@ -991,9 +1002,10 @@ class MessageServiceTest {
         // Divergence from 1:1: Block check is strictly bypassed for GROUP conversations (ADR 007)
         verify(contactService, never()).isBlockedBy(any(), any());
 
-        // Notifications incremented in bulk for all recipients except sender (O(1) round-trip)
-        verify(notificationRepository).incrementUnreadCounts(argThat(list -> list.containsAll(List.of(recipientId, recipient2)) && list.size() == 2), eq(conversationId));
-        verify(notificationRepository, never()).incrementUnreadCount(anyString(), anyString());
+        // Notifications incremented and published for all recipients except sender
+        verify(notificationRepository).incrementAndGetUnreadCount(recipientId, conversationId);
+        verify(notificationRepository).incrementAndGetUnreadCount(recipient2, conversationId);
+        verify(kafkaMessageProducer, times(2)).publishNotification(any(NotificationEvent.class));
 
         // Kafka fan-out published with all group recipients
         ArgumentCaptor<com.orbit.message.kafka.MessageDeliveryEvent> captor = ArgumentCaptor.forClass(com.orbit.message.kafka.MessageDeliveryEvent.class);
@@ -1065,6 +1077,7 @@ class MessageServiceTest {
         messageService.markMessagesAsRead(conversationId, List.of("m1", "m2"), senderId);
 
         verify(notificationRepository).markConversationAsRead(senderId, conversationId);
+        verify(kafkaMessageProducer).publishNotification(argThat(e -> e.userId().equals(senderId) && e.payload().count() == 0));
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<Iterable<Message>> captor = ArgumentCaptor.forClass(Iterable.class);

@@ -48,6 +48,23 @@ describe('NavigationRailComponent', () => {
     expect(dot).toBeTruthy();
   });
 
+  it('should show chats badge dot when unreadChatsCount > 0', () => {
+    fixture.componentRef.setInput('incomingCount', 0);
+    fixture.componentRef.setInput('unreadChatsCount', 3);
+    fixture.detectChanges();
+
+    const dot = fixture.nativeElement.querySelector('[data-testid="chats-badge-dot"]');
+    expect(dot).toBeTruthy();
+  });
+
+  it('should show groups badge dot when unreadGroupsCount > 0', () => {
+    fixture.componentRef.setInput('unreadGroupsCount', 2);
+    fixture.detectChanges();
+
+    const dot = fixture.nativeElement.querySelector('[data-testid="groups-badge-dot"]');
+    expect(dot).toBeTruthy();
+  });
+
   it('should toggle user dropdown menu when avatar button is clicked', () => {
     fixture.componentRef.setInput('user', mockUser);
     fixture.detectChanges();

@@ -13,6 +13,8 @@ import com.orbit.message.kafka.MessageReactionEvent;
 import com.orbit.message.kafka.MessageReadEvent;
 import com.orbit.message.model.MessageDeliveryStatus;
 import com.orbit.message.model.MessageType;
+import com.orbit.notification.dto.NotificationEvent;
+import com.orbit.notification.dto.NotificationPayload;
 import com.orbit.presence.dto.PresenceEvent;
 import com.orbit.presence.dto.PresenceNotification;
 import com.orbit.presence.dto.TypingEvent;
@@ -190,5 +192,31 @@ class KafkaWebSocketBridgeTest {
         assertThat(notification.conversationId()).isEqualTo("conv-123");
         assertThat(notification.reactions()).hasSize(1);
         assertThat(notification.reactions().get(0).emoji()).isEqualTo("👍");
+    }
+
+    @Test
+    @DisplayName("Should deliver notification to user when user is online")
+    void shouldDeliverNotificationWhenUserOnline() {
+        NotificationPayload payload = new NotificationPayload("UNREAD_COUNT", "conv-123", 5);
+        NotificationEvent event = new NotificationEvent("user-1", payload);
+
+        when(sessionRegistry.isOnline("user-1")).thenReturn(true);
+
+        bridge.handleNotification(event);
+
+        verify(messagingTemplate).convertAndSendToUser("user-1", "/queue/notifications", payload);
+    }
+
+    @Test
+    @DisplayName("Should discard notification when user is offline")
+    void shouldDiscardNotificationWhenUserOffline() {
+        NotificationPayload payload = new NotificationPayload("UNREAD_COUNT", "conv-123", 5);
+        NotificationEvent event = new NotificationEvent("user-1", payload);
+
+        when(sessionRegistry.isOnline("user-1")).thenReturn(false);
+
+        bridge.handleNotification(event);
+
+        verify(messagingTemplate, never()).convertAndSendToUser(any(), any(), any());
     }
 }
