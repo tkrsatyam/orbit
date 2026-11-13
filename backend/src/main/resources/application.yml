@@ -76,3 +76,9 @@ orbit:
     uploads-per-minute: ${RATE_LIMIT_UPLOADS_PER_MINUTE:10}
     ai-requests-per-minute: ${RATE_LIMIT_AI_PER_MINUTE:20}
     default-per-minute: ${RATE_LIMIT_DEFAULT_PER_MINUTE:100}
+  storage:
+    account-id: ${R2_ACCOUNT_ID:}
+    access-key-id: ${R2_ACCESS_KEY_ID:}
+    secret-access-key: ${R2_SECRET_ACCESS_KEY:}
+    bucket-name: ${R2_BUCKET_NAME:orbit-dev}
+    public-url: ${R2_PUBLIC_URL:}
