@@ -179,6 +179,9 @@ public class MessageService {
             Optional<Message> quotedNormal = messageRepository.findById(qId);
             if (quotedNormal.isPresent()) {
                 Message qm = quotedNormal.get();
+                if (!conversationId.equals(qm.getConversationId())) {
+                    throw new ResourceNotFoundException("Quoted message does not belong to this conversation");
+                }
                 if (qm.isDeleted()) {
                     throw new IllegalArgumentException("Cannot quote a deleted message");
                 }
@@ -193,6 +196,9 @@ public class MessageService {
                 Optional<BlockedMessage> quotedBlocked = blockedMessageRepository.findById(qId);
                 if (quotedBlocked.isPresent()) {
                     BlockedMessage qm = quotedBlocked.get();
+                    if (!conversationId.equals(qm.getConversationId())) {
+                        throw new ResourceNotFoundException("Quoted message does not belong to this conversation");
+                    }
                     if (qm.isDeleted()) {
                         throw new IllegalArgumentException("Cannot quote a deleted message");
                     }

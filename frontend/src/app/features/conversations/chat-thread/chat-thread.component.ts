@@ -1,8 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { bufferTime, filter, Subject, Subscription } from 'rxjs';
 import {
   ChatMessageItem,
   MessageDeleteMode,
@@ -59,6 +60,8 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private readonly conversationService = inject(ConversationService);
   private readonly userService = inject(UserService);
   readonly webSocketService = inject(WebSocketService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly incomingReadSubject = new Subject<string>();
 
   @ViewChild('messagesScroll') private messagesScrollContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('composerTextarea') private composerTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -143,6 +146,21 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Buffer read receipts in 500ms windows to prevent high-volume network storms
+    this.incomingReadSubject.pipe(
+      bufferTime(500),
+      filter(ids => ids.length > 0),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(ids => {
+      const convId = this.conversationId();
+      if (!convId || (typeof document !== 'undefined' && !document.hasFocus())) return;
+      const uniqueIds = Array.from(new Set(ids));
+      this.messageService.markMessagesAsRead(convId, uniqueIds).subscribe({
+        error: () => {}
+      });
+      this.conversationService.resetUnreadCount(convId);
+    });
   }
 
   ngOnDestroy(): void {
@@ -229,12 +247,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         this.isLoadingInitial.set(false);
         this.scrollToBottom();
 
-        // Mark unread incoming messages as read
+        // Mark unread incoming messages as read in batch (avoiding N+1 network requests)
         const unreadIncoming = history.content.filter(
           m => m.senderId !== this.currentUserId() && (!m.readBy || !m.readBy.includes(this.currentUserId()))
         );
-        for (const msg of unreadIncoming) {
-          this.messageService.markMessageAsRead(id, msg.id).subscribe({
+        if (unreadIncoming.length > 0) {
+          const unreadIds = unreadIncoming.map(m => m.id);
+          this.messageService.markMessagesAsRead(id, unreadIds).subscribe({
             error: () => {}
           });
         }
@@ -821,10 +840,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         clearTimeout(this.typingSafetyTimer);
         this.typingSafetyTimer = undefined;
       }
-      this.messageService.markMessageAsRead(this.conversationId(), incoming.id).subscribe({
-        error: () => {}
-      });
-      this.conversationService.resetUnreadCount(this.conversationId());
+      // Buffer read receipts in 500ms windows when window has focus
+      if (typeof document !== 'undefined' && document.hasFocus()) {
+        this.incomingReadSubject.next(incoming.id);
+      }
     }
 
     this.conversationService.updateLastMessage(this.conversationId(), {

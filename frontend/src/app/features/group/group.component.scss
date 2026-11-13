@@ -416,42 +416,6 @@
   }
 }
 
-.quoted-preview-card {
-  display: flex;
-  padding: 6px 10px;
-  border-radius: 6px;
-  margin-bottom: 6px;
-  background-color: rgba(0, 0, 0, 0.15);
-  border-left: 3px solid var(--orbit-accent, #f59e0b);
-  cursor: pointer;
-  max-width: 100%;
-  box-sizing: border-box;
-
-  .quote-content-wrap {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  .quote-sender {
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--orbit-accent, #f59e0b);
-    line-height: 1.2;
-    margin-bottom: 2px;
-  }
-
-  .quote-text {
-    font-size: 0.8125rem;
-    color: var(--orbit-text-muted, #a1a1aa);
-    line-height: 1.3;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
 .group-message-bubble.outgoing .quoted-preview-card {
   background-color: rgba(0, 0, 0, 0.12);
   border-left-color: #121214;

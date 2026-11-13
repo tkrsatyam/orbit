@@ -1327,4 +1327,29 @@ class MessageServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Quoted message not found");
     }
+
+    @Test
+    @DisplayName("sendMessage with quoted message from different conversation throws ResourceNotFoundException")
+    void sendMessage_WithForeignConversationQuotedMessage_ThrowsResourceNotFoundException() {
+        Conversation conversation = Conversation.builder()
+                .id(conversationId)
+                .type(ConversationType.DIRECT)
+                .participantIds(List.of(senderId, recipientId))
+                .build();
+        when(conversationRepository.findById(conversationId)).thenReturn(Optional.of(conversation));
+        when(rateLimiter.tryConsume(anyString(), anyInt())).thenReturn(ConsumptionResult.success());
+
+        Message foreignOriginal = Message.builder()
+                .id("foreign-msg-1")
+                .conversationId("other-conv-999")
+                .content("Secret from another chat")
+                .deleted(false)
+                .build();
+        when(messageRepository.findById("foreign-msg-1")).thenReturn(Optional.of(foreignOriginal));
+
+        SendMessageRequest request = new SendMessageRequest("Attempting cross-conversation quote leak", MessageType.TEXT, null, "foreign-msg-1");
+        assertThatThrownBy(() -> messageService.sendMessage(conversationId, senderId, request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("does not belong to this conversation");
+    }
 }
