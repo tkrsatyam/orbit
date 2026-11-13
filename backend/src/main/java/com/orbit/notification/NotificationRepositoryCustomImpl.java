@@ -3,6 +3,7 @@ package com.orbit.notification;
 import com.orbit.notification.model.Notification;
 import com.orbit.notification.model.NotificationType;
 import org.springframework.data.mongodb.core.BulkOperations;
+import org.springframework.data.mongodb.core.FindAndModifyOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -31,6 +32,20 @@ public class NotificationRepositoryCustomImpl implements NotificationRepositoryC
                 .set("updatedAt", Instant.now())
                 .setOnInsert("createdAt", Instant.now());
         mongoTemplate.upsert(query, update, Notification.class);
+    }
+
+    @Override
+    public int incrementAndGetUnreadCount(String userId, String conversationId) {
+        Query query = new Query(Criteria.where("userId").is(userId).and("conversationId").is(conversationId));
+        Update update = new Update()
+                .inc("count", 1)
+                .set("read", false)
+                .set("type", NotificationType.UNREAD_MESSAGE.name())
+                .set("updatedAt", Instant.now())
+                .setOnInsert("createdAt", Instant.now());
+        FindAndModifyOptions options = FindAndModifyOptions.options().returnNew(true).upsert(true);
+        Notification updated = mongoTemplate.findAndModify(query, update, options, Notification.class);
+        return updated != null ? updated.getCount() : 1;
     }
 
     @Override

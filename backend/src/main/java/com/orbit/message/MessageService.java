@@ -37,6 +37,8 @@ import com.orbit.message.model.QuotedMessage;
 import com.orbit.message.model.Reaction;
 import com.orbit.message.model.ReadReceipt;
 import com.orbit.notification.NotificationRepository;
+import com.orbit.notification.dto.NotificationEvent;
+import com.orbit.notification.dto.NotificationPayload;
 import com.orbit.user.UserRepository;
 import com.orbit.user.model.User;
 import org.slf4j.Logger;
@@ -266,11 +268,13 @@ public class MessageService {
         conversation.setLastMessage(snapshot);
         conversationRepository.save(conversation);
 
-        // 7. Upsert unread notification counts for all recipients (bulk write when multiple)
-        if (recipientIds.size() == 1) {
-            notificationRepository.incrementUnreadCount(recipientIds.get(0), conversationId);
-        } else if (recipientIds.size() > 1) {
-            notificationRepository.incrementUnreadCounts(recipientIds, conversationId);
+        // 7. Upsert unread notification counts for all recipients and publish personal UNREAD_COUNT events
+        for (String recipientId : recipientIds) {
+            int unreadCount = notificationRepository.incrementAndGetUnreadCount(recipientId, conversationId);
+            kafkaMessageProducer.publishNotification(new NotificationEvent(
+                    recipientId,
+                    new NotificationPayload("UNREAD_COUNT", conversationId, unreadCount)
+            ));
         }
 
         // 8. Publish MessageDeliveryEvent to Kafka chat.messages
@@ -610,8 +614,12 @@ public class MessageService {
             throw new ForbiddenException("User is not a participant in this conversation");
         }
 
-        // Always reset conversation unread count for this user
+        // Always reset conversation unread count for this user and publish UNREAD_COUNT 0 sync
         notificationRepository.markConversationAsRead(userId, conversationId);
+        kafkaMessageProducer.publishNotification(new NotificationEvent(
+                userId,
+                new NotificationPayload("UNREAD_COUNT", conversationId, 0)
+        ));
 
         Optional<Message> messageOpt = messageRepository.findById(messageId);
         if (messageOpt.isEmpty()) {
@@ -677,8 +685,12 @@ public class MessageService {
             throw new ForbiddenException("User is not a participant in this conversation");
         }
 
-        // Always reset conversation unread count for this user
+        // Always reset conversation unread count for this user and publish UNREAD_COUNT 0 sync
         notificationRepository.markConversationAsRead(userId, conversationId);
+        kafkaMessageProducer.publishNotification(new NotificationEvent(
+                userId,
+                new NotificationPayload("UNREAD_COUNT", conversationId, 0)
+        ));
 
         Instant now = Instant.now();
         List<Message> messages = messageRepository.findAllById(messageIds);

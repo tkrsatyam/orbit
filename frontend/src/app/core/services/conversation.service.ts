@@ -53,6 +53,21 @@ export class ConversationService {
     );
   }
 
+  setUnreadCount(conversationId: string, count: number): void {
+    const safeCount = Math.max(0, count || 0);
+    this.conversations.update(items =>
+      items.map(item => {
+        if (item.id === conversationId) {
+          return {
+            ...item,
+            unreadCount: safeCount
+          };
+        }
+        return item;
+      })
+    );
+  }
+
   resetUnreadCount(conversationId: string): void {
     this.conversations.update(items =>
       items.map(item => {

@@ -19,6 +19,8 @@ export class NavigationRailComponent {
 
   readonly activeTab = input<NavRailTab>('CHATS');
   readonly incomingCount = input<number>(0);
+  readonly unreadChatsCount = input<number>(0);
+  readonly unreadGroupsCount = input<number>(0);
   readonly user = input<User | null>(null);
 
   readonly tabChange = output<NavRailTab>();

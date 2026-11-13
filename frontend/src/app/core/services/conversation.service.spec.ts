@@ -123,6 +123,21 @@ describe('ConversationService', () => {
     expect(service.unreadTotalCount()).toBe(3);
   });
 
+  it('setUnreadCount should update unreadCount for specified conversation', () => {
+    service.conversations.set([...mockConversations]);
+    expect(service.unreadTotalCount()).toBe(2);
+
+    service.setUnreadCount('conv-1', 7);
+
+    const updated = service.conversations().find(c => c.id === 'conv-1');
+    expect(updated?.unreadCount).toBe(7);
+    expect(service.unreadTotalCount()).toBe(7);
+
+    service.setUnreadCount('conv-1', 0);
+    expect(service.conversations().find(c => c.id === 'conv-1')?.unreadCount).toBe(0);
+    expect(service.unreadTotalCount()).toBe(0);
+  });
+
   it('updateLastMessage should update message and move conversation to top of list', () => {
     service.conversations.set([...mockConversations]);
 

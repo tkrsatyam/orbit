@@ -10,6 +10,7 @@ import { ConversationService } from '../../core/services/conversation.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
 import { UserService } from '../../core/services/user.service';
 import { WebSocketService } from '../../core/services/websocket/websocket.service';
+import { NotificationService } from '../../core/services/notification/notification.service';
 import { ConversationsComponent } from './conversations.component';
 
 describe('ConversationsComponent', () => {
@@ -57,6 +58,15 @@ describe('ConversationsComponent', () => {
     showReconnectAlert: ReturnType<typeof signal<boolean>>;
     status: ReturnType<typeof signal<string>>;
     subscribe: ReturnType<typeof vi.fn>;
+  };
+  let notificationServiceMock: {
+    permission: ReturnType<typeof signal<NotificationPermission>>;
+    isBannerDismissed: ReturnType<typeof signal<boolean>>;
+    showPermissionBanner: ReturnType<typeof signal<boolean>>;
+    requestPermission: ReturnType<typeof vi.fn>;
+    dismissBanner: ReturnType<typeof vi.fn>;
+    notifyIncomingMessage: ReturnType<typeof vi.fn>;
+    init: ReturnType<typeof vi.fn>;
   };
   let router: Router;
 
@@ -140,6 +150,16 @@ describe('ConversationsComponent', () => {
       subscribe: vi.fn().mockReturnValue(() => {})
     };
 
+    notificationServiceMock = {
+      permission: signal<NotificationPermission>('default'),
+      isBannerDismissed: signal<boolean>(false),
+      showPermissionBanner: signal<boolean>(true),
+      requestPermission: vi.fn().mockResolvedValue('granted'),
+      dismissBanner: vi.fn(),
+      notifyIncomingMessage: vi.fn(),
+      init: vi.fn()
+    };
+
     await TestBed.configureTestingModule({
       imports: [ConversationsComponent],
       providers: [
@@ -149,7 +169,8 @@ describe('ConversationsComponent', () => {
         { provide: ConversationService, useValue: conversationServiceMock },
         { provide: UserService, useValue: userServiceMock },
         { provide: GroupService, useValue: groupServiceMock },
-        { provide: WebSocketService, useValue: webSocketServiceMock }
+        { provide: WebSocketService, useValue: webSocketServiceMock },
+        { provide: NotificationService, useValue: notificationServiceMock }
       ]
     }).compileComponents();
 
@@ -407,5 +428,29 @@ describe('ConversationsComponent', () => {
     expect(retryBtn).not.toBeNull();
     retryBtn.click();
     expect(webSocketServiceMock.connect).toHaveBeenCalledTimes(2);
+  });
+
+  it('should render notification permission banner when showPermissionBanner is true', () => {
+    notificationServiceMock.showPermissionBanner.set(true);
+    fixture.detectChanges();
+
+    const banner = fixture.nativeElement.querySelector('[data-testid="notification-permission-banner"]');
+    expect(banner).toBeTruthy();
+
+    const enableBtn = fixture.nativeElement.querySelector('[data-testid="enable-notifications-btn"]');
+    enableBtn.click();
+    expect(notificationServiceMock.requestPermission).toHaveBeenCalled();
+
+    const dismissBtn = fixture.nativeElement.querySelector('[data-testid="dismiss-notifications-banner-btn"]');
+    dismissBtn.click();
+    expect(notificationServiceMock.dismissBanner).toHaveBeenCalled();
+  });
+
+  it('should not render notification permission banner when showPermissionBanner is false', () => {
+    notificationServiceMock.showPermissionBanner.set(false);
+    fixture.detectChanges();
+
+    const banner = fixture.nativeElement.querySelector('[data-testid="notification-permission-banner"]');
+    expect(banner).toBeNull();
   });
 });

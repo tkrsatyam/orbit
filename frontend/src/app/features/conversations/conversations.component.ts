@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ContactService } from '../../core/services/contact.service';
 import { ConversationService } from '../../core/services/conversation.service';
 import { GroupResponse, GroupService } from '../../core/services/group.service';
+import { NotificationService } from '../../core/services/notification/notification.service';
 import { UserService } from '../../core/services/user.service';
 import { WebSocketService } from '../../core/services/websocket/websocket.service';
 import { AvatarComponent } from '../../shared/components/avatar/avatar.component';
@@ -40,6 +41,7 @@ export class ConversationsComponent implements OnInit, OnDestroy {
   readonly conversationService = inject(ConversationService);
   readonly groupService = inject(GroupService);
   readonly webSocketService = inject(WebSocketService);
+  readonly notificationService = inject(NotificationService);
 
   private routerSub?: Subscription;
   private readonly presenceUnsubs = new Map<string, () => void>();
@@ -81,6 +83,20 @@ export class ConversationsComponent implements OnInit, OnDestroy {
     }
     return groups;
   });
+
+  readonly unreadGroupsCount = computed(() => {
+    return this.conversationService
+      .conversations()
+      .filter(c => c.type === 'GROUP')
+      .reduce((acc, c) => acc + (c.unreadCount || 0), 0);
+  });
+
+  getGroupUnreadCount(groupId: string): number {
+    const conv = this.conversationService
+      .conversations()
+      .find(c => c.type === 'GROUP' && c.group?.id === groupId);
+    return conv?.unreadCount || 0;
+  }
 
   constructor() {
     effect(() => {
@@ -192,6 +208,16 @@ export class ConversationsComponent implements OnInit, OnDestroy {
               const isConvActive = this.activeConversationId() === c.id || isGroupActive;
               if (!isConvActive && msg.senderId !== this.authService.currentUser()?.id) {
                 this.conversationService.incrementUnreadCount(c.id);
+              }
+              if (msg.senderId !== this.authService.currentUser()?.id) {
+                this.notificationService.notifyIncomingMessage({
+                  conversationId: c.id,
+                  senderId: msg.senderId,
+                  senderName: msg.senderName,
+                  content: msg.content,
+                  conversationType: c.type,
+                  groupName: c.group?.name
+                });
               }
             }
           }
