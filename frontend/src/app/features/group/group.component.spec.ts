@@ -35,6 +35,9 @@ describe('GroupComponent', () => {
     subscribeToReceipts: ReturnType<typeof vi.fn>;
     subscribeToEdits: ReturnType<typeof vi.fn>;
     subscribeToDeletes: ReturnType<typeof vi.fn>;
+    subscribeToReactions: ReturnType<typeof vi.fn>;
+    addOrToggleReaction: ReturnType<typeof vi.fn>;
+    removeReaction: ReturnType<typeof vi.fn>;
     subscribeToTyping: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
     sendMessageRest: ReturnType<typeof vi.fn>;
@@ -127,6 +130,9 @@ describe('GroupComponent', () => {
       subscribeToReceipts: vi.fn().mockReturnValue(() => {}),
       subscribeToEdits: vi.fn().mockReturnValue(() => {}),
       subscribeToDeletes: vi.fn().mockReturnValue(() => {}),
+      subscribeToReactions: vi.fn().mockReturnValue(() => {}),
+      addOrToggleReaction: vi.fn().mockReturnValue(of({ emoji: '👍', userId: 'u-1', displayName: 'Lead Admin', createdAt: new Date().toISOString() })),
+      removeReaction: vi.fn().mockReturnValue(of(void 0)),
       subscribeToTyping: vi.fn().mockReturnValue(() => {}),
       isWebSocketConnected: vi.fn().mockReturnValue(true),
       sendMessageStomp: vi.fn(),

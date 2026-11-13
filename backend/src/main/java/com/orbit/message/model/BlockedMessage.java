@@ -61,6 +61,11 @@ public class BlockedMessage {
 
     private Instant editedAt;
 
+    private QuotedMessage quotedMessage;
+
+    @Builder.Default
+    private List<Reaction> reactions = new ArrayList<>();
+
     @Indexed(sparse = true)
     private String idempotencyKey;
 

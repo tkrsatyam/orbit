@@ -16,13 +16,20 @@ public record SendMessageRequest(
         MessageType type,
 
         @Schema(description = "Client-generated idempotency key (UUID)", example = "c8f2b7a4-3995-4672-9a0f-1558914619a9", nullable = true)
-        String idempotencyKey
+        String idempotencyKey,
+
+        @Schema(description = "ID of message being quoted in reply", example = "60c72b2f9b1d8b2bad000001", nullable = true)
+        String quotedMessageId
 ) {
     public SendMessageRequest(String content) {
-        this(content, MessageType.TEXT, null);
+        this(content, MessageType.TEXT, null, null);
     }
 
     public SendMessageRequest(String content, MessageType type) {
-        this(content, type, null);
+        this(content, type, null, null);
+    }
+
+    public SendMessageRequest(String content, MessageType type, String idempotencyKey) {
+        this(content, type, idempotencyKey, null);
     }
 }

@@ -49,31 +49,44 @@ public record MessageResponse(
         List<String> readBy,
 
         @Schema(description = "Client idempotency key if provided", example = "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        String idempotencyKey
+        String idempotencyKey,
+
+        @Schema(description = "Reactions on this message")
+        List<ReactionResponse> reactions,
+
+        @Schema(description = "Embedded snapshot of quoted message, or null if not a reply")
+        QuotedMessageResponse quotedMessage
 ) {
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED, List.of(), null);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, MessageDeliveryStatus.DELIVERED, List.of(), null, List.of(), null);
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant createdAt, MessageDeliveryStatus deliveryStatus) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus, List.of(), null);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, null, createdAt, deliveryStatus, List.of(), null, List.of(), null);
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, List.of(), null);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, List.of(), null, List.of(), null);
     }
 
     public MessageResponse(String id, String conversationId, String senderId, String senderName,
                            MessageType type, String content, boolean deleted, boolean edited,
                            Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus,
                            List<String> readBy) {
-        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, readBy, null);
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, readBy, null, List.of(), null);
+    }
+
+    public MessageResponse(String id, String conversationId, String senderId, String senderName,
+                           MessageType type, String content, boolean deleted, boolean edited,
+                           Instant editedAt, Instant createdAt, MessageDeliveryStatus deliveryStatus,
+                           List<String> readBy, String idempotencyKey) {
+        this(id, conversationId, senderId, senderName, type, content, deleted, edited, editedAt, createdAt, deliveryStatus, readBy, idempotencyKey, List.of(), null);
     }
 
     public static MessageResponse from(Message message) {
@@ -85,6 +98,10 @@ public record MessageResponse(
         List<String> readBy = message.getReadBy() != null
                 ? message.getReadBy().stream().map(ReadReceipt::getUserId).toList()
                 : List.of();
+        List<ReactionResponse> reactions = message.isDeleted() || message.getReactions() == null
+                ? List.of()
+                : message.getReactions().stream().map(ReactionResponse::from).toList();
+        QuotedMessageResponse quoted = QuotedMessageResponse.from(message.getQuotedMessage());
         MessageDeliveryStatus effectiveStatus = deliveryStatus;
         if (effectiveStatus == MessageDeliveryStatus.DELIVERED && !readBy.isEmpty()) {
             effectiveStatus = MessageDeliveryStatus.READ;
@@ -102,7 +119,9 @@ public record MessageResponse(
                 message.getCreatedAt(),
                 effectiveStatus,
                 readBy,
-                message.getIdempotencyKey()
+                message.getIdempotencyKey(),
+                reactions,
+                quoted
         );
     }
 
@@ -112,6 +131,10 @@ public record MessageResponse(
 
     public static MessageResponse from(BlockedMessage message, MessageDeliveryStatus deliveryStatus) {
         String content = message.isDeleted() ? null : message.getContent();
+        List<ReactionResponse> reactions = message.isDeleted() || message.getReactions() == null
+                ? List.of()
+                : message.getReactions().stream().map(ReactionResponse::from).toList();
+        QuotedMessageResponse quoted = QuotedMessageResponse.from(message.getQuotedMessage());
         return new MessageResponse(
                 message.getId(),
                 message.getConversationId(),
@@ -125,7 +148,9 @@ public record MessageResponse(
                 message.getCreatedAt(),
                 deliveryStatus,
                 List.of(),
-                message.getIdempotencyKey()
+                message.getIdempotencyKey(),
+                reactions,
+                quoted
         );
     }
 }

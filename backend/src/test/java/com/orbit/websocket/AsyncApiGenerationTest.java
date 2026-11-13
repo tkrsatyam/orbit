@@ -44,9 +44,11 @@ class AsyncApiGenerationTest {
         assertThat(yaml).contains("/app/conversations/{id}/read");
         assertThat(yaml).contains("/app/conversations/{id}/typing");
         assertThat(yaml).contains("/topic/conversations/{conversationId}/messages");
+        assertThat(yaml).contains("/topic/conversations/{conversationId}/reactions");
         assertThat(yaml).contains("/topic/presence/{userId}");
         assertThat(yaml).contains("/user/queue/notifications");
         assertThat(yaml).contains("chat.messages");
+        assertThat(yaml).contains("chat.messages.reactions");
         assertThat(yaml).contains("chat.presence");
         assertThat(yaml).contains("chat.notifications");
 

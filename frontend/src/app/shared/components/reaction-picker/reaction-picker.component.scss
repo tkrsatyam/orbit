@@ -1,0 +1,57 @@
+:host {
+  display: inline-block;
+  user-select: none;
+}
+
+.reaction-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  background-color: var(--orbit-elevated, #27272a);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  border-radius: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: pickerPop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.btn-emoji {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.12s ease, background-color 0.12s ease;
+
+  .emoji-glyph {
+    font-size: 1.125rem;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: scale(1.25);
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &.active {
+    background-color: var(--orbit-accent-subtle, rgba(245, 158, 11, 0.15));
+    outline: 1.5px solid var(--orbit-accent, #f59e0b);
+  }
+}
+
+@keyframes pickerPop {
+  from {
+    opacity: 0;
+    transform: scale(0.9) translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

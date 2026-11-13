@@ -226,6 +226,49 @@
   }
 }
 
+.bubble-stack {
+  display: flex;
+  flex-direction: column;
+  max-width: 65%;
+  min-width: 120px;
+}
+
+.message-row.outgoing .bubble-stack {
+  align-items: flex-end;
+}
+
+.message-row.incoming .bubble-stack {
+  align-items: flex-start;
+}
+
+.reaction-picker-popover {
+  position: absolute;
+  z-index: 20;
+
+  &.outgoing {
+    right: 0;
+    bottom: calc(100% + 4px);
+  }
+
+  &.incoming {
+    left: 42px;
+    bottom: calc(100% + 4px);
+  }
+}
+
+.message-bubble.outgoing .quoted-preview-card {
+  background-color: rgba(0, 0, 0, 0.12);
+  border-left-color: #121214;
+
+  .quote-sender {
+    color: #121214;
+  }
+
+  .quote-text {
+    color: rgba(18, 18, 20, 0.85);
+  }
+}
+
 .bubble-chevron-btn {
   position: absolute;
   top: 0;
@@ -339,7 +382,7 @@
 }
 
 .message-bubble {
-  max-width: 65%;
+  max-width: 100%;
   min-width: 120px;
   padding: 0.625rem 0.875rem 0.4rem;
   border-radius: 12px;

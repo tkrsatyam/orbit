@@ -1,0 +1,53 @@
+:host {
+  display: block;
+}
+
+.message-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+  user-select: none;
+}
+
+.reaction-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background-color: var(--orbit-surface, #18181b);
+  border: 1px solid var(--orbit-border, #2e2e33);
+  border-radius: 12px;
+  color: var(--orbit-text-muted, #a1a1aa);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+
+  .chip-emoji {
+    font-size: 0.875rem;
+    line-height: 1;
+  }
+
+  .chip-count {
+    font-size: 0.75rem;
+  }
+
+  &:hover {
+    background-color: var(--orbit-elevated, #27272a);
+    border-color: rgba(245, 158, 11, 0.4);
+    color: var(--orbit-text-primary, #ededef);
+  }
+
+  &.reacted-by-me {
+    background-color: var(--orbit-accent-subtle, rgba(245, 158, 11, 0.12));
+    border-color: var(--orbit-accent, #f59e0b);
+    color: var(--orbit-accent, #f59e0b);
+    font-weight: 600;
+
+    &:hover {
+      background-color: rgba(245, 158, 11, 0.2);
+    }
+  }
+}

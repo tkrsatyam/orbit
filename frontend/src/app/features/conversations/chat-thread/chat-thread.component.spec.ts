@@ -26,6 +26,9 @@ describe('ChatThreadComponent', () => {
     subscribeToReceipts: ReturnType<typeof vi.fn>;
     subscribeToEdits: ReturnType<typeof vi.fn>;
     subscribeToDeletes: ReturnType<typeof vi.fn>;
+    subscribeToReactions: ReturnType<typeof vi.fn>;
+    addOrToggleReaction: ReturnType<typeof vi.fn>;
+    removeReaction: ReturnType<typeof vi.fn>;
     subscribeToTyping: ReturnType<typeof vi.fn>;
     sendTyping: ReturnType<typeof vi.fn>;
     sendMessageStomp: ReturnType<typeof vi.fn>;
@@ -36,6 +39,7 @@ describe('ChatThreadComponent', () => {
     isWebSocketConnected: ReturnType<typeof vi.fn>;
     subscribeToReadReceipts: ReturnType<typeof vi.fn>;
     markMessageAsRead: ReturnType<typeof vi.fn>;
+    markMessagesAsRead: ReturnType<typeof vi.fn>;
   };
   let conversationServiceMock: {
     conversations: ReturnType<typeof signal<ConversationItem[]>>;
@@ -92,6 +96,9 @@ describe('ChatThreadComponent', () => {
         deleteCallback = cb;
         return () => {};
       }),
+      subscribeToReactions: vi.fn().mockReturnValue(() => {}),
+      addOrToggleReaction: vi.fn().mockReturnValue(of({ emoji: '👍', userId: 'my-user-id', displayName: 'Satyam Kumar', createdAt: new Date().toISOString() })),
+      removeReaction: vi.fn().mockReturnValue(of(undefined)),
       subscribeToTyping: vi.fn().mockImplementation((_convId: string, cb: (typing: any) => void) => {
         typingCallback = cb;
         return () => {};
@@ -104,7 +111,8 @@ describe('ChatThreadComponent', () => {
       getConversationMessages: vi.fn().mockReturnValue(of({ content: [], hasMore: false, nextCursor: null })),
       isWebSocketConnected: vi.fn().mockReturnValue(true),
       subscribeToReadReceipts: vi.fn().mockReturnValue(() => {}),
-      markMessageAsRead: vi.fn().mockReturnValue(of(undefined))
+      markMessageAsRead: vi.fn().mockReturnValue(of(undefined)),
+      markMessagesAsRead: vi.fn().mockReturnValue(of(undefined))
     };
 
     conversationServiceMock = {
@@ -407,6 +415,37 @@ describe('ChatThreadComponent', () => {
     expect(component.messages()[1].deliveryStatus).toBe('DELIVERED');
     expect(component.hasMore()).toBe(true);
     expect(component.nextCursor()).toBe('hist-1');
+    expect(messageServiceMock.markMessagesAsRead).toHaveBeenCalledWith('conv-test-1', ['hist-1']);
+  });
+
+  it('should buffer real-time incoming read receipts and dispatch batch markMessagesAsRead', async () => {
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true);
+    let incomingCallback: (msg: any) => void = () => {};
+    messageServiceMock.subscribeToConversation.mockImplementation((id: string, cb: any) => {
+      incomingCallback = cb;
+      return () => {};
+    });
+
+    // Invoke setupConversation through ngOnInit param change
+    (component as any).setupConversation('conv-test-1');
+
+    incomingCallback({
+      id: 'incoming-stream-1',
+      conversationId: 'conv-test-1',
+      senderId: 'peer-user-1',
+      senderName: 'Ananya Roy',
+      type: 'TEXT',
+      content: 'Realtime msg 1',
+      deleted: false,
+      edited: false,
+      createdAt: '2026-10-24T12:00:00Z'
+    });
+
+    expect(messageServiceMock.markMessagesAsRead).not.toHaveBeenCalled();
+
+    await new Promise(resolve => setTimeout(resolve, 550));
+
+    expect(messageServiceMock.markMessagesAsRead).toHaveBeenCalledWith('conv-test-1', ['incoming-stream-1']);
   });
 
   it('should load older messages and prepend them without duplicates', () => {

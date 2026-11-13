@@ -4,6 +4,36 @@
   (click)="$event.stopPropagation()"
   [attr.data-testid]="'message-actions-' + messageId()"
 >
+  @if (canReact()) {
+    <button
+      type="button"
+      class="btn-action-item btn-action-react"
+      (click)="react.emit()"
+      title="Add reaction"
+      [attr.data-testid]="'react-message-btn-' + messageId()"
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M8 14s1.5 2 4 2 4-2 4-2" />
+        <line x1="9" y1="9" x2="9.01" y2="9" />
+        <line x1="15" y1="9" x2="15.01" y2="9" />
+      </svg>
+    </button>
+  }
+  @if (canReply()) {
+    <button
+      type="button"
+      class="btn-action-item btn-action-reply"
+      (click)="reply.emit()"
+      title="Reply to message"
+      [attr.data-testid]="'reply-message-btn-' + messageId()"
+    >
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 17 4 12 9 7" />
+        <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+      </svg>
+    </button>
+  }
   @if (canEdit()) {
     <button
       type="button"

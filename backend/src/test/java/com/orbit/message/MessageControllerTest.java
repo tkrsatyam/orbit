@@ -4,6 +4,9 @@ import com.orbit.message.dto.BatchReadRequest;
 import com.orbit.message.dto.EditMessageRequest;
 import com.orbit.message.dto.MessageHistoryResponse;
 import com.orbit.message.dto.MessageResponse;
+import com.orbit.message.dto.ReactionListResponse;
+import com.orbit.message.dto.ReactionRequest;
+import com.orbit.message.dto.ReactionResponse;
 import com.orbit.message.dto.ReadReceiptRequest;
 import com.orbit.message.dto.SendMessageRequest;
 import com.orbit.message.model.MessageDeleteMode;
@@ -21,6 +24,7 @@ import org.springframework.security.core.Authentication;
 
 import java.security.Principal;
 import java.time.Instant;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -254,5 +258,46 @@ class MessageControllerTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
         verify(messageService).markMessagesAsRead(conversationId, java.util.List.of("msg-1", "msg-2"), senderId);
+    }
+
+    @Test
+    @DisplayName("REST addReaction delegates to MessageService and returns 200 OK with ReactionListResponse")
+    void shouldAddReaction_AndReturnOk() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        List<ReactionResponse> reactions = List.of(
+                new ReactionResponse("👍", senderId, "Satyam Kumar", Instant.now())
+        );
+        when(messageService.addOrToggleReaction(conversationId, "msg-1", senderId, "👍"))
+                .thenReturn(reactions);
+
+        ReactionRequest request = new ReactionRequest("👍");
+        ResponseEntity<ReactionListResponse> response = messageController.addReaction(
+                conversationId,
+                "msg-1",
+                request,
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().reactions()).hasSize(1);
+        assertThat(response.getBody().reactions().get(0).emoji()).isEqualTo("👍");
+        verify(messageService).addOrToggleReaction(conversationId, "msg-1", senderId, "👍");
+    }
+
+    @Test
+    @DisplayName("REST removeReaction delegates to MessageService and returns 204 No Content")
+    void shouldRemoveReaction_AndReturnNoContent() {
+        when(authentication.getName()).thenReturn(senderId);
+
+        ResponseEntity<Void> response = messageController.removeReaction(
+                conversationId,
+                "msg-1",
+                authentication
+        );
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+        verify(messageService).removeReaction(conversationId, "msg-1", senderId);
     }
 }

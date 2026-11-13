@@ -1,17 +1,20 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, HostListener, inject, OnDestroy, OnInit, signal, ViewChild } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { bufferTime, filter, Subject, Subscription } from 'rxjs';
 import {
   ChatMessageItem,
   MessageDeleteMode,
   MessageDeletedEventPayload,
   MessageDeliveryStatus,
   MessageEditedEventPayload,
+  MessageReactionNotification,
   MessageResponse,
   PresenceEventPayload,
   ReadReceiptEventPayload,
+  ReactionResponse,
   TypingEventPayload
 } from '../../../core/models/message.model';
 import { AuthService } from '../../../core/services/auth.service';
@@ -26,6 +29,9 @@ import { MessageActionsBarComponent } from '../../../shared/components/message-a
 import { ComposerEditingBannerComponent } from '../../../shared/components/composer-editing-banner/composer-editing-banner.component';
 import { DeleteMessageModalComponent } from '../../../shared/components/delete-message-modal/delete-message-modal.component';
 import { TypingIndicatorComponent } from '../../../shared/components/typing-indicator/typing-indicator.component';
+import { ReactionPickerComponent } from '../../../shared/components/reaction-picker/reaction-picker.component';
+import { MessageReactionsComponent } from '../../../shared/components/message-reactions/message-reactions.component';
+import { ComposerReplyBannerComponent } from '../../../shared/components/composer-reply-banner/composer-reply-banner.component';
 
 @Component({
   selector: 'app-chat-thread',
@@ -37,7 +43,10 @@ import { TypingIndicatorComponent } from '../../../shared/components/typing-indi
     MessageActionsBarComponent,
     ComposerEditingBannerComponent,
     DeleteMessageModalComponent,
-    TypingIndicatorComponent
+    TypingIndicatorComponent,
+    ReactionPickerComponent,
+    MessageReactionsComponent,
+    ComposerReplyBannerComponent
   ],
   templateUrl: './chat-thread.component.html',
   styleUrl: './chat-thread.component.scss'
@@ -51,6 +60,8 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private readonly conversationService = inject(ConversationService);
   private readonly userService = inject(UserService);
   readonly webSocketService = inject(WebSocketService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly incomingReadSubject = new Subject<string>();
 
   @ViewChild('messagesScroll') private messagesScrollContainer?: ElementRef<HTMLDivElement>;
   @ViewChild('composerTextarea') private composerTextarea?: ElementRef<HTMLTextAreaElement>;
@@ -73,8 +84,15 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   readonly editingMessage = signal<ChatMessageItem | null>(null);
   readonly isEditing = computed(() => this.editingMessage() !== null);
 
+  // Quoted reply state
+  readonly replyingToMessage = signal<ChatMessageItem | null>(null);
+  readonly isReplying = computed(() => this.replyingToMessage() !== null);
+
   // Active floating action bar (message ID)
   readonly activeActionMessageId = signal<string | null>(null);
+
+  // Active reaction picker (message ID)
+  readonly activeReactionPickerMessageId = signal<string | null>(null);
 
   // Delete modal state
   readonly deleteModalMessage = signal<ChatMessageItem | null>(null);
@@ -97,6 +115,7 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   private unsubscribeReadReceipts?: () => void;
   private unsubscribeEdits?: () => void;
   private unsubscribeDeletes?: () => void;
+  private unsubscribeReactions?: () => void;
   private unsubscribeTyping?: () => void;
   private unsubscribePresence?: () => void;
   private routeSub?: Subscription;
@@ -127,6 +146,21 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Buffer read receipts in 500ms windows to prevent high-volume network storms
+    this.incomingReadSubject.pipe(
+      bufferTime(500),
+      filter(ids => ids.length > 0),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe(ids => {
+      const convId = this.conversationId();
+      if (!convId || (typeof document !== 'undefined' && !document.hasFocus())) return;
+      const uniqueIds = Array.from(new Set(ids));
+      this.messageService.markMessagesAsRead(convId, uniqueIds).subscribe({
+        error: () => {}
+      });
+      this.conversationService.resetUnreadCount(convId);
+    });
   }
 
   ngOnDestroy(): void {
@@ -143,7 +177,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.isLoadingOlder.set(false);
     this.isLoadingInitial.set(true);
     this.editingMessage.set(null);
+    this.replyingToMessage.set(null);
     this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.set(null);
     this.deleteModalMessage.set(null);
     this.isPeerTyping.set(false);
     this.typingPeerName.set('');
@@ -170,6 +206,11 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     // Subscribe to message deletions
     this.unsubscribeDeletes = this.messageService.subscribeToDeletes(id, (deleted: MessageDeletedEventPayload) => {
       this.handleDeletedMessage(deleted);
+    });
+
+    // Subscribe to message reactions
+    this.unsubscribeReactions = this.messageService.subscribeToReactions(id, (notif: MessageReactionNotification) => {
+      this.handleReactionNotification(notif);
     });
 
     // Subscribe to typing indicator signals
@@ -206,12 +247,13 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         this.isLoadingInitial.set(false);
         this.scrollToBottom();
 
-        // Mark unread incoming messages as read
+        // Mark unread incoming messages as read in batch (avoiding N+1 network requests)
         const unreadIncoming = history.content.filter(
           m => m.senderId !== this.currentUserId() && (!m.readBy || !m.readBy.includes(this.currentUserId()))
         );
-        for (const msg of unreadIncoming) {
-          this.messageService.markMessageAsRead(id, msg.id).subscribe({
+        if (unreadIncoming.length > 0) {
+          const unreadIds = unreadIncoming.map(m => m.id);
+          this.messageService.markMessagesAsRead(id, unreadIds).subscribe({
             error: () => {}
           });
         }
@@ -303,6 +345,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       this.unsubscribeDeletes();
       this.unsubscribeDeletes = undefined;
     }
+    if (this.unsubscribeReactions) {
+      this.unsubscribeReactions();
+      this.unsubscribeReactions = undefined;
+    }
     if (this.unsubscribeTyping) {
       this.unsubscribeTyping();
       this.unsubscribeTyping = undefined;
@@ -382,11 +428,92 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     if (this.activeActionMessageId()) {
       this.activeActionMessageId.set(null);
     }
+    if (this.activeReactionPickerMessageId()) {
+      this.activeReactionPickerMessageId.set(null);
+    }
   }
 
   toggleActions(msg: ChatMessageItem, event: MouseEvent): void {
     event.stopPropagation();
+    this.activeReactionPickerMessageId.set(null);
     this.activeActionMessageId.update(curr => curr === msg.id ? null : msg.id);
+  }
+
+  toggleReactionPicker(msg: ChatMessageItem): void {
+    this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.update(curr => curr === msg.id ? null : msg.id);
+  }
+
+  onSelectReaction(msg: ChatMessageItem, emoji: string): void {
+    this.activeReactionPickerMessageId.set(null);
+    this.applyReaction(msg.id, emoji);
+  }
+
+  onToggleReaction(msg: ChatMessageItem, emoji: string): void {
+    this.applyReaction(msg.id, emoji);
+  }
+
+  getMyReactionEmoji(msg: ChatMessageItem): string | null {
+    const myId = this.currentUserId();
+    const found = msg.reactions?.find(r => r.userId === myId);
+    return found ? found.emoji : null;
+  }
+
+  private applyReaction(messageId: string, emoji: string): void {
+    const convId = this.conversationId();
+    if (!convId) return;
+
+    this.messageService.addOrToggleReaction(convId, messageId, emoji).subscribe({
+      next: (response) => {
+        this.messages.update(list => list.map(m => {
+          if (m.id !== messageId) return m;
+          const currentReactions = m.reactions ? [...m.reactions] : [];
+          const myId = this.currentUserId();
+          const existingIdx = currentReactions.findIndex(r => r.userId === myId);
+
+          if (!response) {
+            // Toggled off
+            if (existingIdx !== -1) {
+              currentReactions.splice(existingIdx, 1);
+            }
+          } else {
+            // Added or swapped
+            if (existingIdx !== -1) {
+              currentReactions[existingIdx] = response;
+            } else {
+              currentReactions.push(response);
+            }
+          }
+          return { ...m, reactions: currentReactions };
+        }));
+      },
+      error: (err) => {
+        console.error('Failed to react to message', err);
+      }
+    });
+  }
+
+  private handleReactionNotification(notif: MessageReactionNotification): void {
+    this.messages.update(list => list.map(m =>
+      m.id === notif.messageId
+        ? { ...m, reactions: notif.reactions }
+        : m
+    ));
+  }
+
+  startReply(msg: ChatMessageItem): void {
+    if (msg.deleted) return;
+    this.replyingToMessage.set(msg);
+    this.cancelEdit();
+    this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.set(null);
+    setTimeout(() => {
+      this.composerTextarea?.nativeElement?.focus();
+    }, 0);
+  }
+
+  dismissReply(): void {
+    this.replyingToMessage.set(null);
   }
 
   onContextMenu(msg: ChatMessageItem, event: MouseEvent): void {
@@ -424,9 +551,11 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     if (msg.senderId !== this.currentUserId() || msg.deleted || msg.type !== 'TEXT') {
       return;
     }
+    this.dismissReply();
     this.editingMessage.set(msg);
     this.messageInput.set(msg.content);
     this.activeActionMessageId.set(null);
+    this.activeReactionPickerMessageId.set(null);
     setTimeout(() => {
       this.composerTextarea?.nativeElement?.focus();
     }, 0);
@@ -517,10 +646,17 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
   }
 
   onKeydown(event: KeyboardEvent): void {
-    if (event.key === 'Escape' && this.isEditing()) {
-      event.preventDefault();
-      this.cancelEdit();
-      return;
+    if (event.key === 'Escape') {
+      if (this.isEditing()) {
+        event.preventDefault();
+        this.cancelEdit();
+        return;
+      }
+      if (this.isReplying()) {
+        event.preventDefault();
+        this.dismissReply();
+        return;
+      }
     }
 
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -572,6 +708,9 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       ? crypto.randomUUID()
       : 'idem-' + Date.now() + '-' + Math.random().toString(36).substring(2, 9);
 
+    const quoted = this.replyingToMessage();
+    const quotedMessageId = quoted ? quoted.id : undefined;
+
     // Optimistic UI update: immediately render message with 'SENDING' status
     const optimisticMessage: ChatMessageItem = {
       id: 'temp-' + idempotencyKey,
@@ -584,20 +723,32 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
       edited: false,
       createdAt: new Date().toISOString(),
       deliveryStatus: 'SENDING',
-      idempotencyKey
+      idempotencyKey,
+      quotedMessage: quoted ? {
+        messageId: quoted.id,
+        content: quoted.content,
+        senderId: quoted.senderId,
+        senderName: quoted.senderName,
+        type: quoted.type
+      } : null
     };
 
     this.messages.update(list => [...list, optimisticMessage]);
     this.messageInput.set('');
+    this.dismissReply();
     this.sendStopTyping();
     this.scrollToBottom();
 
     if (this.messageService.isWebSocketConnected()) {
       // Primary STOMP path
-      this.messageService.sendMessageStomp(convId, content, idempotencyKey);
+      if (quotedMessageId) {
+        this.messageService.sendMessageStomp(convId, content, idempotencyKey, quotedMessageId);
+      } else {
+        this.messageService.sendMessageStomp(convId, content, idempotencyKey);
+      }
     } else {
       // REST fallback path
-      this.dispatchRestSend(convId, content, idempotencyKey);
+      this.dispatchRestSend(convId, content, idempotencyKey, quotedMessageId);
     }
   }
 
@@ -607,8 +758,12 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
     this.dispatchRestSend(this.conversationId(), failedMsg.content, failedMsg.idempotencyKey);
   }
 
-  private dispatchRestSend(convId: string, content: string, idempotencyKey: string): void {
-    this.messageService.sendMessageRest(convId, content, idempotencyKey).subscribe({
+  private dispatchRestSend(convId: string, content: string, idempotencyKey: string, quotedMessageId?: string): void {
+    const request$ = quotedMessageId
+      ? this.messageService.sendMessageRest(convId, content, idempotencyKey, quotedMessageId)
+      : this.messageService.sendMessageRest(convId, content, idempotencyKey);
+
+    request$.subscribe({
       next: (response) => {
         this.confirmMessage(idempotencyKey, response);
       },
@@ -685,10 +840,10 @@ export class ChatThreadComponent implements OnInit, OnDestroy {
         clearTimeout(this.typingSafetyTimer);
         this.typingSafetyTimer = undefined;
       }
-      this.messageService.markMessageAsRead(this.conversationId(), incoming.id).subscribe({
-        error: () => {}
-      });
-      this.conversationService.resetUnreadCount(this.conversationId());
+      // Buffer read receipts in 500ms windows when window has focus
+      if (typeof document !== 'undefined' && document.hasFocus()) {
+        this.incomingReadSubject.next(incoming.id);
+      }
     }
 
     this.conversationService.updateLastMessage(this.conversationId(), {

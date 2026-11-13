@@ -1,0 +1,17 @@
+@if (groupedReactions().length > 0) {
+  <div class="message-reactions" role="group" aria-label="Reactions" [attr.data-testid]="'message-reactions-' + messageId()">
+    @for (group of groupedReactions(); track group.emoji) {
+      <button
+        type="button"
+        class="reaction-chip"
+        [class.reacted-by-me]="group.reactedByMe"
+        (click)="onToggle(group.emoji)"
+        [title]="tooltipFor(group)"
+        [attr.data-testid]="'reaction-chip-' + group.emoji"
+      >
+        <span class="chip-emoji">{{ group.emoji }}</span>
+        <span class="chip-count">{{ group.count }}</span>
+      </button>
+    }
+  </div>
+}

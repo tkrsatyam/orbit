@@ -8,8 +8,10 @@ import {
   MessageDeletedEventPayload,
   MessageEditedEventPayload,
   MessageHistoryResponse,
+  MessageReactionNotification,
   MessageResponse,
   ReadReceiptEventPayload,
+  ReactionResponse,
   SendMessagePayload,
   TypingEventPayload,
   TypingRequestPayload
@@ -91,17 +93,20 @@ export class MessageService {
    * @param conversationId the target conversation ID
    * @param content text body of the message
    * @param idempotencyKey client UUID for deduplication
+   * @param quotedMessageId optional ID of message being replied to
    * @returns Observable resolving to the message response (via REST) or void (via STOMP)
    */
   sendMessageRest(
     conversationId: string,
     content: string,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    quotedMessageId?: string | null
   ): Observable<MessageResponse> {
     const payload: SendMessagePayload = {
       content,
       type: 'TEXT',
-      idempotencyKey
+      idempotencyKey,
+      quotedMessageId: quotedMessageId || undefined
     };
 
     const headers: Record<string, string> = {};
@@ -125,16 +130,19 @@ export class MessageService {
    * @param conversationId the target conversation ID
    * @param content text body of the message
    * @param idempotencyKey client UUID for deduplication
+   * @param quotedMessageId optional ID of message being replied to
    */
   sendMessageStomp(
     conversationId: string,
     content: string,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    quotedMessageId?: string | null
   ): void {
     const payload: SendMessagePayload = {
       content,
       type: 'TEXT',
-      idempotencyKey
+      idempotencyKey,
+      quotedMessageId: quotedMessageId || undefined
     };
 
     this.webSocketService.publish(`/app/conversations/${conversationId}/send`, payload);
@@ -272,5 +280,47 @@ export class MessageService {
   ): () => void {
     const destination = `/topic/conversations/${conversationId}/read`;
     return this.webSocketService.subscribe<ReadReceiptEventPayload>(destination, callback);
+  }
+
+  /**
+   * Adds, swaps, or toggles an emoji reaction on a message.
+   * POST /api/v1/conversations/{conversationId}/messages/{messageId}/reactions
+   */
+  addOrToggleReaction(
+    conversationId: string,
+    messageId: string,
+    emoji: string
+  ): Observable<ReactionResponse | null> {
+    return this.http.post<ReactionResponse | null>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}/reactions`,
+      { emoji },
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Explicitly removes the user's reaction from a message.
+   * DELETE /api/v1/conversations/{conversationId}/messages/{messageId}/reactions
+   */
+  removeReaction(
+    conversationId: string,
+    messageId: string
+  ): Observable<void> {
+    return this.http.delete<void>(
+      `${environment.apiBaseUrl}/api/v1/conversations/${conversationId}/messages/${messageId}/reactions`,
+      { withCredentials: true }
+    );
+  }
+
+  /**
+   * Subscribes to real-time reaction updates for a conversation.
+   * Destination: /topic/conversations/{conversationId}/reactions
+   */
+  subscribeToReactions(
+    conversationId: string,
+    callback: (notification: MessageReactionNotification) => void
+  ): () => void {
+    const destination = `/topic/conversations/${conversationId}/reactions`;
+    return this.webSocketService.subscribe<MessageReactionNotification>(destination, callback);
   }
 }

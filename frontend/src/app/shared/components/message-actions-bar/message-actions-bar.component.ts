@@ -11,8 +11,12 @@ export class MessageActionsBarComponent {
   readonly isVisible = input<boolean>(false);
   readonly canEdit = input<boolean>(false);
   readonly canDelete = input<boolean>(true);
+  readonly canReact = input<boolean>(true);
+  readonly canReply = input<boolean>(true);
   readonly messageId = input<string>('');
 
   readonly edit = output<void>();
   readonly delete = output<void>();
+  readonly react = output<void>();
+  readonly reply = output<void>();
 }

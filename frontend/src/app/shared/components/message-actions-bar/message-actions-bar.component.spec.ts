@@ -46,6 +46,36 @@ describe('MessageActionsBarComponent', () => {
     expect(emitted).toBe(true);
   });
 
+  it('should emit react when react button clicked', () => {
+    let emitted = false;
+    component.react.subscribe(() => (emitted = true));
+
+    fixture.componentRef.setInput('canReact', true);
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.detectChanges();
+
+    const reactBtn = fixture.nativeElement.querySelector('.btn-action-react');
+    expect(reactBtn).not.toBeNull();
+    reactBtn.click();
+
+    expect(emitted).toBe(true);
+  });
+
+  it('should emit reply when reply button clicked', () => {
+    let emitted = false;
+    component.reply.subscribe(() => (emitted = true));
+
+    fixture.componentRef.setInput('canReply', true);
+    fixture.componentRef.setInput('isVisible', true);
+    fixture.detectChanges();
+
+    const replyBtn = fixture.nativeElement.querySelector('.btn-action-reply');
+    expect(replyBtn).not.toBeNull();
+    replyBtn.click();
+
+    expect(emitted).toBe(true);
+  });
+
   it('should emit delete when delete button clicked', () => {
     let emitted = false;
     component.delete.subscribe(() => (emitted = true));
