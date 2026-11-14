@@ -327,12 +327,15 @@ The CSRF decision for this cookie is recorded in `API_CONTRACTS.md` (POST /api/v
 
 ### 3. Cloudflare R2 (Phase 2+)
 
+> **Status Note**: The `orbit-dev` bucket was provisioned and live-verified in Epic `ORDM-11`. Provisioning of the production bucket `orbit-prod` is deferred to this Deployment Epic workflow.
+
 1. Create a Cloudflare account at [cloudflare.com](https://cloudflare.com)
 2. Navigate to R2 in the dashboard
 3. Create a bucket named `orbit-prod`
-4. Under **Manage R2 API Tokens**: create a token with object read/write permissions scoped to `orbit-prod`
+4. Under **Manage R2 API Tokens**: create a token with object read/write permissions scoped to `orbit-prod` (or add `orbit-prod` to the existing account token)
 5. Note the Account ID, Access Key ID, and Secret Access Key
 6. Enable public access on the bucket and note the public URL
+7. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME=orbit-prod`, and `R2_PUBLIC_URL` as Render environment variables.
 
 ### 4. Render — Backend
 
